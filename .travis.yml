@@ -1,0 +1,10 @@
+language: java
+jdk:
+  - oraclejdk8
+before_install:
+  - git clone --depth=1 https://github.com/thomasdeanwhite/instrumentation.git
+  - pushd instrumentation
+  - mvn clean install
+  - popd
+script:
+  - mvn test package
