@@ -68,7 +68,7 @@
       <artifactId>tools</artifactId>
       <version>1.0.0</version>
       <scope>system</scope>
-      <systemPath>/Library/Java/JavaVirtualMachines/jdk1.8.0_60.jdk/Contents/Home/jre/../lib/tools.jar</systemPath>
+      <systemPath>/opt/jdk/jdk1.8.0_05/jre/../lib/tools.jar</systemPath>
     </dependency>
   </dependencies>
 </project>
