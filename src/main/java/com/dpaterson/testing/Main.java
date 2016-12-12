@@ -34,9 +34,11 @@ import com.dpaterson.testing.framework.TestCaseChromosome;
 import com.dpaterson.testing.framework.TestSuiteChromosome;
 import com.dpaterson.testing.framework.instrumentation.Instrumenter;
 import com.dpaterson.testing.util.Util;
+import com.sheffield.instrumenter.InstrumentationProperties;
 import com.sheffield.instrumenter.PropertySource;
 import com.sheffield.instrumenter.analysis.ClassAnalyzer;
 import com.sheffield.instrumenter.instrumentation.ClassReplacementTransformer;
+import com.sheffield.instrumenter.instrumentation.InstrumentingClassLoader;
 import com.sheffield.util.ArrayUtils;
 
 public class Main {
@@ -61,9 +63,12 @@ public class Main {
             List<PropertySource> sources = ArrayUtils.createList(Properties.instance(),
                     com.sheffield.instrumenter.InstrumentationProperties.instance());
             TestSuitePrioritisation.handleProperties(line, sources);
+            if (InstrumentationProperties.VISIT_MUTANTS) {
+                InstrumentingClassLoader.getInstance().setVisitMutants(true);
+            }
             setupFramework(line, fw);
             fw.run();
-        } catch (final ParseException e) {
+        } catch (final ParseException | ClassNotFoundException e) {
             logger.error(e);
         }
         // necessary due to random thread creation during test cases (don't do
@@ -72,24 +77,14 @@ public class Main {
     }
 
     /**
-     * Takes options from the {@link CommandLine} and creates a
-     * {@link TestSuiteChromosome} instance containing all of the test cases and
-     * a {@link SUTChromosome} object containing all of the source classes. The
-     * command line must contain a -s/--sourceFolder option for the source
-     * classes and a -t/--testFolder option for the test cases. Both of these
-     * folders will be added to the classpath, and all nested .class files will
-     * be loaded in as either source or test cases ready for instrumentation.
-     * Currently, instrumentation and JUnit execution takes place in the
-     * constructor of a {@link TestSuiteChromosome}, but this may well be
-     * changed as fitness functions are introduced that are not reliant on code
-     * coverage.
+     * Takes options from the {@link CommandLine} and creates a {@link TestSuiteChromosome} instance containing all of the test cases and a {@link SUTChromosome} object containing all of the source
+     * classes. The command line must contain a -s/--sourceFolder option for the source classes and a -t/--testFolder option for the test cases. Both of these folders will be added to the classpath,
+     * and all nested .class files will be loaded in as either source or test cases ready for instrumentation. Currently, instrumentation and JUnit execution takes place in the constructor of a
+     * {@link TestSuiteChromosome}, but this may well be changed as fitness functions are introduced that are not reliant on code coverage.
      *
      * @param line
-     *            - the {@link CommandLine} instance which must contain -s and
-     *            -t options for source and test folders respectively
-     * @return a {@link TestSuiteChromosome} object containing a
-     *         {@link SUTChromosome} with all of the source classes and a list
-     *         of {@link TestCaseChromosome} objects for all of the test cases
+     *            - the {@link CommandLine} instance which must contain -s and -t options for source and test folders respectively
+     * @return a {@link TestSuiteChromosome} object containing a {@link SUTChromosome} with all of the source classes and a list of {@link TestCaseChromosome} objects for all of the test cases
      *         contained within the specified location
      */
     public static void setupFramework(CommandLine line, Framework fw) throws MissingOptionException {
