@@ -10,3 +10,9 @@ script:
   - mvn test package
 notifications:
   slack: testprioritisation:b88gEuUpTCwV7zTZKYcdUMz8
+  email:
+    recipients:
+      - dpaterson1@sheffield.ac.uk
+    on_success: change
+    on_failure: change
+      
