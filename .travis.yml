@@ -8,3 +8,5 @@ before_install:
   - popd
 script:
   - mvn test package
+notifications:
+  slack: testprioritisation:b88gEuUpTCwV7zTZKYcdUMz8
