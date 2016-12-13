@@ -1,26 +1,8 @@
 package com.dpaterson.testing;
 
-import java.io.File;
-import java.util.Arrays;
-import java.util.List;
-
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.MissingOptionException;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import com.dpaterson.testing.algorithms.RandomSearchAlgorithm;
 import com.dpaterson.testing.algorithms.SearchAlgorithm;
-import com.dpaterson.testing.algorithms.heuristics.AdditionalGreedyAlgorithm;
-import com.dpaterson.testing.algorithms.heuristics.EIrreplaceabilityAlgorithm;
-import com.dpaterson.testing.algorithms.heuristics.GreedyAlgorithm;
-import com.dpaterson.testing.algorithms.heuristics.IrreplaceabilityAlgorithm;
-import com.dpaterson.testing.algorithms.heuristics.KOptimalAlgorithm;
-import com.dpaterson.testing.algorithms.heuristics.TotalFEPAlgorithm;
+import com.dpaterson.testing.algorithms.heuristics.*;
 import com.dpaterson.testing.algorithms.metaheuristics.EpistaticGeneticAlgorithm;
 import com.dpaterson.testing.algorithms.metaheuristics.GeneticAlgorithm;
 import com.dpaterson.testing.algorithms.metaheuristics.HillClimbAlgorithm;
@@ -34,18 +16,25 @@ import com.dpaterson.testing.framework.TestCaseChromosome;
 import com.dpaterson.testing.framework.TestSuiteChromosome;
 import com.dpaterson.testing.framework.instrumentation.Instrumenter;
 import com.dpaterson.testing.util.Util;
-import com.sheffield.instrumenter.InstrumentationProperties;
 import com.sheffield.instrumenter.PropertySource;
 import com.sheffield.instrumenter.analysis.ClassAnalyzer;
 import com.sheffield.instrumenter.instrumentation.ClassReplacementTransformer;
 import com.sheffield.instrumenter.instrumentation.InstrumentingClassLoader;
+import com.sheffield.instrumenter.mutation.MutationProperties;
 import com.sheffield.util.ArrayUtils;
+import org.apache.commons.cli.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+import java.io.File;
+import java.util.Arrays;
+import java.util.List;
 
 public class Main {
     public static final Logger logger = LogManager.getLogger(Main.class);
     private static final String[] forbiddenPackages = new String[] { "com/dpaterson", "org/junit",
             "org/apache/commons/cli", "junit", "org/apache/bcel", "org/apache/logging/log4j", "org/objectweb/asm",
-            "javax/swing" };
+            "javax/swing", "javax/servlet", "org/xml" };
 
     public static void main(String[] args) {
         // org.evosuite.Properties.TT = true;
@@ -61,9 +50,9 @@ public class Main {
                 return;
             }
             List<PropertySource> sources = ArrayUtils.createList(Properties.instance(),
-                    com.sheffield.instrumenter.InstrumentationProperties.instance());
+                    com.sheffield.instrumenter.InstrumentationProperties.instance(), MutationProperties.instance());
             TestSuitePrioritisation.handleProperties(line, sources);
-            if (InstrumentationProperties.VISIT_MUTANTS) {
+            if (MutationProperties.VISIT_MUTANTS) {
                 InstrumentingClassLoader.getInstance().setVisitMutants(true);
             }
             setupFramework(line, fw);
@@ -104,6 +93,10 @@ public class Main {
                 fw.addLibFolder(file);
             }
         }
+        if (!MutationProperties.MAJOR_ROOT.equals("")) {
+            File majorJar = Util.getFile(MutationProperties.MAJOR_ROOT + "/config/config.jar");
+            Util.addToClassPath(majorJar);
+        }
         folder = line.getOptionValue("s");
         // relative path
         file = Util.getFile(folder);
@@ -120,41 +113,41 @@ public class Main {
     private static SearchAlgorithm getAlgorithm(String algorithmChoice) {
         SearchAlgorithm algorithm = new GreedyAlgorithm();
         switch (algorithmChoice.toLowerCase()) {
-        case "greedy":
-            break;
-        case "additionalgreedy":
-            algorithm = new AdditionalGreedyAlgorithm();
-            break;
-        case "koptimal":
-            algorithm = new KOptimalAlgorithm();
-            break;
-        case "irreplaceability":
-            algorithm = new IrreplaceabilityAlgorithm();
-            break;
-        case "eirreplaceability":
-            algorithm = new EIrreplaceabilityAlgorithm();
-            break;
-        case "hillclimb":
-            algorithm = new HillClimbAlgorithm();
-            break;
-        case "geneticalgorithm":
-            algorithm = new GeneticAlgorithm();
-            algorithm.addStoppingCondition(new FitnessStoppingCondition());
-            break;
-        case "hypervolumega":
-            algorithm = new HypervolumeGeneticAlgorithm();
-            break;
-        case "epistaticga":
-            algorithm = new EpistaticGeneticAlgorithm();
-            break;
-        case "random":
-            algorithm = new RandomSearchAlgorithm();
-            break;
-        case "feptotal":
-            algorithm = new TotalFEPAlgorithm();
-            break;
-        default:
-            break;
+            case "greedy":
+                break;
+            case "additionalgreedy":
+                algorithm = new AdditionalGreedyAlgorithm();
+                break;
+            case "koptimal":
+                algorithm = new KOptimalAlgorithm();
+                break;
+            case "irreplaceability":
+                algorithm = new IrreplaceabilityAlgorithm();
+                break;
+            case "eirreplaceability":
+                algorithm = new EIrreplaceabilityAlgorithm();
+                break;
+            case "hillclimb":
+                algorithm = new HillClimbAlgorithm();
+                break;
+            case "geneticalgorithm":
+                algorithm = new GeneticAlgorithm();
+                algorithm.addStoppingCondition(new FitnessStoppingCondition());
+                break;
+            case "hypervolumega":
+                algorithm = new HypervolumeGeneticAlgorithm();
+                break;
+            case "epistaticga":
+                algorithm = new EpistaticGeneticAlgorithm();
+                break;
+            case "random":
+                algorithm = new RandomSearchAlgorithm();
+                break;
+            case "feptotal":
+                algorithm = new TotalFEPAlgorithm();
+                break;
+            default:
+                break;
         }
         if (Properties.USE_TIME) {
             algorithm.addStoppingCondition(new TimeStoppingCondition());

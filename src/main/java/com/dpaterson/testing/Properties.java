@@ -1,13 +1,13 @@
 package com.dpaterson.testing;
 
+import com.sheffield.instrumenter.InstrumentationProperties.Parameter;
+import com.sheffield.instrumenter.PropertySource;
+
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-
-import com.sheffield.instrumenter.InstrumentationProperties.Parameter;
-import com.sheffield.instrumenter.PropertySource;
 
 public class Properties implements PropertySource {
 
