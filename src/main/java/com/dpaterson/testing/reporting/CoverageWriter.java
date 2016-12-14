@@ -1,10 +1,5 @@
 package com.dpaterson.testing.reporting;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 import com.dpaterson.testing.algorithms.SearchAlgorithm;
 import com.dpaterson.testing.framework.CUTChromosome;
 import com.dpaterson.testing.framework.Chromosome;
@@ -13,6 +8,11 @@ import com.dpaterson.testing.framework.TestSuiteChromosome;
 import com.dpaterson.testing.util.HashSetCollector;
 import com.sheffield.instrumenter.instrumentation.objectrepresentation.Branch;
 import com.sheffield.instrumenter.instrumentation.objectrepresentation.Line;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class CoverageWriter extends CsvWriter {
   private Chromosome problem;
@@ -30,7 +30,7 @@ public class CoverageWriter extends CsvWriter {
 
   @Override
   public void prepareCsv() {
-    String[] headers = new String[] { "Class", "LinesCovered", "LinesMissed", "PercentageLineCoverage",
+    String[] headers = new String[] { "Class", "NumLinesCovered", "NumLinesMissed", "LinesCovered", "LinesMissed", "PercentageLineCoverage",
         "Total Branches", "BranchesCovered", "BranchesMissed", "PercentageBranchCoverage" };
     setHeaders(headers);
     List<CUTChromosome> cuts = ((TestSuiteChromosome) problem).getSUT().getClassesUnderTest();
@@ -72,7 +72,10 @@ public class CoverageWriter extends CsvWriter {
         double percentageBranch = (double) (2 * branchesFullyCovered.size() + branchesPartiallyCovered.size())
             / (cut.getTotalBranches());
         String[] csv = new String[] { cut.getCUT().getName(), Integer.toString(linesCovered.size()),
-            Integer.toString(linesMissed.size()), Double.toString(percentageCoverage),
+            Integer.toString(linesMissed.size()),
+                linesCovered.size() > 0 ? linesCovered.stream().map(line -> Integer.toString(line.getLineNumber())).reduce((lineNumber, lineNumber2) -> lineNumber+":"+lineNumber2).get() : "",
+                linesMissed.size() > 0 ? linesMissed.stream().map(line -> Integer.toString(line.getLineNumber())).reduce((lineNumber, lineNumber2) -> lineNumber+":"+lineNumber2).get() : "",
+                Double.toString(percentageCoverage),
             Integer.toString(cut.getTotalBranches()),
             Double.toString((2 * branchesFullyCovered.size() + branchesPartiallyCovered.size())),
             Double.toString((2 * branchesMissed.size() + branchesPartiallyCovered.size())),
