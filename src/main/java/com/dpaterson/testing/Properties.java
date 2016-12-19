@@ -133,6 +133,12 @@ public class Properties implements PropertySource {
     @Parameter(key = "patience", description = "Patience refers to the amount of time an algorithm can go without improving the fitness of its best candidate solution before being considered stagnant and terminated. Usage of this property is determined by USE_STAGNATION", category = "TCP")
     public static int PATIENCE = 1000 / POPULATION_SIZE;
 
+    @Parameter(key = "timeout", description = "Test cases can in some cases run infinitely. The timeout property allows the user to define a point at which to cut off long running test cases. The use of this property is controlled by Properties.USE_TIMEOUT", category="TCP")
+    public static int TIMEOUT = 100000;
+
+    @Parameter(key = "use_timeout", description = "Whether or not to use the test case timeout defined by Properties.TIMEOUT. Since for deterministic test cases we should not be expecting any infinite loops, it becomes less likely that timeouts will be hit", category = "TCP")
+    public static boolean USE_TIMEOUT = true;
+
     /**
      * Not intended to be used from command line, so don't have an
      * {@link Parameter} annotation for this. Used to determine whether or not

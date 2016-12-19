@@ -326,7 +326,9 @@ public class Framework {
     public void run() throws ClassNotFoundException {
         generateTSC();
         algorithm.setSearchProblem(testSuite);
-        setupFitnessFunction();
+        if(algorithm.needsFitnessFunction()) {
+            setupFitnessFunction();
+        }
         if (Properties.PRIORITISE) {
             logger.info("Finished parsing source folder. Found " + sut.getClassesUnderTest().size()
                     + " source classes and " + testSuite.size() + " test cases");

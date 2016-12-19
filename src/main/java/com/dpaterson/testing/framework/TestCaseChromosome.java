@@ -2,6 +2,7 @@ package com.dpaterson.testing.framework;
 
 import com.dpaterson.testing.framework.instrumentation.Instrumented;
 import com.dpaterson.testing.junit.TestingUtils;
+import com.dpaterson.testing.Properties;
 import com.sheffield.instrumenter.InstrumentationProperties;
 import com.sheffield.instrumenter.analysis.ClassAnalyzer;
 import com.sheffield.instrumenter.analysis.task.AbstractTask;
@@ -32,7 +33,7 @@ import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 public class TestCaseChromosome extends Chromosome implements Instrumented {
-    private static final long TIMEOUT = 10000;
+    private static final long TIMEOUT = Properties.TIMEOUT;
     private static final TimeUnit UNIT = TimeUnit.MILLISECONDS;
     private Class<?> testClass;
     private Method testMethod;
@@ -64,51 +65,57 @@ public class TestCaseChromosome extends Chromosome implements Instrumented {
         if (InstrumentationProperties.LOG) {
             TaskTimer.taskStart(timerTask);
         }
-        if (TestingUtils.isJUnit4Test(testMethod)) {
-            FrameworkMethod m = new FrameworkMethod(testMethod);
-            ParentRunner r = new BlockJUnit4ClassRunner(testClass) {
-                @Override
-                protected List<TestRule> getTestRules(Object target) {
-                    List<TestRule> testRules = super.getTestRules(target);
-                    testRules.add(Timeout.builder().withTimeout(TIMEOUT, UNIT).build());
-                    ClassAnalyzer.out.println("Running "+testName(m)+" with Timeout 10000ms");
-                    return testRules;
+        if(Properties.USE_TIMEOUT) {
+            if (TestingUtils.isJUnit4Test(testMethod)) {
+                FrameworkMethod m = new FrameworkMethod(testMethod);
+                ParentRunner r = new BlockJUnit4ClassRunner(testClass) {
+                    @Override
+                    protected List<TestRule> getTestRules(Object target) {
+                        List<TestRule> testRules = super.getTestRules(target);
+                        Timeout.Builder builder = Timeout.builder().withTimeout(TIMEOUT, UNIT);
+                        testRules.add(builder.build());
+                        return testRules;
+                    }
+                };
+                Description desc = Description.createTestDescription(testClass, m.getName());
+                try {
+                    r.filter(Filter.matchMethodDescription(desc));
+                } catch (NoTestsRemainException e) {
+                    e.printStackTrace(ClassAnalyzer.out);
                 }
-            };
-            Description desc = Description.createTestDescription(testClass, m.getName());
-            try {
-                r.filter(Filter.matchMethodDescription(desc));
-            } catch (NoTestsRemainException e) {
-                e.printStackTrace(ClassAnalyzer.out);
-            }
-            RunNotifier notifier = new RunNotifier();
-            notifier.addListener(new RunListener(){
-                @Override
-                public void testRunFinished(Result result) throws Exception {
-                    setResult(result);
-                }
-            });
-            r.run(notifier);
+                RunNotifier notifier = new RunNotifier();
+                notifier.addListener(new RunListener() {
+                    @Override
+                    public void testRunFinished(Result result) throws Exception {
+                        setResult(result);
+                    }
+                });
+                r.run(notifier);
 
-        } else {
-            Request req = Request.method(testClass, testMethod.getName());
-            ExecutorService service = Executors.newSingleThreadExecutor();
-            Future<Result> res = service.submit(new Callable<Result>(){
-                @Override
-                public Result call() {
-                    return core.run(req);
+            } else {
+                Request req = Request.method(testClass, testMethod.getName());
+                ExecutorService service = Executors.newSingleThreadExecutor();
+                Future<Result> res = service.submit(new Callable<Result>() {
+                    @Override
+                    public Result call() {
+                        return core.run(req);
+                    }
+                });
+                try {
+                    setResult(res.get(TIMEOUT, UNIT));
+                } catch (TimeoutException e) {
+                    ClassAnalyzer.out.println("Test " + testMethod.getName() + " timed out.");
+                    return;
+                } catch (InterruptedException e) {
+                    e.printStackTrace(ClassAnalyzer.out);
+                } catch (ExecutionException e) {
+                    e.printStackTrace(ClassAnalyzer.out);
                 }
-            });
-            try{
-                setResult(res.get(TIMEOUT,UNIT));
-            }catch(TimeoutException e){
-                ClassAnalyzer.out.println("Test "+testMethod.getName()+" timed out.");
-                return;
-            } catch (InterruptedException e) {
-                e.printStackTrace(ClassAnalyzer.out);
-            } catch (ExecutionException e) {
-                e.printStackTrace(ClassAnalyzer.out);
             }
+        } else {
+            Request r = Request.method(testClass, testMethod.getName());
+            Result res = core.run(r);
+            setResult(res);
         }
         if (InstrumentationProperties.LOG) {
             TaskTimer.taskEnd(timerTask);

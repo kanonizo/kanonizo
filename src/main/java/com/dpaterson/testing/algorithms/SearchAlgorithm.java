@@ -23,6 +23,10 @@ public interface SearchAlgorithm {
 
   long getTotalTime();
 
+  default boolean needsFitnessFunction(){
+    return true;
+  }
+
   default double getFitness(TestSuiteChromosome chr) {
     // TODO remove default implementation once search algorithms have
     // implemented their own fitness functions

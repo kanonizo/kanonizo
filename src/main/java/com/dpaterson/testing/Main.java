@@ -140,11 +140,14 @@ public class Main {
             case "epistaticga":
                 algorithm = new EpistaticGeneticAlgorithm();
                 break;
-            case "random":
+            case "randomsearch":
                 algorithm = new RandomSearchAlgorithm();
                 break;
             case "feptotal":
                 algorithm = new TotalFEPAlgorithm();
+                break;
+            case "random":
+                algorithm = new RandomAlgorithm();
                 break;
             default:
                 break;
