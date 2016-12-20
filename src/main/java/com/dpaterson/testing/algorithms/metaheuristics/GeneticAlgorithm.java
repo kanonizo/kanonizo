@@ -19,6 +19,7 @@ import com.dpaterson.testing.algorithms.metaheuristics.crossover.CrossoverFuncti
 import com.dpaterson.testing.algorithms.metaheuristics.crossover.SinglePointCrossover;
 import com.dpaterson.testing.algorithms.metaheuristics.selection.RankSelection;
 import com.dpaterson.testing.algorithms.metaheuristics.selection.SelectionFunction;
+import com.dpaterson.testing.algorithms.stoppingconditions.StoppingCondition;
 import com.dpaterson.testing.commandline.ProgressBar;
 import com.dpaterson.testing.framework.TestCaseChromosome;
 import com.dpaterson.testing.framework.TestSuiteChromosome;
@@ -65,10 +66,12 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
     }
     writer.write();
     bar.complete();
+    StoppingCondition terminatingStoppingCondition=stoppingConditions.stream().filter(cond -> cond.shouldFinish(this)).findFirst().get();
     LocalDateTime enddate = LocalDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()),
         TimeZone.getDefault().toZoneId());
     logger.info("Total Number of iterations: " + age + "\n");
     logger.info("Genetic Algorithm finished execution at : " + enddate.format(format));
+    logger.info("Genetic Algorithm terminated by: "+terminatingStoppingCondition.getClass().getSimpleName());
 
   }
 

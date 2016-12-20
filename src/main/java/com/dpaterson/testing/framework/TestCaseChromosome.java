@@ -1,8 +1,27 @@
 package com.dpaterson.testing.framework;
 
-import com.dpaterson.testing.framework.instrumentation.Instrumented;
-import com.dpaterson.testing.junit.TestingUtils;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
+
+import org.junit.runner.JUnitCore;
+import org.junit.runner.Request;
+import org.junit.runner.Result;
+import org.junit.runner.notification.Failure;
+
 import com.dpaterson.testing.Properties;
+import com.dpaterson.testing.framework.instrumentation.Instrumented;
 import com.sheffield.instrumenter.InstrumentationProperties;
 import com.sheffield.instrumenter.analysis.ClassAnalyzer;
 import com.sheffield.instrumenter.analysis.task.AbstractTask;
@@ -11,26 +30,6 @@ import com.sheffield.instrumenter.analysis.task.TaskTimer;
 import com.sheffield.instrumenter.instrumentation.objectrepresentation.Branch;
 import com.sheffield.instrumenter.instrumentation.objectrepresentation.Line;
 import com.sheffield.instrumenter.testcase.TestCaseWrapper;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
-import org.junit.runner.Description;
-import org.junit.runner.JUnitCore;
-import org.junit.runner.Request;
-import org.junit.runner.Result;
-import org.junit.runner.manipulation.Filter;
-import org.junit.runner.manipulation.NoTestsRemainException;
-import org.junit.runner.notification.Failure;
-import org.junit.runner.notification.RunListener;
-import org.junit.runner.notification.RunNotifier;
-import org.junit.runners.BlockJUnit4ClassRunner;
-import org.junit.runners.ParentRunner;
-import org.junit.runners.model.FrameworkMethod;
-import org.junit.runners.model.InitializationError;
-
-import java.lang.reflect.Method;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.stream.Collectors;
 
 public class TestCaseChromosome extends Chromosome implements Instrumented {
     private static final long TIMEOUT = Properties.TIMEOUT;
@@ -52,12 +51,16 @@ public class TestCaseChromosome extends Chromosome implements Instrumented {
     }
 
     /**
-     * Executes a single test method on the JUnitCore class, using default Runners and configuration. This method must reload the class from the class loader as it will have been instrumented since it
-     * is first created. If the instrumented version is not loaded, code coverage goes a little bit funky.
+     * Executes a single test method on the JUnitCore class, using default
+     * Runners and configuration. This method must reload the class from the
+     * class loader as it will have been instrumented since it is first created.
+     * If the instrumented version is not loaded, code coverage goes a little
+     * bit funky.
      *
-     * @throws ClassNotFoundException if the ClassLoader can't find the {@link #testClass} by name
+     * @throws ClassNotFoundException
+     *             if the ClassLoader can't find the {@link #testClass} by name
      */
-    public void run() throws InitializationError {
+    public void run() {
         long startTime = System.currentTimeMillis();
         // reload testclass from memory class loader to get the instrumented
         // version
@@ -65,52 +68,24 @@ public class TestCaseChromosome extends Chromosome implements Instrumented {
         if (InstrumentationProperties.LOG) {
             TaskTimer.taskStart(timerTask);
         }
-        if(Properties.USE_TIMEOUT) {
-            if (TestingUtils.isJUnit4Test(testMethod)) {
-                FrameworkMethod m = new FrameworkMethod(testMethod);
-                ParentRunner r = new BlockJUnit4ClassRunner(testClass) {
-                    @Override
-                    protected List<TestRule> getTestRules(Object target) {
-                        List<TestRule> testRules = super.getTestRules(target);
-                        Timeout.Builder builder = Timeout.builder().withTimeout(TIMEOUT, UNIT);
-                        testRules.add(builder.build());
-                        return testRules;
-                    }
-                };
-                Description desc = Description.createTestDescription(testClass, m.getName());
-                try {
-                    r.filter(Filter.matchMethodDescription(desc));
-                } catch (NoTestsRemainException e) {
-                    e.printStackTrace(ClassAnalyzer.out);
+        if (Properties.USE_TIMEOUT) {
+            Request req = Request.method(testClass, testMethod.getName());
+            ExecutorService service = Executors.newSingleThreadExecutor();
+            Future<Result> res = service.submit(new Callable<Result>() {
+                @Override
+                public Result call() {
+                    return core.run(req);
                 }
-                RunNotifier notifier = new RunNotifier();
-                notifier.addListener(new RunListener() {
-                    @Override
-                    public void testRunFinished(Result result) throws Exception {
-                        setResult(result);
-                    }
-                });
-                r.run(notifier);
-
-            } else {
-                Request req = Request.method(testClass, testMethod.getName());
-                ExecutorService service = Executors.newSingleThreadExecutor();
-                Future<Result> res = service.submit(new Callable<Result>() {
-                    @Override
-                    public Result call() {
-                        return core.run(req);
-                    }
-                });
-                try {
-                    setResult(res.get(TIMEOUT, UNIT));
-                } catch (TimeoutException e) {
-                    ClassAnalyzer.out.println("Test " + testMethod.getName() + " timed out.");
-                    return;
-                } catch (InterruptedException e) {
-                    e.printStackTrace(ClassAnalyzer.out);
-                } catch (ExecutionException e) {
-                    e.printStackTrace(ClassAnalyzer.out);
-                }
+            });
+            try {
+                setResult(res.get(TIMEOUT, UNIT));
+            } catch (TimeoutException e) {
+                ClassAnalyzer.out.println("Test " + testMethod.getName() + " timed out.");
+                return;
+            } catch (InterruptedException e) {
+                e.printStackTrace(ClassAnalyzer.out);
+            } catch (ExecutionException e) {
+                e.printStackTrace(ClassAnalyzer.out);
             }
         } else {
             Request r = Request.method(testClass, testMethod.getName());
@@ -126,9 +101,10 @@ public class TestCaseChromosome extends Chromosome implements Instrumented {
         executionTime = System.currentTimeMillis() - startTime;
     }
 
-    private void setResult(Result result){
+    private void setResult(Result result) {
         this.result = result;
     }
+
     public boolean hasFailures() {
         return failures.size() > 0;
     }
@@ -184,7 +160,8 @@ public class TestCaseChromosome extends Chromosome implements Instrumented {
 
     public Map<CUTChromosome, Double> getLinesCovered() {
         Map<CUTChromosome, Double> lines = new HashMap<CUTChromosome, Double>();
-        executionData.entrySet().stream().forEach(entry -> lines.put(entry.getKey(), entry.getValue().getLineCoverage()));
+        executionData.entrySet().stream()
+                .forEach(entry -> lines.put(entry.getKey(), entry.getValue().getLineCoverage()));
         return lines;
     }
 
@@ -266,7 +243,8 @@ public class TestCaseChromosome extends Chromosome implements Instrumented {
                         .filter(branch -> branch.getTrueHits() > 0 && branch.getFalseHits() > 0).map(Branch::clone)
                         .collect(Collectors.toList());
                 List<Branch> partiallyCovered = branches.stream()
-                        .filter(branch -> !fullyCovered.contains(branch) && (branch.getTrueHits() > 0 || branch.getFalseHits() > 0))
+                        .filter(branch -> !fullyCovered.contains(branch)
+                                && (branch.getTrueHits() > 0 || branch.getFalseHits() > 0))
                         .map(Branch::clone).collect(Collectors.toList());
                 double lineCoverage = lines.size() / (double) totalLines;
                 double branchCoverage = branches.stream().mapToDouble(branch -> {
@@ -326,4 +304,5 @@ public class TestCaseChromosome extends Chromosome implements Instrumented {
         }
 
     }
+
 }
