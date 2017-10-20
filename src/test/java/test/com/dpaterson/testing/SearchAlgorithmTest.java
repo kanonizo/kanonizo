@@ -4,9 +4,9 @@ import java.io.File;
 
 import org.junit.Before;
 
-import com.dpaterson.testing.Framework;
-import com.dpaterson.testing.algorithms.SearchAlgorithm;
-import com.dpaterson.testing.framework.TestSuiteChromosome;
+import org.kanonizo.Framework;
+import org.kanonizo.algorithms.SearchAlgorithm;
+import org.kanonizo.framework.TestSuiteChromosome;
 
 public abstract class SearchAlgorithmTest extends MockitoTest {
     protected SearchAlgorithm algorithm;

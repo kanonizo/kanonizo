@@ -8,8 +8,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 
-import com.dpaterson.testing.Framework;
-import com.dpaterson.testing.Main;
+import org.kanonizo.Framework;
+import org.kanonizo.Main;
 
 public class TestCommandLine extends MockitoTest {
   private static final String SOURCE_OPTION = "s";

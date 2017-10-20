@@ -12,10 +12,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 
-import com.dpaterson.testing.Properties;
-import com.dpaterson.testing.TestSuitePrioritisation;
-import com.dpaterson.testing.Properties.CoverageApproach;
-import com.sheffield.instrumenter.PropertySource;
+import org.kanonizo.Properties;
+import org.kanonizo.TestSuitePrioritisation;
+import org.kanonizo.Properties.CoverageApproach;
+import com.scythe.instrumenter.PropertySource;
 
 public class TestSuitePrioritisationTest extends MockitoTest {
   @Mock private CommandLine line;

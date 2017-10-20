@@ -1,13 +1,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>com.dpaterson.searchalgorithms</groupId>
-	<artifactId>com.dpaterson.searchalgorithms</artifactId>
+	<groupId>org.kanonizo</groupId>
+	<artifactId>kanonizo</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>Search Algorithms for Test Case Prioritisation</name>
-	<description>Search Algorithms for Test Case Prioritisation</description>
+	<name>Kanonizo</name>
+	<description>Kanonizo Tool for Test Case Prioritisation</description>
 	<build>
-		<finalName>testing</finalName>
+		<finalName>kanonizo</finalName>
 		<sourceDirectory>src/main/java</sourceDirectory>
 		<testSourceDirectory>src/test/java</testSourceDirectory>
 		<plugins>
@@ -52,7 +52,7 @@
 								<!-- add Main-Class to manifest file -->
 								<transformer
 									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-									<mainClass>com.dpaterson.testing.Main</mainClass>
+									<mainClass>org.kanonizo.Main</mainClass>
 								</transformer>
 							</transformers>
 						</configuration>
@@ -112,9 +112,9 @@
 			<systemPath>${java.home}/../lib/tools.jar</systemPath>
 		</dependency>
 		<dependency>
-			<groupId>com.sheffield</groupId>
-			<artifactId>instrumentation</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<groupId>com.scythe</groupId>
+			<artifactId>scythe</artifactId>
+			<version>0.0.1-DEV</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>

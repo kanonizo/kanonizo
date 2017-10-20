@@ -6,10 +6,10 @@ import java.util.List;
 
 import org.junit.Test;
 
-import com.dpaterson.testing.algorithms.heuristics.GreedyAlgorithm;
-import com.dpaterson.testing.framework.CUTChromosome;
-import com.dpaterson.testing.framework.CUTChromosomeStore;
-import com.dpaterson.testing.framework.TestCaseChromosome;
+import org.kanonizo.algorithms.heuristics.GreedyAlgorithm;
+import org.kanonizo.framework.CUTChromosome;
+import org.kanonizo.framework.CUTChromosomeStore;
+import org.kanonizo.framework.TestCaseChromosome;
 
 public class GreedyAlgorithmTest extends SearchAlgorithmTest {
 
