@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com.dpaterson.searchalgorithms</groupId>
-  <artifactId>com.dpaterson.searchalgorithms</artifactId>
+  <groupId>org.kanonizo</groupId>
+  <artifactId>kanonizo</artifactId>
   <packaging>ejb</packaging>
-  <name>Search Algorithms for Test Case Prioritisation</name>
+  <name>Kanonizo</name>
   <version>0.0.1-SNAPSHOT</version>
-  <description>Search Algorithms for Test Case Prioritisation</description>
+  <description>Kanonizcd o Test Case Prioritization Framework</description>
   <build>
     <sourceDirectory>src/main/java</sourceDirectory>
     <testSourceDirectory>src/test/java</testSourceDirectory>
-    <finalName>testing</finalName>
+    <finalName>kanonizo</finalName>
     <plugins>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
@@ -47,7 +47,7 @@
               </filters>
               <transformers>
                 <transformer>
-                  <mainClass>com.dpaterson.testing.Main</mainClass>
+                  <mainClass>org.kanonizo.Main</mainClass>
                 </transformer>
               </transformers>
             </configuration>
@@ -68,7 +68,7 @@
       <artifactId>tools</artifactId>
       <version>1.0.0</version>
       <scope>system</scope>
-      <systemPath>/usr/lib/jvm/jdk1.8.0_60/jre/../lib/tools.jar</systemPath>
+      <systemPath>/usr/lib/jvm/java-8-openjdk-amd64/jre/../lib/tools.jar</systemPath>
     </dependency>
   </dependencies>
 </project>
