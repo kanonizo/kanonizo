@@ -1,27 +1,23 @@
 package org.kanonizo.framework;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import com.google.gson.Gson;
 
-import org.kanonizo.util.ArrayStringCollector;
-import com.scythe.instrumenter.instrumentation.objectrepresentation.Branch;
-import com.scythe.instrumenter.instrumentation.objectrepresentation.Line;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 public class TestCaseExecutionData {
   private double branchCoverage;
   private double lineCoverage;
-  private List<Line> linesCovered;
-  private List<Branch> branchesFullyCovered;
-  private List<Branch> branchesPartiallyCovered;
+  private Map<String, Set<Integer>> linesCovered;
+  private Map<String, Set<Integer>> branchesCovered;
 
-  public TestCaseExecutionData(double branchCoverage, double lineCoverage, List<Line> linesCovered,
-      List<Branch> branchesFullyCovered, List<Branch> branchesPartiallyCovered) {
+  public TestCaseExecutionData(double branchCoverage, double lineCoverage, Map<String, Set<Integer>> linesCovered, Map<String, Set<Integer>> branchesCovered) {
     this.branchCoverage = branchCoverage;
     this.lineCoverage = lineCoverage;
     this.linesCovered = linesCovered;
-    this.branchesFullyCovered = branchesFullyCovered;
-    this.branchesPartiallyCovered = branchesPartiallyCovered;
+    this.branchesCovered = branchesCovered;
   }
 
   public double getBranchCoverage() {
@@ -32,33 +28,27 @@ public class TestCaseExecutionData {
     return lineCoverage;
   }
 
-  public List<Line> getLinesCovered() {
-    return Collections.unmodifiableList(linesCovered);
+  public Map<String, Set<Integer>> getLinesCovered() {
+    return Collections.unmodifiableMap(linesCovered);
   }
 
-  public List<Branch> getBranchesPartiallyCovered() {
-    return new ArrayList<>(branchesPartiallyCovered);
-  }
-
-  public List<Branch> getBranchesFullyCovered() {
-    return new ArrayList<>(branchesFullyCovered);
+  public Map<String, Set<Integer>> getBranchesCovered() {
+    return Collections.unmodifiableMap(branchesCovered);
   }
 
   @Override
   public TestCaseExecutionData clone() {
-    TestCaseExecutionData clone = new TestCaseExecutionData(branchCoverage, lineCoverage, new ArrayList<Line>(),
-        new ArrayList<Branch>(), new ArrayList<Branch>());
-    clone.linesCovered.addAll(linesCovered);
-    clone.branchesPartiallyCovered.addAll(branchesPartiallyCovered);
-    clone.branchesFullyCovered.addAll(branchesFullyCovered);
+    TestCaseExecutionData clone = new TestCaseExecutionData(branchCoverage, lineCoverage, new HashMap<>(),
+        new HashMap<>());
+    clone.linesCovered.putAll(linesCovered);
+    clone.branchesCovered.putAll(branchesCovered);
     return clone;
   }
 
   @Override
   public String toString() {
-    return "Coverage achieved: \nBranch Coverage - " + getBranchCoverage() + "\nLine Coverage - " + getLineCoverage()
-        + "\nLines Covered - " + linesCovered.stream().map(Line::getLineNumber).map(i -> Integer.toString(i))
-            .collect(new ArrayStringCollector());
+    Gson gson = new Gson();
+    return gson.toJson(this);
   }
 
 }

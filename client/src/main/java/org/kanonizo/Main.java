@@ -18,7 +18,7 @@ import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.framework.SUTChromosome;
 import org.kanonizo.framework.TestCaseChromosome;
 import org.kanonizo.framework.TestSuiteChromosome;
-import org.kanonizo.framework.instrumentation.Instrumenter;
+import org.kanonizo.framework.instrumentation.ScytheInstrumenter;
 import org.kanonizo.util.Util;
 import org.reflections.Reflections;
 
@@ -74,7 +74,7 @@ public class Main {
      *         contained within the specified location
      */
     public static void setupFramework(CommandLine line, Framework fw) throws MissingOptionException {
-        Instrumenter.getNullOut();
+        ScytheInstrumenter.getNullOut();
         File file;
         String folder;
         String[] libFolders;

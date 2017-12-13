@@ -1,35 +1,23 @@
 package org.kanonizo.framework;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
-
-import org.junit.runner.JUnitCore;
-import org.junit.runner.Request;
-import org.junit.runner.Result;
-import org.junit.runner.notification.Failure;
-
-import org.kanonizo.Properties;
-import org.kanonizo.framework.instrumentation.Instrumented;
 import com.scythe.instrumenter.InstrumentationProperties;
 import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import com.scythe.instrumenter.analysis.task.AbstractTask;
 import com.scythe.instrumenter.analysis.task.Task;
 import com.scythe.instrumenter.analysis.task.TaskTimer;
-import com.scythe.instrumenter.instrumentation.objectrepresentation.Branch;
-import com.scythe.instrumenter.instrumentation.objectrepresentation.Line;
 import com.scythe.instrumenter.testcase.TestCaseWrapper;
+import org.junit.runner.JUnitCore;
+import org.junit.runner.Request;
+import org.junit.runner.Result;
+import org.junit.runner.notification.Failure;
+import org.kanonizo.Framework;
+import org.kanonizo.Properties;
+import org.kanonizo.framework.instrumentation.Instrumented;
+import org.kanonizo.framework.instrumentation.Instrumenter;
+
+import java.lang.reflect.Method;
+import java.util.*;
+import java.util.concurrent.*;
 
 public class TestCaseChromosome extends Chromosome implements Instrumented {
     private static final long TIMEOUT = Properties.TIMEOUT;
@@ -57,8 +45,7 @@ public class TestCaseChromosome extends Chromosome implements Instrumented {
      * If the instrumented version is not loaded, code coverage goes a little
      * bit funky.
      *
-     * @throws ClassNotFoundException
-     *             if the ClassLoader can't find the {@link #testClass} by name
+     * @throws ClassNotFoundException if the ClassLoader can't find the {@link #testClass} by name
      */
     public void run() {
         long startTime = System.currentTimeMillis();
@@ -165,8 +152,8 @@ public class TestCaseChromosome extends Chromosome implements Instrumented {
         return lines;
     }
 
-    public Map<CUTChromosome, List<Line>> getLineNumbersCovered() {
-        Map<CUTChromosome, List<Line>> linesCovered = new HashMap<CUTChromosome, List<Line>>();
+    public Map<CUTChromosome, Map<String, Set<Integer>>> getLineNumbersCovered() {
+        Map<CUTChromosome, Map<String, Set<Integer>>> linesCovered = new HashMap<>();
         executionData.entrySet().stream()
                 .forEach((entry) -> linesCovered.put(entry.getKey(), entry.getValue().getLinesCovered()));
         return linesCovered;
@@ -186,38 +173,24 @@ public class TestCaseChromosome extends Chromosome implements Instrumented {
         return 0.0;
     }
 
-    public List<Line> getAllLinesCovered(CUTChromosome c) {
+    public Map<String, Set<Integer>> getAllLinesCovered(CUTChromosome c) {
         if (executionData.containsKey(c)) {
             return executionData.get(c).getLinesCovered();
         }
-        return Collections.emptyList();
+        return Collections.emptyMap();
     }
 
-    public List<Branch> getAllBranchesFullyCovered(CUTChromosome c) {
+    public Map<String, Set<Integer>> getAllBranchesCovered(CUTChromosome c) {
         if (executionData.containsKey(c)) {
-            return executionData.get(c).getBranchesFullyCovered();
+            return executionData.get(c).getBranchesCovered();
         }
-        return Collections.emptyList();
+        return Collections.emptyMap();
     }
 
-    public Map<CUTChromosome, List<Branch>> getAllBranchesFullyCovered() {
-        Map<CUTChromosome, List<Branch>> branchesCovered = new HashMap<>();
+    public Map<CUTChromosome, Map<String, Set<Integer>>> getAllBranchesCovered() {
+        Map<CUTChromosome, Map<String, Set<Integer>>> branchesCovered = new HashMap<>();
         executionData.entrySet().stream()
-                .forEach(entry -> branchesCovered.put(entry.getKey(), entry.getValue().getBranchesFullyCovered()));
-        return branchesCovered;
-    }
-
-    public List<Branch> getAllBranchesPartiallyCovered(CUTChromosome c) {
-        if (executionData.containsKey(c)) {
-            return executionData.get(c).getBranchesPartiallyCovered();
-        }
-        return Collections.emptyList();
-    }
-
-    public Map<CUTChromosome, List<Branch>> getAllBranchesPartiallyCovered() {
-        Map<CUTChromosome, List<Branch>> branchesCovered = new HashMap<>();
-        executionData.entrySet().stream()
-                .forEach(entry -> branchesCovered.put(entry.getKey(), entry.getValue().getBranchesPartiallyCovered()));
+                .forEach(entry -> branchesCovered.put(entry.getKey(), entry.getValue().getBranchesCovered()));
         return branchesCovered;
     }
 
@@ -231,35 +204,17 @@ public class TestCaseChromosome extends Chromosome implements Instrumented {
 
     @Override
     public void instrumentationFinished() {
-        List<Class<?>> changedClasses = ClassAnalyzer.getChangedClasses();
-        for (Class<?> cl : changedClasses) {
-            if (CUTChromosomeStore.get(cl.getName()) != null) {
-                List<Line> lines = ClassAnalyzer.getCoverableLines(cl.getName());
-                List<Branch> branches = ClassAnalyzer.getCoverableBranches(cl.getName());
-                int totalLines = lines.size();
-                int totalBranches = 2 * branches.size();
-                lines = lines.stream().filter(line -> line.getHits() > 0).collect(Collectors.toList());
-                List<Branch> fullyCovered = branches.stream()
-                        .filter(branch -> branch.getTrueHits() > 0 && branch.getFalseHits() > 0).map(Branch::clone)
-                        .collect(Collectors.toList());
-                List<Branch> partiallyCovered = branches.stream()
-                        .filter(branch -> !fullyCovered.contains(branch)
-                                && (branch.getTrueHits() > 0 || branch.getFalseHits() > 0))
-                        .map(Branch::clone).collect(Collectors.toList());
-                double lineCoverage = lines.size() / (double) totalLines;
-                double branchCoverage = branches.stream().mapToDouble(branch -> {
-                    if (branch.getTrueHits() == 0 && branch.getFalseHits() == 0) {
-                        return 0;
-                    } else if (branch.getTrueHits() > 0 && branch.getFalseHits() > 0) {
-                        return 2;
-                    } else {
-                        return 1;
-                    }
-                }).sum() / totalBranches;
-                executionData.put(CUTChromosomeStore.get(cl.getName()),
-                        new TestCaseExecutionData(branchCoverage, lineCoverage, lines, fullyCovered, partiallyCovered));
-            }
+        Instrumenter inst = Framework.getInstrumenter();
+        Map<String, Set<Integer>> linesCovered = inst.getLinesCovered(this);
+        Map<String, Set<Integer>> branchesCovered = inst.getBranchesCovered(this);
+        for(Class<?> cl : inst.getAffectedClasses()){
+            CUTChromosome cut = CUTChromosomeStore.get(cl.getName());
+            double lineCoverage = inst.getLineCoverage(cut);
+            double branchCoverage = inst.getBranchCoverage(cut);
+            executionData.put(CUTChromosomeStore.get(cl.getName()),
+                    new TestCaseExecutionData( branchCoverage, lineCoverage, linesCovered, branchesCovered));
         }
+
     }
 
     @Override

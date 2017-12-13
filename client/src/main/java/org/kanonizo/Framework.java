@@ -1,5 +1,25 @@
 package org.kanonizo;
 
+import com.scythe.instrumenter.analysis.ClassAnalyzer;
+import com.scythe.instrumenter.instrumentation.InstrumentingClassLoader;
+import org.apache.bcel.classfile.ClassParser;
+import org.apache.bcel.classfile.JavaClass;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.junit.Test;
+import org.kanonizo.algorithms.MutationSearchAlgorithm;
+import org.kanonizo.algorithms.SearchAlgorithm;
+import org.kanonizo.algorithms.metaheuristics.fitness.*;
+import org.kanonizo.framework.*;
+import org.kanonizo.framework.instrumentation.Instrumenter;
+import org.kanonizo.framework.instrumentation.NullInstrumenter;
+import org.kanonizo.framework.instrumentation.ScytheInstrumenter;
+import org.kanonizo.reporting.CoverageWriter;
+import org.kanonizo.reporting.CsvWriter;
+import org.kanonizo.reporting.MiscStatsWriter;
+import org.kanonizo.reporting.TestCaseOrderingWriter;
+import org.kanonizo.util.Util;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -10,33 +30,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.apache.bcel.classfile.ClassParser;
-import org.apache.bcel.classfile.JavaClass;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.junit.Test;
-
-import org.kanonizo.algorithms.MutationSearchAlgorithm;
-import org.kanonizo.algorithms.SearchAlgorithm;
-import org.kanonizo.algorithms.metaheuristics.fitness.APBCFunction;
-import org.kanonizo.algorithms.metaheuristics.fitness.APFDFunction;
-import org.kanonizo.algorithms.metaheuristics.fitness.APLCFunction;
-import org.kanonizo.algorithms.metaheuristics.fitness.FitnessFunction;
-import org.kanonizo.algorithms.metaheuristics.fitness.InstrumentedFitnessFunction;
-import org.kanonizo.framework.CUTChromosome;
-import org.kanonizo.framework.Chromosome;
-import org.kanonizo.framework.SUTChromosome;
-import org.kanonizo.framework.TestCaseChromosome;
-import org.kanonizo.framework.TestSuiteChromosome;
-import org.kanonizo.framework.instrumentation.Instrumenter;
-import org.kanonizo.reporting.CoverageWriter;
-import org.kanonizo.reporting.CsvWriter;
-import org.kanonizo.reporting.MiscStatsWriter;
-import org.kanonizo.reporting.TestCaseOrderingWriter;
-import org.kanonizo.util.Util;
-import com.scythe.instrumenter.analysis.ClassAnalyzer;
-import com.scythe.instrumenter.instrumentation.InstrumentingClassLoader;
-
 public class Framework {
     private File sourceFolder;
     private File testFolder;
@@ -46,6 +39,16 @@ public class Framework {
     private SUTChromosome sut;
     private TestSuiteChromosome testSuite;
     private SearchAlgorithm algorithm;
+    private static Instrumenter inst = new NullInstrumenter();
+
+    public static Instrumenter getInstrumenter() {
+        return inst;
+    }
+
+    public static void setInstrumenter(Instrumenter inst) {
+        Framework.inst = inst;
+    }
+
 
     public Framework() {
         Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
@@ -184,7 +187,7 @@ public class Framework {
             return;
         }
         PrintStream sysOut = System.out;
-        System.setOut(Instrumenter.getNullOut());
+        System.setOut(ScytheInstrumenter.getNullOut());
         Class<?> cl = null;
         try {
             ClassParser parser = new ClassParser(file.getAbsolutePath());
@@ -232,7 +235,7 @@ public class Framework {
             return;
         }
         PrintStream sysOut = System.out;
-        System.setOut(Instrumenter.getNullOut());
+        System.setOut(ScytheInstrumenter.getNullOut());
         Class<?> cl = null;
         try {
             ClassParser parser = new ClassParser(file.getAbsolutePath());
