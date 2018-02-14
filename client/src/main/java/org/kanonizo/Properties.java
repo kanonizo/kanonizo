@@ -92,7 +92,7 @@ public class Properties implements PropertySource {
      * where the fitness of the best solution in a population does not increase
      */
     @Parameter(key = "use_stagnation_stopping_condition", description = "Whether or not to use an stagnation stopping condition. If true, then the value of PATIENCE will be used to determine how long an algorithm can go without improving fitness before being stopped", category = "TCP")
-    public static boolean USE_STAGNATION = true;
+    public static boolean USE_STAGNATION = false;
 
     /**
      * Probability of a test case being removed during mutation
@@ -137,7 +137,7 @@ public class Properties implements PropertySource {
     public static int TIMEOUT = 100000;
 
     @Parameter(key = "use_timeout", description = "Whether or not to use the test case timeout defined by Properties.TIMEOUT. Since for deterministic test cases we should not be expecting any infinite loops, it becomes less likely that timeouts will be hit", category = "TCP")
-    public static boolean USE_TIMEOUT = true;
+    public static boolean USE_TIMEOUT = false;
 
     /**
      * Not intended to be used from command line, so don't have an
@@ -148,6 +148,9 @@ public class Properties implements PropertySource {
 
     @Parameter(key = "track_generation_fitness", description = "In the FitnessWriter it is possible to track the current fitness evaluation or the entire generation max fitness. Seeing the entire generation max fitness allows the user to see the progression of the population over time (for example in the GA), while seeing the individual fitness allows to see the spread of fitness scores across the population/evolutions. Set to true to track the whole generation fitness, set to false to see individual evaluation fitness", category = "TCP")
     public static boolean TRACK_GENERATION_FITNESS = true;
+
+    @Parameter(key = "instrumenter", description = "Choice of instrumentation tool to use to collect code coverage from test case execution", category="TCP")
+    public static String INSTRUMENTER = "Scythe";
 
     private Map<String, Field> parameterMap = new HashMap<String, Field>();
 

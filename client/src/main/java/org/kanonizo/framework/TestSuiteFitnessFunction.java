@@ -3,10 +3,9 @@ package org.kanonizo.framework;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.Collectors;
-
-import com.scythe.instrumenter.instrumentation.objectrepresentation.Line;
 
 public class TestSuiteFitnessFunction implements ToDoubleFunction<TestCaseChromosome> {
 
@@ -20,10 +19,10 @@ public class TestSuiteFitnessFunction implements ToDoubleFunction<TestCaseChromo
 
 	@Override
 	public double applyAsDouble(TestCaseChromosome value) {
-		Map<CUTChromosome, List<Line>> coveredLines = value.getLineNumbersCovered();
+		Map<CUTChromosome, Set<Integer>> coveredLines = value.getLineNumbersCovered();
 		int newlyCoveredLines = coveredLines.entrySet().stream().mapToInt(f -> {
 			CUTChromosome cut = f.getKey();
-			List<Line> cov = f.getValue();
+			Set<Integer> cov = f.getValue();
 			if (coverableLines.containsKey(cut)) {
 				return cov.stream().filter(a -> coverableLines.get(cut).contains(a)).collect(Collectors.toList())
 						.size();

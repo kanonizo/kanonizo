@@ -10,6 +10,7 @@ import java.util.*;
  * Class to not instrument classes, not interested in the output of test cases, defers class loading to the system class
  * loader
  */
+@org.kanonizo.annotations.Instrumenter(readableName = "null")
 public class NullInstrumenter implements Instrumenter {
     @Override
     public Class<?> loadClass(String className) throws ClassNotFoundException {
@@ -50,4 +51,5 @@ public class NullInstrumenter implements Instrumenter {
     public List<Class<?>> getAffectedClasses() {
         return Collections.emptyList();
     }
+
 }

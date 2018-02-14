@@ -1,17 +1,15 @@
 package org.kanonizo.algorithms.metaheuristics.fitness;
 
+import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import org.kanonizo.framework.CUTChromosome;
 import org.kanonizo.framework.TestCaseChromosome;
 import org.kanonizo.framework.TestSuiteChromosome;
-import com.scythe.instrumenter.analysis.ClassAnalyzer;
-import com.scythe.instrumenter.instrumentation.objectrepresentation.CoverableGoal;
 
 public abstract class APFDFunction extends InstrumentedFitnessFunction {
-  protected List<? extends CoverableGoal> totalGoals;
+  protected List<Integer> totalGoals;
   protected double coveredGoals = 0;
   protected TestSuiteChromosome chrom;
 
@@ -29,20 +27,20 @@ public abstract class APFDFunction extends InstrumentedFitnessFunction {
     for (int i = 0; i < testCases.size(); i++) {
       final int ind = i;
       TestCaseChromosome tc = testCases.get(i);
-      Map<CUTChromosome, List<CoverableGoal>> goalsCovered = getCoveredGoals(tc);
+      Map<CUTChromosome, List<Integer>> goalsCovered = getCoveredGoals(tc);
       goalsCovered.forEach((cut, goals) -> {
         int classId = ClassAnalyzer.getClassId(cut.getCUT().getName());
         if (goalMap.containsKey(classId)) {
           Map<Integer, Integer> cov = goalMap.get(classId);
-          for (CoverableGoal goal : goals) {
-            if (!cov.containsKey(goal.getGoalId())) {
-              cov.put(goal.getGoalId(), ind + 1);
+          for (Integer goal : goals) {
+            if (!cov.containsKey(goal)) {
+              cov.put(goal, ind + 1);
             }
           }
         } else {
           Map<Integer, Integer> cov = new HashMap<>();
-          for (CoverableGoal goal : goals) {
-            cov.put(goal.getGoalId(), ind + 1);
+          for (Integer goal : goals) {
+            cov.put(goal, ind + 1);
           }
           goalMap.put(classId, cov);
         }
@@ -72,9 +70,9 @@ public abstract class APFDFunction extends InstrumentedFitnessFunction {
     return totalGoals.size() == 0 ? 0 : coveredGoals / totalGoals.size();
   }
 
-  public abstract Map<CUTChromosome, List<CoverableGoal>> getCoveredGoals(TestCaseChromosome tc);
+  public abstract Map<CUTChromosome, List<Integer>> getCoveredGoals(TestCaseChromosome tc);
 
-  protected abstract List<? extends CoverableGoal> getGoals();
+  protected abstract List<Integer> getGoals();
 
   @Override
   public void dispose() {

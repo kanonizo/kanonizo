@@ -1,19 +1,17 @@
 package org.kanonizo.framework;
 
 import com.google.gson.Gson;
-
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.HashSet;
 import java.util.Set;
 
 public class TestCaseExecutionData {
   private double branchCoverage;
   private double lineCoverage;
-  private Map<String, Set<Integer>> linesCovered;
-  private Map<String, Set<Integer>> branchesCovered;
+  private Set<Integer> linesCovered;
+  private Set<Integer> branchesCovered;
 
-  public TestCaseExecutionData(double branchCoverage, double lineCoverage, Map<String, Set<Integer>> linesCovered, Map<String, Set<Integer>> branchesCovered) {
+  public TestCaseExecutionData(double branchCoverage, double lineCoverage, Set<Integer> linesCovered, Set<Integer> branchesCovered) {
     this.branchCoverage = branchCoverage;
     this.lineCoverage = lineCoverage;
     this.linesCovered = linesCovered;
@@ -28,20 +26,20 @@ public class TestCaseExecutionData {
     return lineCoverage;
   }
 
-  public Map<String, Set<Integer>> getLinesCovered() {
-    return Collections.unmodifiableMap(linesCovered);
+  public Set<Integer> getLinesCovered() {
+    return Collections.unmodifiableSet(linesCovered);
   }
 
-  public Map<String, Set<Integer>> getBranchesCovered() {
-    return Collections.unmodifiableMap(branchesCovered);
+  public Set<Integer> getBranchesCovered() {
+    return Collections.unmodifiableSet(branchesCovered);
   }
 
   @Override
   public TestCaseExecutionData clone() {
-    TestCaseExecutionData clone = new TestCaseExecutionData(branchCoverage, lineCoverage, new HashMap<>(),
-        new HashMap<>());
-    clone.linesCovered.putAll(linesCovered);
-    clone.branchesCovered.putAll(branchesCovered);
+    TestCaseExecutionData clone = new TestCaseExecutionData(branchCoverage, lineCoverage, new HashSet<>(),
+        new HashSet<>());
+    clone.linesCovered.addAll(linesCovered);
+    clone.branchesCovered.addAll(branchesCovered);
     return clone;
   }
 

@@ -11,13 +11,11 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collector;
 
-import com.scythe.instrumenter.instrumentation.objectrepresentation.Line;
-
 public class CUTCollector
-		implements Collector<CUTChromosome, Map<CUTChromosome, List<Line>>, Map<CUTChromosome, List<Line>>> {
+		implements Collector<CUTChromosome, Map<CUTChromosome, List<Integer>>, Map<CUTChromosome, List<Integer>>> {
 
 	@Override
-	public BiConsumer<Map<CUTChromosome, List<Line>>, CUTChromosome> accumulator() {
+	public BiConsumer<Map<CUTChromosome, List<Integer>>, CUTChromosome> accumulator() {
 		return (t, c) -> t.put(c, c.getCoverableLines());
 	}
 
@@ -27,7 +25,7 @@ public class CUTCollector
 	}
 
 	@Override
-	public BinaryOperator<Map<CUTChromosome, List<Line>>> combiner() {
+	public BinaryOperator<Map<CUTChromosome, List<Integer>>> combiner() {
 		return (left, right) -> {
 			left.putAll(right);
 			return left;
@@ -35,17 +33,17 @@ public class CUTCollector
 	}
 
 	@Override
-	public Function<Map<CUTChromosome, List<Line>>, Map<CUTChromosome, List<Line>>> finisher() {
+	public Function<Map<CUTChromosome, List<Integer>>, Map<CUTChromosome, List<Integer>>> finisher() {
 		return t -> t;
 	}
 
 	@Override
-	public Supplier<Map<CUTChromosome, List<Line>>> supplier() {
-		return new Supplier<Map<CUTChromosome, List<Line>>>() {
+	public Supplier<Map<CUTChromosome, List<Integer>>> supplier() {
+		return new Supplier<Map<CUTChromosome, List<Integer>>>() {
 
 			@Override
-			public Map<CUTChromosome, List<Line>> get() {
-				return new HashMap<CUTChromosome, List<Line>>();
+			public Map<CUTChromosome, List<Integer>> get() {
+				return new HashMap<CUTChromosome, List<Integer>>();
 			}
 
 		};

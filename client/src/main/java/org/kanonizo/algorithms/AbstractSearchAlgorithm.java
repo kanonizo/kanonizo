@@ -1,5 +1,9 @@
 package org.kanonizo.algorithms;
 
+import com.scythe.instrumenter.InstrumentationProperties;
+import com.scythe.instrumenter.analysis.task.AbstractTask;
+import com.scythe.instrumenter.analysis.task.Task;
+import com.scythe.instrumenter.analysis.task.TaskTimer;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -7,18 +11,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.kanonizo.algorithms.stoppingconditions.StoppingCondition;
 import org.kanonizo.framework.TestCaseChromosome;
 import org.kanonizo.framework.TestSuiteChromosome;
-import com.scythe.instrumenter.InstrumentationProperties;
-import com.scythe.instrumenter.analysis.task.AbstractTask;
-import com.scythe.instrumenter.analysis.task.Task;
-import com.scythe.instrumenter.analysis.task.TaskTimer;
 
 public abstract class AbstractSearchAlgorithm implements SearchAlgorithm {
   protected TestSuiteChromosome problem;
   protected TestSuiteChromosome currentOptimal;
+  private static final Logger LOGGER = LogManager.getLogger(AbstractSearchAlgorithm.class);
 
   protected int age;
   protected List<StoppingCondition> stoppingConditions = new ArrayList<>();
@@ -46,7 +48,13 @@ public abstract class AbstractSearchAlgorithm implements SearchAlgorithm {
   }
 
   protected boolean shouldFinish() {
-    return stoppingConditions.stream().anyMatch(cond -> cond.shouldFinish(this));
+    for(StoppingCondition cond : stoppingConditions){
+      if(cond.shouldFinish(this)){
+        LOGGER.info("Algorithm terminated by "+cond.getClass().getName());
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override

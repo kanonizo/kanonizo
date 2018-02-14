@@ -1,5 +1,6 @@
 package org.kanonizo.framework;
 
+import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -9,10 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
 import org.kanonizo.Disposable;
 import org.kanonizo.Properties;
 import org.kanonizo.algorithms.metaheuristics.fitness.APBCFunction;
@@ -20,9 +19,6 @@ import org.kanonizo.algorithms.metaheuristics.fitness.APLCFunction;
 import org.kanonizo.algorithms.metaheuristics.fitness.FitnessFunction;
 import org.kanonizo.algorithms.metaheuristics.fitness.InstrumentedFitnessFunction;
 import org.kanonizo.util.RandomInstance;
-import com.scythe.instrumenter.analysis.ClassAnalyzer;
-import com.scythe.instrumenter.instrumentation.objectrepresentation.Branch;
-import com.scythe.instrumenter.instrumentation.objectrepresentation.Line;
 
 public class TestSuiteChromosome extends Chromosome implements Comparable<TestSuiteChromosome>, Disposable {
   private SUTChromosome sut;
@@ -84,13 +80,18 @@ public class TestSuiteChromosome extends Chromosome implements Comparable<TestSu
   }
 
   public int getCoveredLines() {
-    Set<Line> coveredLines = new HashSet<>();
+    Map<String, Set<Integer>> coveredLines = new HashMap<>();
     for (CUTChromosome cut : sut.getClassesUnderTest()) {
       for (TestCaseChromosome tc : testCases) {
-        coveredLines.addAll(tc.getAllLinesCovered(cut));
+        Set<Integer> linesCoveredByTest = tc.getAllLinesCovered(cut);
+        if (coveredLines.containsKey(cut.getCUT().getName()) && linesCoveredByTest.size() > 0) {
+          coveredLines.get(cut.getCUT().getName()).addAll(linesCoveredByTest);
+        } else if (linesCoveredByTest.size() > 0) {
+          coveredLines.put(cut.getCUT().getName(), new HashSet<>(linesCoveredByTest));
+        }
       }
     }
-    return coveredLines.size();
+    return coveredLines.entrySet().stream().mapToInt(entry -> entry.getValue().size()).sum();
   }
 
   public int getTotalBranches() {
@@ -101,44 +102,26 @@ public class TestSuiteChromosome extends Chromosome implements Comparable<TestSu
   }
 
   public int getCoveredBranches() {
-    Set<Branch> fullyCovered = new HashSet<>();
-    Map<Branch, Boolean> partiallyCovered = new HashMap<>();
+    Map<String, Set<Integer>> coveredBranches = new HashMap<>();
     for (CUTChromosome cut : sut.getClassesUnderTest()) {
       for (TestCaseChromosome tc : testCases) {
-        for (Branch b : tc.getAllBranchesFullyCovered(cut)) {
-          fullyCovered.add(b);
-          if (partiallyCovered.containsKey(b)) {
-            partiallyCovered.remove(b);
-          }
-        }
-        for (Branch b : tc.getAllBranchesPartiallyCovered(cut)) {
-          if (!fullyCovered.contains(b)) {
-            if (partiallyCovered.containsKey(b)) {
-              if (partiallyCovered.get(b) && b.getFalseHits() > 0) {
-                partiallyCovered.remove(b);
-                fullyCovered.add(b);
-              } else if (!partiallyCovered.get(b) && b.getTrueHits() > 0) {
-                partiallyCovered.remove(b);
-                fullyCovered.add(b);
-              }
-            } else {
-              partiallyCovered.put(b, b.getTrueHits() > 0);
-            }
-          }
+        if (coveredBranches.containsKey(cut.getCUT().getName())) {
+          coveredBranches.get(cut.getCUT().getName()).addAll(tc.getAllBranchesCovered(cut));
+        } else {
+          coveredBranches.put(cut.getCUT().getName(), tc.getAllBranchesCovered(cut));
         }
       }
     }
-    return (2 * fullyCovered.size()) + partiallyCovered.size();
+    return coveredBranches.entrySet().stream().mapToInt(entry -> entry.getValue().size()).sum();
   }
 
   public double getLineCoverage(TestCaseChromosome tcc) {
-    int linesCovered = tcc.getLineNumbersCovered().values().stream().mapToInt(List::size).sum();
+    int linesCovered = tcc.getLineNumbersCovered().values().stream().mapToInt(Set::size).sum();
     return ((double) linesCovered) / getTotalLines();
   }
 
   public double getBranchCoverage(TestCaseChromosome tcc) {
-    int branchesCovered = 2 * tcc.getAllBranchesFullyCovered().values().stream().mapToInt(List::size).sum()
-        + tcc.getAllBranchesPartiallyCovered().values().stream().mapToInt(List::size).sum();
+    int branchesCovered = tcc.getAllBranchesCovered().values().stream().mapToInt(Set::size).sum();
     return ((double) branchesCovered) / getTotalBranches();
   }
 
@@ -303,14 +286,14 @@ public class TestSuiteChromosome extends Chromosome implements Comparable<TestSu
   public FitnessFunction<TestSuiteChromosome> getFitnessFunction() {
     if (func == null) {
       switch (Properties.COVERAGE_APPROACH) {
-      case LINE:
-        func = new APLCFunction(this);
-        break;
-      case BRANCH:
-        func = new APBCFunction(this);
-        break;
-      default:
-        func = new APLCFunction(this);
+        case LINE:
+          func = new APLCFunction(this);
+          break;
+        case BRANCH:
+          func = new APBCFunction(this);
+          break;
+        default:
+          func = new APLCFunction(this);
       }
     }
     return func;
@@ -329,15 +312,15 @@ public class TestSuiteChromosome extends Chromosome implements Comparable<TestSu
     StringBuilder sb = new StringBuilder();
     sb.append("\n-------------------------------------------\nMAXIMUM FITNESS: " + String.format("%.4f", getFitness())
         + "\n-------------------------------------------\n");
-    Map<CUTChromosome, Set<Line>> branchesCovered = new HashMap<>();
+    Map<CUTChromosome, Set<Integer>> branchesCovered = new HashMap<>();
     testCases.stream().forEach(tc -> {
-      Map<CUTChromosome, List<Line>> branches = tc.getLineNumbersCovered();
+      Map<CUTChromosome, Set<Integer>> branches = tc.getLineNumbersCovered();
       branches.entrySet().stream().forEach(entry -> {
         CUTChromosome cut = entry.getKey();
         if (branchesCovered.containsKey(cut)) {
           branchesCovered.get(cut).addAll(entry.getValue());
         } else {
-          branchesCovered.put(cut, new HashSet<Line>(entry.getValue()));
+          branchesCovered.put(cut, new HashSet<Integer>(entry.getValue()));
         }
       });
     });
@@ -394,8 +377,7 @@ public class TestSuiteChromosome extends Chromosome implements Comparable<TestSu
    * that the {@link FitnessFunction} object for this class isn't known by any other class, and may be a minimisation function (i.e. aiming for a 0 fitness) or a maximisation function (i.e. aiming for
    * highest possible fitness). This method determines the fitter individual according to the current {@link #func}
    *
-   * @param other
-   *          - the {@link TestSuiteChromosome} object to compare to <code>this</code>
+   * @param other - the {@link TestSuiteChromosome} object to compare to <code>this</code>
    * @return the fitter individual according to the current fitness function. Always <code>this</code> or <code>other</code>, never null or a new object. This allows for object comparison if required
    */
   public TestSuiteChromosome fitter(TestSuiteChromosome other) {

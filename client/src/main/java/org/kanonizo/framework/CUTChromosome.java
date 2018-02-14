@@ -1,20 +1,18 @@
 package org.kanonizo.framework;
 
+import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-
+import java.util.stream.Collectors;
 import org.kanonizo.framework.instrumentation.Instrumented;
 import org.kanonizo.util.Util;
-import com.scythe.instrumenter.analysis.ClassAnalyzer;
-import com.scythe.instrumenter.instrumentation.objectrepresentation.Branch;
-import com.scythe.instrumenter.instrumentation.objectrepresentation.Line;
 
 public class CUTChromosome extends Chromosome implements Instrumented {
   private Class<?> cut;
   private int totalLines;
-  private List<Line> coverableLines = new ArrayList<>();
-  private List<Branch> coverableBranches = new ArrayList<>();
+  private List<Integer> coverableLines = new ArrayList<>();
+  private List<Integer> coverableBranches = new ArrayList<>();
 
   public CUTChromosome(Class<?> cut) {
     this.cut = cut;
@@ -36,16 +34,16 @@ public class CUTChromosome extends Chromosome implements Instrumented {
 
   @Override
   public void instrumentationFinished() {
-    coverableLines = ClassAnalyzer.getCoverableLines(cut.getName());
-    coverableBranches = ClassAnalyzer.getCoverableBranches(cut.getName());
+    coverableLines = ClassAnalyzer.getCoverableLines(cut.getName()).stream().map(line -> line.getLineNumber()).collect(Collectors.toList());
+    coverableBranches = ClassAnalyzer.getCoverableBranches(cut.getName()).stream().map(branch -> branch.getGoalId()).collect(Collectors.toList());
     totalLines = coverableLines.size();
   }
 
-  public List<Line> getCoverableLines() {
+  public List<Integer> getCoverableLines() {
     return new LinkedList<>(coverableLines);
   }
 
-  public List<Branch> getCoverableBranches() {
+  public List<Integer> getCoverableBranches() {
     return new ArrayList<>(coverableBranches);
   }
 

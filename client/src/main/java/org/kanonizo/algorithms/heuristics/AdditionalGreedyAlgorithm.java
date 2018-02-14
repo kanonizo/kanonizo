@@ -1,17 +1,20 @@
 package org.kanonizo.algorithms.heuristics;
 
 import com.scythe.instrumenter.analysis.ClassAnalyzer;
-import com.scythe.instrumenter.instrumentation.objectrepresentation.CoverableGoal;
 import com.scythe.util.ClassUtils;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import org.kanonizo.algorithms.AbstractSearchAlgorithm;
 import org.kanonizo.algorithms.metaheuristics.fitness.APFDFunction;
 import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.commandline.ProgressBar;
 import org.kanonizo.framework.CUTChromosome;
 import org.kanonizo.framework.TestCaseChromosome;
-
-import java.util.*;
-import java.util.stream.Collectors;
 @Algorithm(readableName = "additionalgreedy")
 public class AdditionalGreedyAlgorithm extends AbstractSearchAlgorithm {
   Map<Integer, Set<Integer>> cache = new HashMap<>();
@@ -38,11 +41,11 @@ public class AdditionalGreedyAlgorithm extends AbstractSearchAlgorithm {
       totalLines = (int) getFitness(chr);
       newOrder.add(chr);
       testCases.remove(chr);
-      Map<CUTChromosome, List<CoverableGoal>> goals = ((APFDFunction) problem.getFitnessFunction())
+      Map<CUTChromosome, List<Integer>> goals = ((APFDFunction) problem.getFitnessFunction())
           .getCoveredGoals(chr);
       goals.entrySet().stream().forEach(entry -> {
         int classId = ClassAnalyzer.getClassId(entry.getKey().getCUT().getName());
-        cache.get(classId).addAll(entry.getValue().stream().map(goal -> goal.getGoalId()).collect(Collectors.toList()));
+        cache.get(classId).addAll(entry.getValue());
       });
       bar.reportProgress(newOrder.size(), (newOrder.size() + testCases.size()));
     }
@@ -61,7 +64,7 @@ public class AdditionalGreedyAlgorithm extends AbstractSearchAlgorithm {
         .mapToInt(entry -> {
           int classId = ClassAnalyzer.getClassId(entry.getKey().getCUT().getName());
           if (cache.containsKey(classId)) {
-            return entry.getValue().stream().mapToInt(goal -> cache.get(classId).contains(goal.getGoalId()) ? 0 : 1)
+            return entry.getValue().stream().mapToInt(goal -> cache.get(classId).contains(goal) ? 0 : 1)
                 .sum();
           } else {
             return entry.getValue().size();

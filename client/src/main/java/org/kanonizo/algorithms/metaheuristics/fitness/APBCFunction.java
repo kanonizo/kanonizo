@@ -5,11 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 import org.kanonizo.framework.CUTChromosome;
 import org.kanonizo.framework.TestCaseChromosome;
 import org.kanonizo.framework.TestSuiteChromosome;
-import com.scythe.instrumenter.instrumentation.objectrepresentation.CoverableGoal;
 
 public class APBCFunction extends APFDFunction {
 
@@ -18,15 +16,10 @@ public class APBCFunction extends APFDFunction {
   }
 
   @Override
-  public Map<CUTChromosome, List<CoverableGoal>> getCoveredGoals(TestCaseChromosome tc) {
-    Map<CUTChromosome, List<CoverableGoal>> returnMap = new HashMap<>();
-    tc.getAllBranchesFullyCovered().entrySet().forEach(entry -> {
-      List<CoverableGoal> goals = new ArrayList<>();
-      goals.addAll(entry.getValue());
-      returnMap.put(entry.getKey(), goals);
-    });
-    tc.getAllBranchesPartiallyCovered().entrySet().forEach(entry -> {
-      List<CoverableGoal> goals = new ArrayList<>();
+  public Map<CUTChromosome, List<Integer>> getCoveredGoals(TestCaseChromosome tc) {
+    Map<CUTChromosome, List<Integer>> returnMap = new HashMap<>();
+    tc.getAllBranchesCovered().entrySet().forEach(entry -> {
+      List<Integer> goals = new ArrayList<>();
       goals.addAll(entry.getValue());
       returnMap.put(entry.getKey(), goals);
     });
@@ -34,7 +27,7 @@ public class APBCFunction extends APFDFunction {
   }
 
   @Override
-  protected List<? extends CoverableGoal> getGoals() {
+  protected List<Integer> getGoals() {
     return chrom.getSUT().getClassesUnderTest().stream().map(CUTChromosome::getCoverableBranches).flatMap(List::stream)
         .collect(Collectors.toList());
   }

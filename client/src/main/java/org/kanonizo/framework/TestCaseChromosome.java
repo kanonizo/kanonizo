@@ -152,8 +152,8 @@ public class TestCaseChromosome extends Chromosome implements Instrumented {
         return lines;
     }
 
-    public Map<CUTChromosome, Map<String, Set<Integer>>> getLineNumbersCovered() {
-        Map<CUTChromosome, Map<String, Set<Integer>>> linesCovered = new HashMap<>();
+    public Map<CUTChromosome, Set<Integer>> getLineNumbersCovered() {
+        Map<CUTChromosome, Set<Integer>> linesCovered = new HashMap<>();
         executionData.entrySet().stream()
                 .forEach((entry) -> linesCovered.put(entry.getKey(), entry.getValue().getLinesCovered()));
         return linesCovered;
@@ -173,22 +173,22 @@ public class TestCaseChromosome extends Chromosome implements Instrumented {
         return 0.0;
     }
 
-    public Map<String, Set<Integer>> getAllLinesCovered(CUTChromosome c) {
+    public Set<Integer> getAllLinesCovered(CUTChromosome c) {
         if (executionData.containsKey(c)) {
             return executionData.get(c).getLinesCovered();
         }
-        return Collections.emptyMap();
+        return new HashSet<>();
     }
 
-    public Map<String, Set<Integer>> getAllBranchesCovered(CUTChromosome c) {
+    public Set<Integer> getAllBranchesCovered(CUTChromosome c) {
         if (executionData.containsKey(c)) {
             return executionData.get(c).getBranchesCovered();
         }
-        return Collections.emptyMap();
+        return new HashSet<>();
     }
 
-    public Map<CUTChromosome, Map<String, Set<Integer>>> getAllBranchesCovered() {
-        Map<CUTChromosome, Map<String, Set<Integer>>> branchesCovered = new HashMap<>();
+    public Map<CUTChromosome, Set<Integer>> getAllBranchesCovered() {
+        Map<CUTChromosome, Set<Integer>> branchesCovered = new HashMap<>();
         executionData.entrySet().stream()
                 .forEach(entry -> branchesCovered.put(entry.getKey(), entry.getValue().getBranchesCovered()));
         return branchesCovered;
@@ -212,7 +212,7 @@ public class TestCaseChromosome extends Chromosome implements Instrumented {
             double lineCoverage = inst.getLineCoverage(cut);
             double branchCoverage = inst.getBranchCoverage(cut);
             executionData.put(CUTChromosomeStore.get(cl.getName()),
-                    new TestCaseExecutionData( branchCoverage, lineCoverage, linesCovered, branchesCovered));
+                    new TestCaseExecutionData( branchCoverage, lineCoverage, linesCovered.get(cl.getName()), branchesCovered.get(cl.getName())));
         }
 
     }

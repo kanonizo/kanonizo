@@ -6,7 +6,16 @@ import com.scythe.instrumenter.instrumentation.ClassReplacementTransformer;
 import com.scythe.instrumenter.instrumentation.InstrumentingClassLoader;
 import com.scythe.instrumenter.mutation.MutationProperties;
 import com.scythe.util.ArrayUtils;
-import org.apache.commons.cli.*;
+import java.io.File;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.MissingOptionException;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kanonizo.algorithms.SearchAlgorithm;
@@ -21,11 +30,6 @@ import org.kanonizo.framework.TestSuiteChromosome;
 import org.kanonizo.framework.instrumentation.ScytheInstrumenter;
 import org.kanonizo.util.Util;
 import org.reflections.Reflections;
-
-import java.io.File;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
 
 public class Main {
     public static final Logger logger = LogManager.getLogger(Main.class);
@@ -109,6 +113,24 @@ public class Main {
         fw.setTestFolder(file);
         String algorithmChoice = line.hasOption("a") ? line.getOptionValue("a") : "";
         fw.setAlgorithm(getAlgorithm(algorithmChoice));
+        String instrumenter = Properties.INSTRUMENTER;
+        setInstrumenter(instrumenter);
+    }
+
+    private static void setInstrumenter(String instrumenter){
+        Reflections r = new Reflections();
+        Set<Class<?>> instrumenters = r.getTypesAnnotatedWith(org.kanonizo.annotations.Instrumenter.class);
+        for(Class<?> inst : instrumenters){
+            if(instrumenter.equals(inst.getAnnotation(org.kanonizo.annotations.Instrumenter.class).readableName())){
+                try {
+                    Framework.setInstrumenter((org.kanonizo.framework.instrumentation.Instrumenter)inst.newInstance());
+                } catch (InstantiationException e) {
+                    e.printStackTrace();
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     private static SearchAlgorithm getAlgorithm(String algorithmChoice) {

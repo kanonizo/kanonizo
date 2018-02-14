@@ -1,5 +1,6 @@
 package org.kanonizo.framework.instrumentation;
 
+import com.scythe.instrumenter.InstrumentationProperties;
 import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import com.scythe.instrumenter.instrumentation.InstrumentingClassLoader;
 import com.scythe.instrumenter.instrumentation.objectrepresentation.Branch;
@@ -20,18 +21,19 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 //
+@org.kanonizo.annotations.Instrumenter(readableName = "Scythe")
 public class ScytheInstrumenter implements Instrumenter {
   private TestSuiteChromosome testSuite;
   private static PrintStream defaultSysOut = System.out;
   private static PrintStream defaultSysErr = System.err;
   private static final PrintStream NULL_OUT;
-
   private static Logger logger;
 
   static {
     logger = LogManager.getLogger(ScytheInstrumenter.class);
 
     NULL_OUT = new NullPrintStream();
+    InstrumentationProperties.INSTRUMENT_BRANCHES = false;
   }
 
   private static ProgressBar bar = new ProgressBar(defaultSysOut);
@@ -72,7 +74,7 @@ public class ScytheInstrumenter implements Instrumenter {
             failures.addAll(testCase.getFailures());
           }
           bar.reportProgress((double) testSuite.getRunnableTestCases().indexOf(testCase) + 1,
-                  testSuite.getRunnableTestCases().size());
+              testSuite.getRunnableTestCases().size());
           ClassAnalyzer.collectHitCounters(true);
           testCase.instrumentationFinished();
           ClassAnalyzer.resetCoverage();

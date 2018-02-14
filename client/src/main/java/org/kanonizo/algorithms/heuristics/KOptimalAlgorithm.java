@@ -1,19 +1,16 @@
 package org.kanonizo.algorithms.heuristics;
 
+import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
-
 import org.kanonizo.algorithms.AbstractSearchAlgorithm;
 import org.kanonizo.commandline.ProgressBar;
 import org.kanonizo.framework.CUTChromosome;
 import org.kanonizo.framework.TestCaseChromosome;
-import com.scythe.instrumenter.analysis.ClassAnalyzer;
-import com.scythe.instrumenter.instrumentation.objectrepresentation.Line;
 
 public class KOptimalAlgorithm extends AbstractSearchAlgorithm {
 
@@ -40,7 +37,7 @@ public class KOptimalAlgorithm extends AbstractSearchAlgorithm {
                 testCases.remove(testCase);
                 testCase.getLineNumbersCovered().forEach((cut, lines) -> {
                     cache.get(cut)
-                            .addAll(lines.stream().map(line -> line.getLineNumber()).collect(Collectors.toList()));
+                            .addAll(lines);
                 });
             }
             bar.reportProgress(newOrder.size(), newOrder.size() + testCases.size());
@@ -74,11 +71,11 @@ public class KOptimalAlgorithm extends AbstractSearchAlgorithm {
     }
 
     private double getFitness(TestCaseChromosome tc1, TestCaseChromosome tc2) {
-        Map<CUTChromosome, List<Line>> linesCovered = tc1.getLineNumbersCovered();
+        Map<CUTChromosome, Set<Integer>> linesCovered = tc1.getLineNumbersCovered();
         Map<CUTChromosome, Set<Integer>> tempCache = new HashMap<CUTChromosome, Set<Integer>>(cache);
         double fitness = getFitness(linesCovered, tempCache);
         linesCovered.forEach((cut, covered) -> {
-            tempCache.get(cut).addAll(covered.stream().map(line -> line.getLineNumber()).collect(Collectors.toList()));
+            tempCache.get(cut).addAll(covered);
 
         });
         double fitness2 = getFitness(tc2.getLineNumbersCovered(), tempCache);
@@ -89,11 +86,11 @@ public class KOptimalAlgorithm extends AbstractSearchAlgorithm {
         return (fitness * 2) + fitness2;
     }
 
-    private double getFitness(Map<CUTChromosome, List<Line>> linesCovered, Map<CUTChromosome, Set<Integer>> tempCache) {
+    private double getFitness(Map<CUTChromosome, Set<Integer>> linesCovered, Map<CUTChromosome, Set<Integer>> tempCache) {
         return linesCovered.entrySet().stream().mapToDouble(entry -> {
             CUTChromosome cut = entry.getKey();
-            List<Line> covered = entry.getValue();
-            return covered.stream().mapToDouble(line -> tempCache.get(cut).contains(line.getLineNumber()) ? 0 : 1)
+            Set<Integer> covered = entry.getValue();
+            return covered.stream().mapToDouble(line -> tempCache.get(cut).contains(line) ? 0 : 1)
                     .sum();
         }).sum();
     }
