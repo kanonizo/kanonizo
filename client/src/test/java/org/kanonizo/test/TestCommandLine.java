@@ -8,7 +8,12 @@ import org.kanonizo.Framework;
 import org.kanonizo.Main;
 import org.mockito.Mock;
 
+<<<<<<< HEAD:client/src/test/java/org/kanonizo/test/TestCommandLine.java
 import static org.mockito.Mockito.when;
+=======
+import org.kanonizo.Framework;
+import org.kanonizo.Main;
+>>>>>>> 6640b020c437f087863f27ea82489c01f4d92759:src/test/java/test/com/dpaterson/testing/TestCommandLine.java
 
 public class TestCommandLine extends MockitoTest {
   private static final String SOURCE_OPTION = "s";

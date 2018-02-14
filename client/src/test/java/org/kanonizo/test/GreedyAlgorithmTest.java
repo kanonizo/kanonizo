@@ -8,7 +8,16 @@ import org.kanonizo.framework.TestCaseChromosome;
 
 import java.util.List;
 
+<<<<<<< HEAD:client/src/test/java/org/kanonizo/test/GreedyAlgorithmTest.java
 import static org.junit.Assert.assertTrue;
+=======
+import org.junit.Test;
+
+import org.kanonizo.algorithms.heuristics.GreedyAlgorithm;
+import org.kanonizo.framework.CUTChromosome;
+import org.kanonizo.framework.CUTChromosomeStore;
+import org.kanonizo.framework.TestCaseChromosome;
+>>>>>>> 6640b020c437f087863f27ea82489c01f4d92759:src/test/java/test/com/dpaterson/testing/GreedyAlgorithmTest.java
 
 public class GreedyAlgorithmTest extends SearchAlgorithmTest {
 

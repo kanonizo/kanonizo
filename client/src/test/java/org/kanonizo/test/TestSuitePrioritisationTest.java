@@ -9,12 +9,19 @@ import org.kanonizo.Properties.CoverageApproach;
 import org.kanonizo.TestSuitePrioritisation;
 import org.mockito.Mock;
 
+<<<<<<< HEAD:client/src/test/java/org/kanonizo/test/TestSuitePrioritisationTest.java
 import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
+=======
+import org.kanonizo.Properties;
+import org.kanonizo.TestSuitePrioritisation;
+import org.kanonizo.Properties.CoverageApproach;
+import com.scythe.instrumenter.PropertySource;
+>>>>>>> 6640b020c437f087863f27ea82489c01f4d92759:src/test/java/test/com/dpaterson/testing/TestSuitePrioritisationTest.java
 
 public class TestSuitePrioritisationTest extends MockitoTest {
   @Mock private CommandLine line;

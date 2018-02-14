@@ -9,3 +9,4 @@ target/
 classes/
 **/target
 out/
+dependency-reduced-pom.xml

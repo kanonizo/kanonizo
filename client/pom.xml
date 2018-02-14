@@ -5,7 +5,8 @@
 	<artifactId>kanonizo</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>Kanonizo</name>
-	<description>Kanonizcd o Test Case Prioritization Framework</description>
+	<description>Kanonizo Test Case Prioritization Framework</description>
+
 	<build>
 		<finalName>kanonizo</finalName>
 		<sourceDirectory>src/main/java</sourceDirectory>
