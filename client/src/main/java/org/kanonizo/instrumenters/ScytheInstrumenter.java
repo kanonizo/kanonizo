@@ -1,24 +1,32 @@
-package org.kanonizo.framework.instrumentation;
+package org.kanonizo.instrumenters;
 
 import com.scythe.instrumenter.InstrumentationProperties;
 import com.scythe.instrumenter.analysis.ClassAnalyzer;
+import com.scythe.instrumenter.instrumentation.ClassReplacementTransformer;
+import com.scythe.instrumenter.instrumentation.ClassReplacementTransformer.ShouldInstrumentChecker;
 import com.scythe.instrumenter.instrumentation.InstrumentingClassLoader;
 import com.scythe.instrumenter.instrumentation.objectrepresentation.Branch;
 import com.scythe.instrumenter.instrumentation.objectrepresentation.Line;
+import java.io.PrintStream;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.junit.Test;
 import org.junit.runner.notification.Failure;
 import org.kanonizo.commandline.ProgressBar;
 import org.kanonizo.framework.CUTChromosome;
 import org.kanonizo.framework.CUTChromosomeStore;
 import org.kanonizo.framework.TestCaseChromosome;
 import org.kanonizo.framework.TestSuiteChromosome;
-
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
-import java.util.*;
-import java.util.stream.Collectors;
+import org.kanonizo.framework.instrumentation.Instrumenter;
+import org.kanonizo.util.NullPrintStream;
 
 //
 @org.kanonizo.annotations.Instrumenter(readableName = "Scythe")
@@ -32,8 +40,37 @@ public class ScytheInstrumenter implements Instrumenter {
   static {
     logger = LogManager.getLogger(ScytheInstrumenter.class);
 
-    NULL_OUT = new NullPrintStream();
+    NULL_OUT = NullPrintStream.instance;
     InstrumentationProperties.INSTRUMENT_BRANCHES = false;
+    ClassReplacementTransformer.addShouldInstrumentChecker(new ShouldInstrumentChecker() {
+
+      private boolean isTestClass(String className) {
+        try {
+          if(className.contains("Test")){
+            return true;
+          }
+          Class<?> cl = ClassLoader.getSystemClassLoader().loadClass(className.replaceAll("/", "."));
+          List<Method> methods = Arrays.asList(cl.getDeclaredMethods());
+          if(cl.isMemberClass() && isTestClass(cl.getEnclosingClass().getName())){
+            return true;
+          }
+          if(methods.stream().anyMatch(method -> method.getName().startsWith("test"))){
+            return true;
+          }
+          if(methods.stream().anyMatch(method -> Arrays.asList(method.getAnnotations()).contains(Test.class))){
+            return true;
+          }
+        } catch (ClassNotFoundException e) {
+          e.printStackTrace();
+        }
+        return false;
+      }
+
+      @Override
+      public boolean shouldInstrument(String className) {
+        return !isTestClass(className);
+      }
+    });
   }
 
   private static ProgressBar bar = new ProgressBar(defaultSysOut);
@@ -141,19 +178,4 @@ public class ScytheInstrumenter implements Instrumenter {
     return ClassAnalyzer.getChangedClasses();
   }
 
-  private static final class NullPrintStream extends PrintStream {
-
-    public NullPrintStream() {
-      super(new OutputStream() {
-
-        @Override
-        public void write(int b) throws IOException {
-          // do nothing, we don't want execution code from the program
-          // runtime being dumped into console
-        }
-
-      });
-    }
-
-  }
 }

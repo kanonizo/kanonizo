@@ -137,7 +137,7 @@ public class Properties implements PropertySource {
     public static int TIMEOUT = 100000;
 
     @Parameter(key = "use_timeout", description = "Whether or not to use the test case timeout defined by Properties.TIMEOUT. Since for deterministic test cases we should not be expecting any infinite loops, it becomes less likely that timeouts will be hit", category = "TCP")
-    public static boolean USE_TIMEOUT = false;
+    public static boolean USE_TIMEOUT = true;
 
     /**
      * Not intended to be used from command line, so don't have an

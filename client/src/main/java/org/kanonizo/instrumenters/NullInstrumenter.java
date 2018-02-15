@@ -1,10 +1,11 @@
-package org.kanonizo.framework.instrumentation;
+package org.kanonizo.instrumenters;
 
 import org.kanonizo.framework.CUTChromosome;
 import org.kanonizo.framework.TestCaseChromosome;
 import org.kanonizo.framework.TestSuiteChromosome;
 
 import java.util.*;
+import org.kanonizo.framework.instrumentation.Instrumenter;
 
 /**
  * Class to not instrument classes, not interested in the output of test cases, defers class loading to the system class
