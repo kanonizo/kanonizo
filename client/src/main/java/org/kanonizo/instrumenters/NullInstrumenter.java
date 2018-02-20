@@ -1,10 +1,13 @@
 package org.kanonizo.instrumenters;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import org.kanonizo.framework.CUTChromosome;
+import org.kanonizo.framework.SUTChromosome;
 import org.kanonizo.framework.TestCaseChromosome;
 import org.kanonizo.framework.TestSuiteChromosome;
-
-import java.util.*;
 import org.kanonizo.framework.instrumentation.Instrumenter;
 
 /**
@@ -24,33 +27,59 @@ public class NullInstrumenter implements Instrumenter {
     }
 
     @Override
-    public void runTestCases() {
+    public void collectCoverage() {
 
     }
 
     @Override
-    public Map<String, Set<Integer>> getLinesCovered(TestCaseChromosome testCase) {
+    public Map<CUTChromosome, Set<Integer>> getLinesCovered(TestCaseChromosome testCase) {
         return new HashMap<>();
     }
 
     @Override
-    public Map<String, Set<Integer>> getBranchesCovered(TestCaseChromosome testCase) {
+    public Map<CUTChromosome, Set<Integer>> getBranchesCovered(TestCaseChromosome testCase) {
         return new HashMap<>();
     }
 
     @Override
-    public double getLineCoverage(CUTChromosome cut) {
+    public int getTotalLines(CUTChromosome cut) {
         return 0;
     }
 
     @Override
-    public double getBranchCoverage(CUTChromosome cut) {
+    public int getTotalBranches(CUTChromosome cut) {
         return 0;
     }
 
     @Override
-    public List<Class<?>> getAffectedClasses() {
-        return Collections.emptyList();
+    public Set<Integer> getLines(CUTChromosome cut) {
+        return Collections.emptySet();
+    }
+
+    @Override
+    public Set<Integer> getBranches(CUTChromosome cut) {
+        return Collections.emptySet();
+    }
+
+
+    @Override
+    public int getTotalLines(SUTChromosome sut) {
+        return 0;
+    }
+
+    @Override
+    public int getLinesCovered(TestSuiteChromosome testSuite) {
+        return 0;
+    }
+
+    @Override
+    public int getTotalBranches(SUTChromosome sut) {
+        return 0;
+    }
+
+    @Override
+    public int getBranchesCovered(TestSuiteChromosome testSuite) {
+        return 0;
     }
 
 }

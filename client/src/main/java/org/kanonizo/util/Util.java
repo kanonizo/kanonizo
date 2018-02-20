@@ -1,13 +1,19 @@
 package org.kanonizo.util;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-
 import org.kanonizo.Main;
+import org.reflections.Reflections;
+import org.reflections.scanners.FieldAnnotationsScanner;
+import org.reflections.scanners.SubTypesScanner;
+import org.reflections.scanners.TypeAnnotationsScanner;
+import org.reflections.util.ClasspathHelper;
+import org.reflections.util.ConfigurationBuilder;
 
 public class Util {
 
@@ -77,6 +83,48 @@ public class Util {
       }
     }
     return f;
+  }
 
+  @SuppressWarnings({ "unchecked", "rawtypes" })
+  public static void setParameter(Field f, String value) throws IllegalArgumentException, IllegalAccessException {
+    Class<?> cl = f.getType();
+    if (cl.isAssignableFrom(Number.class) || cl.isPrimitive()) {
+      if (cl.equals(Long.class) || cl.equals(long.class)) {
+        try {
+          Long l = Long.parseLong(value);
+          f.setLong(null, l);
+        } catch (NumberFormatException e) {
+          Double fl = Double.parseDouble(value);
+          f.setLong(null, (long) fl.doubleValue());
+        }
+      } else if (cl.equals(Double.class) || cl.equals(double.class)) {
+        Double d = Double.parseDouble(value);
+        f.setDouble(null, d);
+      } else if (cl.equals(Float.class) || cl.equals(float.class)) {
+        Float fl = Float.parseFloat(value);
+        f.setFloat(null, fl);
+      } else if (cl.equals(Integer.class) || cl.equals(int.class)) {
+        Double fl = Double.parseDouble(value);
+        f.setInt(null, (int) fl.doubleValue());
+      } else if (cl.equals(Boolean.class) || cl.equals(boolean.class)) {
+        Boolean bl = Boolean.parseBoolean(value);
+        f.setBoolean(null, bl);
+      }
+    } else if (cl.isAssignableFrom(String.class)) {
+      f.set(null, value);
+    }
+    if (f.getType().isEnum()) {
+      f.set(null, Enum.valueOf((Class<Enum>) f.getType(), value.toUpperCase()));
+    }
+  }
+
+  private static Reflections r;
+  public static Reflections getReflections(){
+    if (r == null){
+      r = new Reflections(new ConfigurationBuilder()
+          .setUrls(ClasspathHelper.forClassLoader())
+          .setScanners(new SubTypesScanner(), new TypeAnnotationsScanner(), new FieldAnnotationsScanner()));
+    }
+    return r;
   }
 }

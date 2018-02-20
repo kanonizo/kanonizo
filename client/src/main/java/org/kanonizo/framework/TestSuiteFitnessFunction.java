@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.Collectors;
+import org.kanonizo.Framework;
 
 public class TestSuiteFitnessFunction implements ToDoubleFunction<TestCaseChromosome> {
 
@@ -19,7 +20,7 @@ public class TestSuiteFitnessFunction implements ToDoubleFunction<TestCaseChromo
 
 	@Override
 	public double applyAsDouble(TestCaseChromosome value) {
-		Map<CUTChromosome, Set<Integer>> coveredLines = value.getLineNumbersCovered();
+		Map<CUTChromosome, Set<Integer>> coveredLines = Framework.getInstrumenter().getLinesCovered(value);
 		int newlyCoveredLines = coveredLines.entrySet().stream().mapToInt(f -> {
 			CUTChromosome cut = f.getKey();
 			Set<Integer> cov = f.getValue();

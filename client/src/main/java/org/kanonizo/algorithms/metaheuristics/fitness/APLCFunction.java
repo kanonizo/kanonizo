@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import org.kanonizo.Framework;
 import org.kanonizo.framework.CUTChromosome;
 import org.kanonizo.framework.TestCaseChromosome;
 import org.kanonizo.framework.TestSuiteChromosome;
@@ -18,7 +20,7 @@ public class APLCFunction extends APFDFunction {
   @Override
   public Map<CUTChromosome, List<Integer>> getCoveredGoals(TestCaseChromosome tc) {
     Map<CUTChromosome, List<Integer>> returnMap = new HashMap<>();
-    tc.getLineNumbersCovered().entrySet().forEach(entry -> {
+    Framework.getInstrumenter().getLinesCovered(tc).entrySet().forEach(entry -> {
       List<Integer> goals = new ArrayList<>();
       goals.addAll(entry.getValue());
       returnMap.put(entry.getKey(), goals);
@@ -28,8 +30,8 @@ public class APLCFunction extends APFDFunction {
 
   @Override
   protected List<Integer> getGoals() {
-    return chrom.getSUT().getClassesUnderTest().stream().map(CUTChromosome::getCoverableLines).flatMap(List::stream)
-        .collect(Collectors.toList());
+    int totalLines = chrom.getSUT().getClassesUnderTest().stream().mapToInt(cut -> Framework.getInstrumenter().getTotalLines(cut)).sum();
+    return IntStream.range(1, totalLines).boxed().collect(Collectors.toList());
   }
 
   @Override
@@ -41,6 +43,6 @@ public class APLCFunction extends APFDFunction {
 
   @Override
   protected void calculateTotalGoalsCovered() {
-    coveredGoals = chrom.getCoveredLines();
+    coveredGoals = Framework.getInstrumenter().getLinesCovered(chrom);
   }
 }

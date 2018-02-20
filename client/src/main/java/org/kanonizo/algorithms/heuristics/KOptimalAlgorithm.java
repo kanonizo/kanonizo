@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.kanonizo.Framework;
 import org.kanonizo.algorithms.AbstractSearchAlgorithm;
 import org.kanonizo.commandline.ProgressBar;
 import org.kanonizo.framework.CUTChromosome;
@@ -35,7 +36,7 @@ public class KOptimalAlgorithm extends AbstractSearchAlgorithm {
                 TestCaseChromosome testCase = bestK.get(i);
                 newOrder.add(testCase);
                 testCases.remove(testCase);
-                testCase.getLineNumbersCovered().forEach((cut, lines) -> {
+                Framework.getInstrumenter().getLinesCovered(testCase).forEach((cut, lines) -> {
                     cache.get(cut)
                             .addAll(lines);
                 });
@@ -71,14 +72,14 @@ public class KOptimalAlgorithm extends AbstractSearchAlgorithm {
     }
 
     private double getFitness(TestCaseChromosome tc1, TestCaseChromosome tc2) {
-        Map<CUTChromosome, Set<Integer>> linesCovered = tc1.getLineNumbersCovered();
+        Map<CUTChromosome, Set<Integer>> linesCovered = Framework.getInstrumenter().getLinesCovered(tc1);
         Map<CUTChromosome, Set<Integer>> tempCache = new HashMap<CUTChromosome, Set<Integer>>(cache);
         double fitness = getFitness(linesCovered, tempCache);
         linesCovered.forEach((cut, covered) -> {
             tempCache.get(cut).addAll(covered);
 
         });
-        double fitness2 = getFitness(tc2.getLineNumbersCovered(), tempCache);
+        double fitness2 = getFitness(Framework.getInstrumenter().getLinesCovered(tc2), tempCache);
         // favour earlier detection
         // TODO investigate whether or not the case I'm investigating is such an edge case that this isn't necessary.
         // In my (very basic) situation, this returns sub-optimal test case ordering because the 2 tests achieve 100%

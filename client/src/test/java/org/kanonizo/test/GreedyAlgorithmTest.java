@@ -4,6 +4,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 import org.junit.Test;
+import org.kanonizo.Framework;
 import org.kanonizo.algorithms.heuristics.GreedyAlgorithm;
 import org.kanonizo.framework.CUTChromosome;
 import org.kanonizo.framework.CUTChromosomeStore;
@@ -22,8 +23,10 @@ public class GreedyAlgorithmTest extends SearchAlgorithmTest {
     for (int i = 0; i < testCases.size() - 2; i++) {
       TestCaseChromosome test1 = testCases.get(i);
       TestCaseChromosome test2 = testCases.get(i + 1);
+      int linesCovered1 = Framework.getInstrumenter().getLinesCovered(test1).entrySet().stream().mapToInt(entry -> entry.getValue().size()).sum();
+      int linesCovered2 = Framework.getInstrumenter().getLinesCovered(test2).entrySet().stream().mapToInt(entry -> entry.getValue().size()).sum();
       assertTrue("Test Case: " + test1 + " has lower coverage than " + test2,
-          test1.getLinesCovered(cut) >= test2.getLinesCovered(cut));
+          linesCovered1 >= linesCovered2);
     }
   }
 

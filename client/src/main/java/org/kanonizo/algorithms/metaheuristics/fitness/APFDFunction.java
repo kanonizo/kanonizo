@@ -1,6 +1,5 @@
 package org.kanonizo.algorithms.metaheuristics.fitness;
 
-import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +28,7 @@ public abstract class APFDFunction extends InstrumentedFitnessFunction {
       TestCaseChromosome tc = testCases.get(i);
       Map<CUTChromosome, List<Integer>> goalsCovered = getCoveredGoals(tc);
       goalsCovered.forEach((cut, goals) -> {
-        int classId = ClassAnalyzer.getClassId(cut.getCUT().getName());
+        int classId = cut.getId();
         if (goalMap.containsKey(classId)) {
           Map<Integer, Integer> cov = goalMap.get(classId);
           for (Integer goal : goals) {

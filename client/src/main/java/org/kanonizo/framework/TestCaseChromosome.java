@@ -10,10 +10,8 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -25,12 +23,9 @@ import org.junit.runner.JUnitCore;
 import org.junit.runner.Request;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
-import org.kanonizo.Framework;
 import org.kanonizo.Properties;
-import org.kanonizo.framework.instrumentation.Instrumented;
-import org.kanonizo.framework.instrumentation.Instrumenter;
 
-public class TestCaseChromosome extends Chromosome implements Instrumented {
+public class TestCaseChromosome extends Chromosome {
   private static final long TIMEOUT = Properties.TIMEOUT;
   private static final TimeUnit UNIT = TimeUnit.MILLISECONDS;
   private Class<?> testClass;
@@ -149,85 +144,12 @@ public class TestCaseChromosome extends Chromosome implements Instrumented {
     throw new UnsupportedOperationException("Test Cases cannot be crossed over in TCP");
   }
 
-  public Map<CUTChromosome, Double> getBranchesCovered() {
-    Map<CUTChromosome, Double> branches = new HashMap<CUTChromosome, Double>();
-    executionData.entrySet().stream()
-        .forEach(entry -> branches.put(entry.getKey(), entry.getValue().getBranchCoverage()));
-    return branches;
-  }
-
-  public Map<CUTChromosome, Double> getLinesCovered() {
-    Map<CUTChromosome, Double> lines = new HashMap<CUTChromosome, Double>();
-    executionData.entrySet().stream()
-        .forEach(entry -> lines.put(entry.getKey(), entry.getValue().getLineCoverage()));
-    return lines;
-  }
-
-  public Map<CUTChromosome, Set<Integer>> getLineNumbersCovered() {
-    Map<CUTChromosome, Set<Integer>> linesCovered = new HashMap<>();
-    executionData.entrySet().stream()
-        .forEach((entry) -> linesCovered.put(entry.getKey(), entry.getValue().getLinesCovered()));
-    return linesCovered;
-  }
-
-  public double getLinesCovered(CUTChromosome c) {
-    if (executionData.containsKey(c)) {
-      return executionData.get(c).getLineCoverage();
-    }
-    return 0.0;
-  }
-
-  public double getBranchesCovered(CUTChromosome c) {
-    if (executionData.containsKey(c)) {
-      return executionData.get(c).getBranchCoverage();
-    }
-    return 0.0;
-  }
-
-  public Set<Integer> getAllLinesCovered(CUTChromosome c) {
-    if (executionData.containsKey(c)) {
-      return executionData.get(c).getLinesCovered();
-    }
-    return new HashSet<>();
-  }
-
-  public Set<Integer> getAllBranchesCovered(CUTChromosome c) {
-    if (executionData.containsKey(c)) {
-      return executionData.get(c).getBranchesCovered();
-    }
-    return new HashSet<>();
-  }
-
-  public Map<CUTChromosome, Set<Integer>> getAllBranchesCovered() {
-    Map<CUTChromosome, Set<Integer>> branchesCovered = new HashMap<>();
-    executionData.entrySet().stream()
-        .forEach(entry -> branchesCovered.put(entry.getKey(), entry.getValue().getBranchesCovered()));
-    return branchesCovered;
-  }
-
-  public double getSize() {
+    public double getSize() {
     return testSize;
   }
 
   public void setSize(int testSize) {
     this.testSize = testSize;
-  }
-
-  @Override
-  public void instrumentationFinished() {
-    Instrumenter inst = Framework.getInstrumenter();
-    Map<String, Set<Integer>> linesCovered = inst.getLinesCovered(this);
-    Map<String, Set<Integer>> branchesCovered = inst.getBranchesCovered(this);
-    for (Class<?> cl : inst.getAffectedClasses()) {
-      CUTChromosome cut = CUTChromosomeStore.get(cl.getName());
-      if (cut != null) {
-        double lineCoverage = inst.getLineCoverage(cut);
-        double branchCoverage = inst.getBranchCoverage(cut);
-        executionData.put(CUTChromosomeStore.get(cl.getName()),
-            new TestCaseExecutionData(branchCoverage, lineCoverage, linesCovered.get(cl.getName()), branchesCovered.get(cl.getName())));
-      }
-    }
-
   }
 
   @Override

@@ -23,6 +23,7 @@ import org.junit.runner.notification.Failure;
 import org.kanonizo.commandline.ProgressBar;
 import org.kanonizo.framework.CUTChromosome;
 import org.kanonizo.framework.CUTChromosomeStore;
+import org.kanonizo.framework.SUTChromosome;
 import org.kanonizo.framework.TestCaseChromosome;
 import org.kanonizo.framework.TestSuiteChromosome;
 import org.kanonizo.framework.instrumentation.Instrumenter;
@@ -36,6 +37,8 @@ public class ScytheInstrumenter implements Instrumenter {
   private static PrintStream defaultSysErr = System.err;
   private static final PrintStream NULL_OUT;
   private static Logger logger;
+  private Map<TestCaseChromosome, Map<CUTChromosome, Set<Integer>>> linesCovered = new HashMap<>();
+  private Map<TestCaseChromosome, Map<CUTChromosome, Set<Integer>>> branchesCovered = new HashMap<>();
 
   static {
     logger = LogManager.getLogger(ScytheInstrumenter.class);
@@ -94,7 +97,7 @@ public class ScytheInstrumenter implements Instrumenter {
   }
 
   @Override
-  public void runTestCases() {
+  public void collectCoverage() {
     try {
       List<Failure> failures = new ArrayList<>();
       bar.setTitle("Running Test Cases");
@@ -113,7 +116,8 @@ public class ScytheInstrumenter implements Instrumenter {
           bar.reportProgress((double) testSuite.getRunnableTestCases().indexOf(testCase) + 1,
               testSuite.getRunnableTestCases().size());
           ClassAnalyzer.collectHitCounters(true);
-          testCase.instrumentationFinished();
+          linesCovered.put(testCase, collectLines(testCase));
+          branchesCovered.put(testCase, collectBranches(testCase));
           ClassAnalyzer.resetCoverage();
         } catch (Throwable e) {
           e.printStackTrace(defaultSysErr);
@@ -135,47 +139,80 @@ public class ScytheInstrumenter implements Instrumenter {
     }
   }
 
-  @Override
-  public Map<String, Set<Integer>> getLinesCovered(TestCaseChromosome testCase) {
-    Map<String, Set<Integer>> covered = new HashMap<>();
+  private Map<CUTChromosome, Set<Integer>> collectLines(TestCaseChromosome testCase){
+    Map<CUTChromosome, Set<Integer>> covered = new HashMap<>();
     List<Class<?>> changedClasses = ClassAnalyzer.getChangedClasses();
     for (Class<?> cl : changedClasses) {
       if (CUTChromosomeStore.get(cl.getName()) != null) {
         List<Line> lines = ClassAnalyzer.getCoverableLines(cl.getName());
         Set<Integer> linesCovered = lines.stream().filter(line -> line.getHits() > 0).map(line -> line.getGoalId()).collect(Collectors.toSet());
-        covered.put(cl.getName(), linesCovered);
+        covered.put(CUTChromosomeStore.get(cl.getName()), linesCovered);
       }
     }
     return covered;
   }
 
-  @Override
-  public Map<String, Set<Integer>> getBranchesCovered(TestCaseChromosome testCase) {
-    Map<String, Set<Integer>> covered = new HashMap<>();
+  private Map<CUTChromosome, Set<Integer>> collectBranches(TestCaseChromosome testCase){
+    Map<CUTChromosome, Set<Integer>> covered = new HashMap<>();
     List<Class<?>> changedClasses = ClassAnalyzer.getChangedClasses();
     for (Class<?> cl : changedClasses) {
       if (CUTChromosomeStore.get(cl.getName()) != null) {
         List<Branch> branches = ClassAnalyzer.getCoverableBranches(cl.getName());
         Set<Integer> branchesCovered = branches.stream().filter(branch -> branch.getHits() > 0).map(branch -> branch.getGoalId()).collect(Collectors.toSet());
-        covered.put(cl.getName(), branchesCovered);
+        covered.put(CUTChromosomeStore.get(cl.getName()), branchesCovered);
       }
     }
     return covered;
   }
 
   @Override
-  public double getLineCoverage(CUTChromosome cut) {
-    return ClassAnalyzer.getLineCoverage(cut.getCUT().getName());
+  public Map<CUTChromosome, Set<Integer>> getLinesCovered(TestCaseChromosome testCase) {
+    return linesCovered.get(testCase);
   }
 
   @Override
-  public double getBranchCoverage(CUTChromosome cut) {
-    return ClassAnalyzer.getBranchCoverage(cut.getCUT().getName());
+  public Map<CUTChromosome, Set<Integer>> getBranchesCovered(TestCaseChromosome testCase) {
+    return branchesCovered.get(testCase);
   }
 
   @Override
-  public List<Class<?>> getAffectedClasses() {
-    return ClassAnalyzer.getChangedClasses();
+  public int getTotalLines(CUTChromosome cut) {
+    return ClassAnalyzer.getCoverableLines(cut.getCUT().getName()).size();
+  }
+
+  @Override
+  public int getTotalBranches(CUTChromosome cut) {
+    return ClassAnalyzer.getCoverableBranches(cut.getCUT().getName()).size();
+  }
+
+  @Override
+  public Set<Integer> getLines(CUTChromosome cut) {
+    return ClassAnalyzer.getCoverableLines(cut.getCUT().getName()).stream().map(line -> line.getLineNumber()).collect(Collectors.toSet());
+  }
+
+  @Override
+  public Set<Integer> getBranches(CUTChromosome cut) {
+    return ClassAnalyzer.getCoverableBranches(cut.getCUT().getName()).stream().map(line -> line.getLineNumber()).collect(Collectors.toSet());
+  }
+
+  @Override
+  public int getTotalLines(SUTChromosome sut) {
+    return sut.getClassesUnderTest().stream().mapToInt(cut -> ClassAnalyzer.getCoverableLines(cut.getCUT().getName()).size()).sum();
+  }
+
+  @Override
+  public int getLinesCovered(TestSuiteChromosome testSuite) {
+    return testSuite.getTestCases().stream().mapToInt(testCase -> getLinesCovered(testCase).entrySet().stream().mapToInt(entry -> entry.getValue().size()).sum()).sum();
+  }
+
+  @Override
+  public int getTotalBranches(SUTChromosome sut) {
+    return sut.getClassesUnderTest().stream().mapToInt(cut -> ClassAnalyzer.getCoverableBranches(cut.getCUT().getName()).size()).sum();
+  }
+
+  @Override
+  public int getBranchesCovered(TestSuiteChromosome testSuite) {
+    return testSuite.getTestCases().stream().mapToInt(testCase -> getBranchesCovered(testCase).entrySet().stream().mapToInt(entry -> entry.getValue().size()).sum()).sum();
   }
 
 }

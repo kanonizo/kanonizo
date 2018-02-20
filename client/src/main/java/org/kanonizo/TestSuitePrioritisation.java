@@ -1,16 +1,14 @@
 package org.kanonizo;
 
-import java.util.List;
+import com.scythe.instrumenter.InstrumentationProperties.Parameter;
+import java.lang.reflect.Field;
 import java.util.Set;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import org.kanonizo.util.HashSetCollector;
-import com.scythe.instrumenter.PropertySource;
+import org.kanonizo.util.Util;
 
 public class TestSuitePrioritisation {
   private static final String ALGORITHM_SHORT = "a";
@@ -61,27 +59,17 @@ public class TestSuitePrioritisation {
     return line.hasOption(HELP_SHORT);
   }
 
-  public static void handleProperties(CommandLine line, List<PropertySource> propertySources) {
+  public static void handleProperties(CommandLine line, Set<Field> parameters) {
     java.util.Properties properties = line.getOptionProperties(PROPERTY);
     if (properties != null) {
-      Set<String> parameterNames = propertySources.stream().map(source -> source.getParameterNames())
-          .collect(new HashSetCollector<String>());
-
-      properties.keySet().forEach(prop -> {
-        String name = (String) prop;
-        if (parameterNames.contains(name)) {
-          propertySources.forEach(source -> {
-            if (source.hasParameter(name)) {
-              try {
-                source.setParameter(name, properties.getProperty(name));
-              } catch (IllegalAccessException e) {
-                logger.error(e);
-              }
-            }
-          });
+      for (String property : properties.stringPropertyNames()) {
+        Field f = parameters.stream().filter(field -> (field.getAnnotation(Parameter.class)).key().equals(property)).findFirst().get();
+        try {
+          Util.setParameter(f, properties.getProperty(property));
+        } catch (IllegalAccessException e) {
+          e.printStackTrace();
         }
-      });
-
+      }
     }
   }
 }

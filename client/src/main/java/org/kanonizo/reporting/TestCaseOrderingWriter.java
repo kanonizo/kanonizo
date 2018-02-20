@@ -16,12 +16,11 @@ public class TestCaseOrderingWriter extends CsvWriter {
   @Override
   protected void prepareCsv() {
     setHeaders(
-        new String[] { "TestCase", "ExecutionTime", "Passed", "PercentageLinesCovered", "PercentageBranchesCovered" });
+        new String[] { "TestCase", "ExecutionTime", "Passed" });
     TestSuiteChromosome optimal = algorithm.getCurrentOptimal();
     optimal.getTestCases().forEach(testCase -> {
       String[] csv = new String[] { testCase.getTestClass().getName() + "." + testCase.getMethod().getName(),
-          Long.toString(testCase.getExecutionTime()), Boolean.toString(testCase.getFailures().size() == 0),
-          Double.toString(optimal.getLineCoverage(testCase)), Double.toString(optimal.getBranchCoverage(testCase)) };
+          Long.toString(testCase.getExecutionTime()), Boolean.toString(testCase.getFailures().size() == 0) };
       addRow(csv);
     });
   }

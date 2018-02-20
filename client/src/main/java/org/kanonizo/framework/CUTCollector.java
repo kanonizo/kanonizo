@@ -2,7 +2,6 @@ package org.kanonizo.framework;
 
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -10,13 +9,14 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collector;
+import org.kanonizo.Framework;
 
 public class CUTCollector
-		implements Collector<CUTChromosome, Map<CUTChromosome, List<Integer>>, Map<CUTChromosome, List<Integer>>> {
+		implements Collector<CUTChromosome, Map<CUTChromosome, Set<Integer>>, Map<CUTChromosome, Set<Integer>>> {
 
 	@Override
-	public BiConsumer<Map<CUTChromosome, List<Integer>>, CUTChromosome> accumulator() {
-		return (t, c) -> t.put(c, c.getCoverableLines());
+	public BiConsumer<Map<CUTChromosome, Set<Integer>>, CUTChromosome> accumulator() {
+		return (t, c) -> t.put(c, Framework.getInstrumenter().getLines(c));
 	}
 
 	@Override
@@ -25,7 +25,7 @@ public class CUTCollector
 	}
 
 	@Override
-	public BinaryOperator<Map<CUTChromosome, List<Integer>>> combiner() {
+	public BinaryOperator<Map<CUTChromosome, Set<Integer>>> combiner() {
 		return (left, right) -> {
 			left.putAll(right);
 			return left;
@@ -33,17 +33,17 @@ public class CUTCollector
 	}
 
 	@Override
-	public Function<Map<CUTChromosome, List<Integer>>, Map<CUTChromosome, List<Integer>>> finisher() {
+	public Function<Map<CUTChromosome, Set<Integer>>, Map<CUTChromosome, Set<Integer>>> finisher() {
 		return t -> t;
 	}
 
 	@Override
-	public Supplier<Map<CUTChromosome, List<Integer>>> supplier() {
-		return new Supplier<Map<CUTChromosome, List<Integer>>>() {
+	public Supplier<Map<CUTChromosome, Set<Integer>>> supplier() {
+		return new Supplier<Map<CUTChromosome, Set<Integer>>>() {
 
 			@Override
-			public Map<CUTChromosome, List<Integer>> get() {
-				return new HashMap<CUTChromosome, List<Integer>>();
+			public Map<CUTChromosome, Set<Integer>> get() {
+				return new HashMap<CUTChromosome, Set<Integer>>();
 			}
 
 		};

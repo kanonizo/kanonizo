@@ -13,11 +13,13 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kanonizo.Disposable;
+import org.kanonizo.Framework;
 import org.kanonizo.Properties;
 import org.kanonizo.algorithms.metaheuristics.fitness.APBCFunction;
 import org.kanonizo.algorithms.metaheuristics.fitness.APLCFunction;
 import org.kanonizo.algorithms.metaheuristics.fitness.FitnessFunction;
 import org.kanonizo.algorithms.metaheuristics.fitness.InstrumentedFitnessFunction;
+import org.kanonizo.framework.instrumentation.Instrumenter;
 import org.kanonizo.util.RandomInstance;
 
 public class TestSuiteChromosome extends Chromosome implements Comparable<TestSuiteChromosome>, Disposable {
@@ -70,59 +72,6 @@ public class TestSuiteChromosome extends Chromosome implements Comparable<TestSu
 
   public SUTChromosome getSUT() {
     return sut;
-  }
-
-  public int getTotalLines() {
-    if (totalLines == 0) {
-      totalLines = sut.getClassesUnderTest().stream().mapToInt(CUTChromosome::getTotalLines).sum();
-    }
-    return totalLines;
-  }
-
-  public int getCoveredLines() {
-    Map<String, Set<Integer>> coveredLines = new HashMap<>();
-    for (CUTChromosome cut : sut.getClassesUnderTest()) {
-      for (TestCaseChromosome tc : testCases) {
-        Set<Integer> linesCoveredByTest = tc.getAllLinesCovered(cut);
-        if (coveredLines.containsKey(cut.getCUT().getName()) && linesCoveredByTest.size() > 0) {
-          coveredLines.get(cut.getCUT().getName()).addAll(linesCoveredByTest);
-        } else if (linesCoveredByTest.size() > 0) {
-          coveredLines.put(cut.getCUT().getName(), new HashSet<>(linesCoveredByTest));
-        }
-      }
-    }
-    return coveredLines.entrySet().stream().mapToInt(entry -> entry.getValue().size()).sum();
-  }
-
-  public int getTotalBranches() {
-    if (totalBranches == 0) {
-      totalBranches = sut.getClassesUnderTest().stream().mapToInt(CUTChromosome::getTotalBranches).sum();
-    }
-    return totalBranches;
-  }
-
-  public int getCoveredBranches() {
-    Map<String, Set<Integer>> coveredBranches = new HashMap<>();
-    for (CUTChromosome cut : sut.getClassesUnderTest()) {
-      for (TestCaseChromosome tc : testCases) {
-        if (coveredBranches.containsKey(cut.getCUT().getName())) {
-          coveredBranches.get(cut.getCUT().getName()).addAll(tc.getAllBranchesCovered(cut));
-        } else {
-          coveredBranches.put(cut.getCUT().getName(), tc.getAllBranchesCovered(cut));
-        }
-      }
-    }
-    return coveredBranches.entrySet().stream().mapToInt(entry -> entry.getValue().size()).sum();
-  }
-
-  public double getLineCoverage(TestCaseChromosome tcc) {
-    int linesCovered = tcc.getLineNumbersCovered().values().stream().mapToInt(Set::size).sum();
-    return ((double) linesCovered) / getTotalLines();
-  }
-
-  public double getBranchCoverage(TestCaseChromosome tcc) {
-    int branchesCovered = tcc.getAllBranchesCovered().values().stream().mapToInt(Set::size).sum();
-    return ((double) branchesCovered) / getTotalBranches();
   }
 
   @Override
@@ -313,8 +262,9 @@ public class TestSuiteChromosome extends Chromosome implements Comparable<TestSu
     sb.append("\n-------------------------------------------\nMAXIMUM FITNESS: " + String.format("%.4f", getFitness())
         + "\n-------------------------------------------\n");
     Map<CUTChromosome, Set<Integer>> branchesCovered = new HashMap<>();
+    Instrumenter inst = Framework.getInstrumenter();
     testCases.stream().forEach(tc -> {
-      Map<CUTChromosome, Set<Integer>> branches = tc.getLineNumbersCovered();
+      Map<CUTChromosome, Set<Integer>> branches = inst.getLinesCovered(tc);
       branches.entrySet().stream().forEach(entry -> {
         CUTChromosome cut = entry.getKey();
         if (branchesCovered.containsKey(cut)) {
@@ -325,7 +275,7 @@ public class TestSuiteChromosome extends Chromosome implements Comparable<TestSu
       });
     });
     int coveredBranches = branchesCovered.entrySet().stream().mapToInt(entry -> entry.getValue().size()).sum();
-    int totalBranches = sut.getClassesUnderTest().stream().mapToInt(CUTChromosome::getTotalLines).sum();
+    int totalBranches = sut.getClassesUnderTest().stream().mapToInt(cut -> inst.getTotalLines(cut)).sum();
     sb.append("Line Coverage: " + (double) coveredBranches / (double) totalBranches);
     sb.append("\n-------------------------------------------\nMaximum fitness found by "
         + getFitnessFunction().getClass().getSimpleName() + "\n-------------------------------------------\n");

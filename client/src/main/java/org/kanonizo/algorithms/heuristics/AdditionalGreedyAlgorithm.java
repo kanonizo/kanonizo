@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.kanonizo.Framework;
 import org.kanonizo.algorithms.AbstractSearchAlgorithm;
 import org.kanonizo.algorithms.metaheuristics.fitness.APFDFunction;
 import org.kanonizo.annotations.Algorithm;
@@ -23,9 +24,9 @@ public class AdditionalGreedyAlgorithm extends AbstractSearchAlgorithm {
   @Override
   public void generateSolution() {
     problem.getSUT().getClassesUnderTest().stream().forEach(cut -> {
-      totalLines += cut.getTotalLines();
+      totalLines += Framework.getInstrumenter().getTotalLines(cut);
       if(ClassUtils.isInstrumented(cut.getCUT())){
-        cache.put(ClassAnalyzer.getClassId(cut.getCUT().getName()), new HashSet<>());
+        cache.put(cut.getId(), new HashSet<>());
       }
 
     });
@@ -44,7 +45,7 @@ public class AdditionalGreedyAlgorithm extends AbstractSearchAlgorithm {
       Map<CUTChromosome, List<Integer>> goals = ((APFDFunction) problem.getFitnessFunction())
           .getCoveredGoals(chr);
       goals.entrySet().stream().forEach(entry -> {
-        int classId = ClassAnalyzer.getClassId(entry.getKey().getCUT().getName());
+        int classId = entry.getKey().getId();
         cache.get(classId).addAll(entry.getValue());
       });
       bar.reportProgress(newOrder.size(), (newOrder.size() + testCases.size()));
@@ -62,7 +63,7 @@ public class AdditionalGreedyAlgorithm extends AbstractSearchAlgorithm {
   public double getFitness(TestCaseChromosome chr) {
     int newLines = ((APFDFunction) problem.getFitnessFunction()).getCoveredGoals(chr).entrySet().stream()
         .mapToInt(entry -> {
-          int classId = ClassAnalyzer.getClassId(entry.getKey().getCUT().getName());
+          int classId = entry.getKey().getId();
           if (cache.containsKey(classId)) {
             return entry.getValue().stream().mapToInt(goal -> cache.get(classId).contains(goal) ? 0 : 1)
                 .sum();

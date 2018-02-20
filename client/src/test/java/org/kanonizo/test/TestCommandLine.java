@@ -15,6 +15,8 @@ public class TestCommandLine extends MockitoTest {
   private static final String SOURCE_FOLDER = "testing/sample_classes";
   private static final String TEST_OPTION = "t";
   private static final String TEST_FOLDER = "testing/sample_tests";
+  private static final String ALGORITHM_OPTION = "a";
+  private static final String ALGORITHM_CHOICE = "greedy";
   @Mock private CommandLine line;
   private Framework framework = new Framework();
 
@@ -24,6 +26,8 @@ public class TestCommandLine extends MockitoTest {
     when(line.getOptionValue(SOURCE_OPTION)).thenReturn(SOURCE_FOLDER);
     when(line.hasOption(TEST_OPTION)).thenReturn(true);
     when(line.getOptionValue(TEST_OPTION)).thenReturn(TEST_FOLDER);
+    when(line.hasOption(ALGORITHM_OPTION)).thenReturn(true);
+    when(line.getOptionValue(ALGORITHM_OPTION)).thenReturn(ALGORITHM_CHOICE);
   }
 
   @Test

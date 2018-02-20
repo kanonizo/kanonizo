@@ -9,7 +9,7 @@ public abstract class InstrumentedFitnessFunction implements FitnessFunction<Tes
   public void instrument(TestSuiteChromosome chrom) {
     Instrumenter inst = Framework.getInstrumenter();
     inst.setTestSuite(chrom);
-    inst.runTestCases();
+    inst.collectCoverage();
     calculateTotalGoalsCovered();
   }
 

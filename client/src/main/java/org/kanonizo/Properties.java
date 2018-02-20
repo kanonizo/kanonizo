@@ -1,19 +1,8 @@
 package org.kanonizo;
 
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
-import com.scythe.instrumenter.PropertySource;
 
-import java.lang.reflect.Field;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-
-public class Properties implements PropertySource {
-
-    private Properties() {
-        reflectMap();
-    }
+public class Properties {
 
     public static int TOTAL_TESTS;
 
@@ -152,81 +141,5 @@ public class Properties implements PropertySource {
     @Parameter(key = "instrumenter", description = "Choice of instrumentation tool to use to collect code coverage from test case execution", category="TCP")
     public static String INSTRUMENTER = "Scythe";
 
-    private Map<String, Field> parameterMap = new HashMap<String, Field>();
-
-    private void reflectMap() {
-        Arrays.asList(Properties.class.getFields()).forEach(field -> {
-            if (field.isAnnotationPresent(Parameter.class)) {
-                parameterMap.put(field.getAnnotation(Parameter.class).key(), field);
-            }
-        });
-    }
-
-    @Override
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    public void setParameter(String key, String value) throws IllegalArgumentException, IllegalAccessException {
-        if (!parameterMap.containsKey(key)) {
-            throw new IllegalArgumentException(key + " was not found in the Properties class");
-        }
-
-        Field f = parameterMap.get(key);
-        Class<?> cl = f.getType();
-        if (cl.isAssignableFrom(Number.class) || cl.isPrimitive())
-
-        {
-            try {
-                if (cl.equals(Long.class) || cl.equals(long.class)) {
-                    Long l = Long.parseLong(value);
-                    f.setLong(null, l);
-                } else if (cl.equals(Double.class) || cl.equals(double.class)) {
-                    Double d = Double.parseDouble(value);
-                    f.setDouble(null, d);
-                } else if (cl.equals(Float.class) || cl.equals(float.class)) {
-                    Float fl = Float.parseFloat(value);
-                    f.setFloat(null, fl);
-                } else if (cl.equals(Integer.class) || cl.equals(int.class)) {
-                    Integer in = Integer.parseInt(value);
-                    f.setInt(null, in);
-                } else if (cl.equals(Boolean.class) || cl.equals(boolean.class)) {
-                    if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
-                        throw new IllegalArgumentException("String " + value + " is not of the type boolean");
-                    }
-                    Boolean bl = Boolean.parseBoolean(value);
-                    f.setBoolean(null, bl);
-                }
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException(
-                        "Required type for parameter " + f.getName() + " was not met by value" + value);
-            }
-        } else if (cl.isAssignableFrom(String.class))
-
-        {
-            f.set(null, value);
-        }
-        if (f.getType().isEnum())
-
-        {
-            f.set(null, Enum.valueOf((Class<Enum>) f.getType(), value.toUpperCase()));
-        }
-    }
-
-    @Override
-    public boolean hasParameter(String name) {
-        return parameterMap.keySet().contains(name);
-    }
-
-    @Override
-    public Set<String> getParameterNames() {
-        return parameterMap.keySet();
-    }
-
-    private static Properties instance;
-
-    public static Properties instance() {
-        if (instance == null) {
-            instance = new Properties();
-        }
-        return instance;
-    }
 
 }
