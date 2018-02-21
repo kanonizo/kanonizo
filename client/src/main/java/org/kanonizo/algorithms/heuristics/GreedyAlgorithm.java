@@ -1,5 +1,6 @@
 package org.kanonizo.algorithms.heuristics;
 
+import org.kanonizo.Framework;
 import org.kanonizo.algorithms.AbstractSearchAlgorithm;
 import org.kanonizo.algorithms.metaheuristics.fitness.APFDFunction;
 import org.kanonizo.annotations.Algorithm;
@@ -7,6 +8,8 @@ import org.kanonizo.framework.TestCaseChromosome;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+
 @Algorithm(readableName = "greedy")
 public class GreedyAlgorithm extends AbstractSearchAlgorithm {
 
@@ -20,8 +23,8 @@ public class GreedyAlgorithm extends AbstractSearchAlgorithm {
 
   @Override
   public double getFitness(TestCaseChromosome chr) {
-    return ((APFDFunction) problem.getFitnessFunction()).getCoveredGoals(chr).values().stream().mapToInt(List::size)
-        .sum();
+    return (Framework.getInstrumenter().getLinesCovered(chr).values().stream().mapToInt(Set::size)
+        .sum());
   }
 
 }

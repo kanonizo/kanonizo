@@ -40,6 +40,9 @@ public class TestCaseChromosome extends Chromosome {
   private TestCaseWrapper testCase;
   private Result result;
 
+  public TestCaseChromosome(){
+    TestCaseChromosomeStore.register(id, this);
+  }
   public int getId() {
     return id;
   }

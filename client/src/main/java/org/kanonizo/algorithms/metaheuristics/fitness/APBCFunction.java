@@ -30,7 +30,7 @@ public class APBCFunction extends APFDFunction {
 
   @Override
   protected List<Integer> getGoals() {
-
+    int totalBranches = chrom.getSUT().getClassesUnderTest().stream().mapToInt(cut -> Framework.getInstrumenter().getTotalBranches(cut)).sum();
     return IntStream.range(1, totalBranches).boxed().collect(Collectors.toList());
   }
 
