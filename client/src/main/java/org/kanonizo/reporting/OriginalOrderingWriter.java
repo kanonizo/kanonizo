@@ -1,11 +1,11 @@
 package org.kanonizo.reporting;
 
-import org.kanonizo.framework.TestSuiteChromosome;
+import org.kanonizo.framework.objects.TestSuite;
 
 public class OriginalOrderingWriter extends TestCaseOrderingWriter{
 	
-	private TestSuiteChromosome tsc;
-	public OriginalOrderingWriter(TestSuiteChromosome tsc){
+	private TestSuite tsc;
+	public OriginalOrderingWriter(TestSuite tsc){
 		this.tsc = tsc;
 	}
 	

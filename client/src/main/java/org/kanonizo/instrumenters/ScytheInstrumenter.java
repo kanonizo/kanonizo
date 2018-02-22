@@ -2,14 +2,8 @@ package org.kanonizo.instrumenters;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonPrimitive;
-import com.google.gson.JsonSerializationContext;
-import com.google.gson.JsonSerializer;
 import com.google.gson.TypeAdapter;
 import com.google.gson.annotations.Expose;
-import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import com.scythe.instrumenter.InstrumentationProperties;
@@ -27,10 +21,9 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.lang.reflect.Method;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -38,21 +31,23 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import junit.framework.TestCase;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.Test;
 import org.junit.runner.notification.Failure;
 import org.kanonizo.commandline.ProgressBar;
-import org.kanonizo.framework.CUTChromosome;
-import org.kanonizo.framework.CUTChromosomeStore;
-import org.kanonizo.framework.SUTChromosome;
-import org.kanonizo.framework.TestCaseChromosome;
-import org.kanonizo.framework.TestCaseChromosomeStore;
-import org.kanonizo.framework.TestSuiteChromosome;
+import org.kanonizo.framework.ClassStore;
+import org.kanonizo.framework.TestCaseStore;
 import org.kanonizo.framework.instrumentation.Instrumenter;
+import org.kanonizo.framework.objects.BranchStore;
+import org.kanonizo.framework.objects.ClassUnderTest;
+import org.kanonizo.framework.objects.Goal;
+import org.kanonizo.framework.objects.LineStore;
+import org.kanonizo.framework.objects.SystemUnderTest;
+import org.kanonizo.framework.objects.TestCase;
+import org.kanonizo.framework.objects.TestSuite;
+import org.kanonizo.util.HashSetCollector;
 import org.kanonizo.util.NullPrintStream;
+import org.kanonizo.util.Util;
 
 //
 @org.kanonizo.annotations.Instrumenter(readableName = "Scythe")
@@ -76,12 +71,12 @@ public class ScytheInstrumenter implements Instrumenter {
           + "to write coverage file(s) to", category = "Instrumentation")
   public static String SCYTHE_OUTPUT_DIR = "";
 
-  private TestSuiteChromosome testSuite;
+  private TestSuite testSuite;
   private static Logger logger;
   @Expose
-  private Map<TestCaseChromosome, Map<CUTChromosome, Set<Integer>>> linesCovered = new HashMap<>();
+  private Map<TestCase, Set<org.kanonizo.framework.objects.Line>> linesCovered = new HashMap<>();
   @Expose
-  private Map<TestCaseChromosome, Map<CUTChromosome, Set<Integer>>> branchesCovered = new HashMap<>();
+  private Map<TestCase, Set<org.kanonizo.framework.objects.Branch>> branchesCovered = new HashMap<>();
 
   static {
     logger = LogManager.getLogger(ScytheInstrumenter.class);
@@ -90,23 +85,11 @@ public class ScytheInstrumenter implements Instrumenter {
     ClassReplacementTransformer.addShouldInstrumentChecker(new ShouldInstrumentChecker() {
 
       private boolean isTestClass(String className) {
+
         try {
-          if (className.contains("Test")) {
-            return true;
-          }
           Class<?> cl = ClassLoader.getSystemClassLoader()
               .loadClass(className.replaceAll("/", "."));
-          List<Method> methods = Arrays.asList(cl.getDeclaredMethods());
-          if (cl.isMemberClass() && isTestClass(cl.getEnclosingClass().getName())) {
-            return true;
-          }
-          if (methods.stream().anyMatch(method -> method.getName().startsWith("test"))) {
-            return true;
-          }
-          if (methods.stream()
-              .anyMatch(method -> Arrays.asList(method.getAnnotations()).contains(Test.class))) {
-            return true;
-          }
+          return Util.isTestClass(cl);
         } catch (ClassNotFoundException e) {
           e.printStackTrace();
         }
@@ -139,14 +122,25 @@ public class ScytheInstrumenter implements Instrumenter {
   }
 
   @Override
-  public void setTestSuite(TestSuiteChromosome ts) {
+  public void setTestSuite(TestSuite ts) {
     this.testSuite = ts;
+  }
+
+  private File getScytheFile() {
+    StringBuilder sb = new StringBuilder();
+    sb.append(SCYTHE_OUTPUT_DIR);
+    if (!sb.toString().isEmpty()) {
+      sb.append(File.separator);
+    }
+    sb.append(SCYTHE_FILENAME);
+    String path = sb.toString();
+    return new File(path);
   }
 
   @Override
   public void collectCoverage() {
     if (SCYTHE_READ) {
-      File scytheCoverage = new File(SCYTHE_OUTPUT_DIR + File.separator + SCYTHE_FILENAME);
+      File scytheCoverage = getScytheFile();
       if (scytheCoverage.exists()) {
         Gson gson = getGson();
         try {
@@ -164,24 +158,23 @@ public class ScytheInstrumenter implements Instrumenter {
     } else {
       try {
         List<Failure> failures = new ArrayList<>();
-        PrintStream defaultSysOut = System.out;
-        PrintStream defaultSysErr = System.err;
+        PrintStream defaultSysOut = java.lang.System.out;
+        PrintStream defaultSysErr = java.lang.System.err;
         // ensure coverage data is collected
-        System.setOut(NullPrintStream.instance);
-        System.setErr(NullPrintStream.instance);
+        java.lang.System.setOut(NullPrintStream.instance);
+        java.lang.System.setErr(NullPrintStream.instance);
         ProgressBar bar = new ProgressBar(defaultSysOut);
         bar.setTitle("Running Test Cases");
-        for (TestCaseChromosome testCase : testSuite.getRunnableTestCases()) {
+        for (TestCase testCase : testSuite.getTestCases()) {
           try {
-            ClassAnalyzer.setActiveTestCase(testCase.getTestCase());
             testCase.run();
             // debug code to find out where/why failures are occurring. Use
             // breakpoints after execution to locate failures
             if (testCase.hasFailures()) {
               failures.addAll(testCase.getFailures());
             }
-            bar.reportProgress((double) testSuite.getRunnableTestCases().indexOf(testCase) + 1,
-                testSuite.getRunnableTestCases().size());
+            bar.reportProgress((double) testSuite.getTestCases().indexOf(testCase) + 1,
+                testSuite.getTestCases().size());
             ClassAnalyzer.collectHitCounters(true);
             linesCovered.put(testCase, collectLines(testCase));
             branchesCovered.put(testCase, collectBranches(testCase));
@@ -198,14 +191,14 @@ public class ScytheInstrumenter implements Instrumenter {
         }
         bar.complete();
         logger.info("Finished instrumentation");
-        System.setOut(defaultSysOut);
-        System.setErr(defaultSysErr);
+        java.lang.System.setOut(defaultSysOut);
+        java.lang.System.setErr(defaultSysErr);
       } catch (final Exception e) {
         // runtime startup exception
         reportException(e);
       }
       if (!SCYTHE_READ && SCYTHE_WRITE) {
-        File scytheCoverage = new File(SCYTHE_OUTPUT_DIR + File.separator + SCYTHE_FILENAME);
+        File scytheCoverage = getScytheFile();
         if (!scytheCoverage.exists()) {
           try {
             scytheCoverage.createNewFile();
@@ -238,134 +231,129 @@ public class ScytheInstrumenter implements Instrumenter {
     return builder.create();
   }
 
-  private Map<CUTChromosome, Set<Integer>> collectLines(TestCaseChromosome testCase) {
-    Map<CUTChromosome, Set<Integer>> covered = new HashMap<>();
+  private Set<org.kanonizo.framework.objects.Line> collectLines(TestCase testCase) {
+    Set<org.kanonizo.framework.objects.Line> covered = new HashSet<>();
     List<Class<?>> changedClasses = ClassAnalyzer.getChangedClasses();
     for (Class<?> cl : changedClasses) {
-      if (CUTChromosomeStore.get(cl.getName()) != null) {
+      if (ClassStore.get(cl.getName()) != null) {
+        ClassUnderTest parent = ClassStore.get(cl.getName());
         List<Line> lines = ClassAnalyzer.getCoverableLines(cl.getName());
-        Set<Integer> linesCovered = lines.stream().filter(line -> line.getHits() > 0)
-            .map(line -> line.getGoalId()).collect(Collectors.toSet());
-        covered.put(CUTChromosomeStore.get(cl.getName()), linesCovered);
+        Set<Line> linesCovered = lines.stream().filter(line -> line.getHits() > 0)
+            .collect(Collectors.toSet());
+        Set<org.kanonizo.framework.objects.Line> kanLines = linesCovered
+            .stream()
+            .map(line -> LineStore.with(parent, line.getLineNumber()))
+            .collect(Collectors.toSet());
+        covered.addAll(kanLines);
       }
     }
     return covered;
   }
 
-  private Map<CUTChromosome, Set<Integer>> collectBranches(TestCaseChromosome testCase) {
-    Map<CUTChromosome, Set<Integer>> covered = new HashMap<>();
+  private Set<org.kanonizo.framework.objects.Branch> collectBranches(TestCase testCase) {
+    Set<org.kanonizo.framework.objects.Branch> covered = new HashSet<>();
     List<Class<?>> changedClasses = ClassAnalyzer.getChangedClasses();
     for (Class<?> cl : changedClasses) {
-      if (CUTChromosomeStore.get(cl.getName()) != null) {
+      if (ClassStore.get(cl.getName()) != null) {
+        ClassUnderTest parent = ClassStore.get(cl.getName());
         List<Branch> branches = ClassAnalyzer.getCoverableBranches(cl.getName());
-        Set<Integer> branchesCovered = branches.stream().filter(branch -> branch.getHits() > 0)
-            .map(branch -> branch.getGoalId()).collect(Collectors.toSet());
-        covered.put(CUTChromosomeStore.get(cl.getName()), branchesCovered);
+        Set<Branch> branchesCovered = branches.stream().filter(branch -> branch.getHits() > 0)
+            .collect(Collectors.toSet());
+        Set<org.kanonizo.framework.objects.Branch> kanBranches = branchesCovered
+            .stream()
+            .map(branch -> BranchStore.with(parent, branch.getLineNumber(), branch.getGoalId()))
+            .collect(Collectors.toSet());
+        covered.addAll(kanBranches);
       }
     }
     return covered;
   }
 
   @Override
-  public Map<CUTChromosome, Set<Integer>> getLinesCovered(TestCaseChromosome testCase) {
+  public Set<org.kanonizo.framework.objects.Line> getLinesCovered(TestCase testCase) {
     return linesCovered.get(testCase);
   }
 
   @Override
-  public Map<CUTChromosome, Set<Integer>> getBranchesCovered(TestCaseChromosome testCase) {
+  public Set<org.kanonizo.framework.objects.Branch> getBranchesCovered(TestCase testCase) {
     return branchesCovered.get(testCase);
   }
 
   @Override
-  public int getTotalLines(CUTChromosome cut) {
+  public int getTotalLines(ClassUnderTest cut) {
     return ClassAnalyzer.getCoverableLines(cut.getCUT().getName()).size();
   }
 
   @Override
-  public int getTotalBranches(CUTChromosome cut) {
+  public int getTotalBranches(ClassUnderTest cut) {
     return ClassAnalyzer.getCoverableBranches(cut.getCUT().getName()).size();
   }
 
   @Override
-  public Set<Integer> getLines(CUTChromosome cut) {
+  public Set<org.kanonizo.framework.objects.Line> getLines(ClassUnderTest cut) {
     return ClassAnalyzer.getCoverableLines(cut.getCUT().getName()).stream()
-        .map(line -> line.getLineNumber()).collect(Collectors.toSet());
+        .map(line -> LineStore.with(cut, line.getLineNumber())).collect(Collectors.toSet());
   }
 
   @Override
-  public Set<Integer> getBranches(CUTChromosome cut) {
+  public Set<org.kanonizo.framework.objects.Branch> getBranches(ClassUnderTest cut) {
     return ClassAnalyzer.getCoverableBranches(cut.getCUT().getName()).stream()
-        .map(line -> line.getLineNumber()).collect(Collectors.toSet());
+        .map(branch -> BranchStore.with(cut, branch.getLineNumber(), branch.getGoalId())).collect(Collectors.toSet());
   }
 
   @Override
-  public int getTotalLines(SUTChromosome sut) {
+  public int getTotalLines(SystemUnderTest sut) {
     return sut.getClassesUnderTest().stream()
         .mapToInt(cut -> ClassAnalyzer.getCoverableLines(cut.getCUT().getName()).size()).sum();
   }
 
   @Override
-  public int getLinesCovered(TestSuiteChromosome testSuite) {
-    Map<CUTChromosome, Set<Integer>> covered = new HashMap<>();
+  public int getLinesCovered(TestSuite testSuite) {
+    Set<org.kanonizo.framework.objects.Line> covered = new HashSet<>();
     testSuite.getTestCases().stream().forEach(testCase -> {
-      Map<CUTChromosome, Set<Integer>> linesCovered = getLinesCovered(testCase);
-      linesCovered.entrySet().forEach(entry -> {
-        if (covered.containsKey(entry.getKey())) {
-          covered.get(entry.getKey()).addAll(entry.getValue());
-        } else {
-          covered.put(entry.getKey(), entry.getValue());
-        }
-      });
+      covered.addAll(getLinesCovered(testCase));
     });
-    return covered.values().stream().mapToInt(Set::size).sum();
+    return covered.size();
   }
 
   @Override
-  public int getTotalBranches(SUTChromosome sut) {
+  public int getTotalBranches(SystemUnderTest sut) {
     return sut.getClassesUnderTest().stream()
         .mapToInt(cut -> ClassAnalyzer.getCoverableBranches(cut.getCUT().getName()).size())
         .sum();
   }
 
   @Override
-  public int getBranchesCovered(TestSuiteChromosome testSuite) {
-    return testSuite.getTestCases().stream().mapToInt(
-        testCase -> getBranchesCovered(testCase).entrySet().stream()
-            .mapToInt(entry -> entry.getValue().size()).sum()).sum();
+  public int getBranchesCovered(TestSuite testSuite) {
+    Set<org.kanonizo.framework.objects.Branch> covered = new HashSet<>();
+    testSuite.getTestCases().stream().forEach(testCase -> {
+      covered.addAll(getBranchesCovered(testCase));
+    });
+    return covered.size();
   }
 
-  private String coveredString
-      (Map<TestCaseChromosome, Map<CUTChromosome, Set<Integer>>> covered) {
-    StringBuilder sb = new StringBuilder();
-    Iterator<TestCaseChromosome> tests = covered.keySet().iterator();
-    while (tests.hasNext()) {
-      TestCaseChromosome tc = tests.next();
-      sb.append(tc.getId());
-      sb.append(":{");
-      Iterator<CUTChromosome> cuts = covered.get(tc).keySet().iterator();
-      while (cuts.hasNext()) {
-        CUTChromosome cut = cuts.next();
-        sb.append(cut.getId());
-        sb.append(":[");
-        Set<Integer> lines = covered.get(tc).get(cut);
-        Iterator<Integer> it = lines.iterator();
-        while (it.hasNext()) {
-          sb.append(it.next());
-          if (it.hasNext()) {
-            sb.append(",");
-          }
-        }
-        sb.append("]");
-        if (cuts.hasNext()) {
-          sb.append(",");
-        }
-      }
-      sb.append("}");
-      if (tests.hasNext()) {
-        sb.append(",");
-      }
-    }
-    return sb.toString();
+  @Override
+  public Set<org.kanonizo.framework.objects.Line> getLinesCovered(ClassUnderTest cut) {
+    return cut.getLines().stream().filter(line -> line.getCoveringTests().size() > 0).collect(Collectors.toSet());
+  }
+
+  @Override
+  public Set<org.kanonizo.framework.objects.Line> getLinesCovered(SystemUnderTest sut) {
+    return sut.getClassesUnderTest().stream().map(cut -> getLinesCovered(cut)).collect(new HashSetCollector<>());
+  }
+
+  @Override
+  public Set<org.kanonizo.framework.objects.Branch> getBranchesCovered(ClassUnderTest cut) {
+    return cut.getLines().stream().map(
+        line -> line.getBranches().stream().filter(
+            branch -> branch.getCoveringTests().size() > 0)
+            .collect(Collectors.toSet()))
+        .collect(new HashSetCollector<>());
+  }
+
+  @Override
+  public Set<org.kanonizo.framework.objects.Branch> getBranchesCovered(SystemUnderTest sut) {
+    return sut.getClassesUnderTest().stream().map(cut -> getBranchesCovered(cut)).collect(new HashSetCollector<>());
   }
 
   private class ScytheTypeWriter extends TypeAdapter<ScytheInstrumenter> {
@@ -375,28 +363,38 @@ public class ScytheInstrumenter implements Instrumenter {
         throws IOException {
       out.beginObject();
       out.name("linesCovered");
+      writeCoverage(out, inst.linesCovered);
+      out.name("branchesCovered");
+      writeCoverage(out, inst.branchesCovered);
+      out.endObject();
+    }
 
+    private <T extends Goal> void writeCoverage(JsonWriter out, Map<TestCase, Set<T>> coverage) throws IOException {
       out.beginObject();
-      Iterator<TestCaseChromosome> testCases = inst.linesCovered.keySet().iterator();
+      List<TestCase> orderedTestCases = new ArrayList<>(coverage.keySet());
+      Collections.sort(orderedTestCases, Comparator.comparing(TestCase::getId));
+      Iterator<TestCase> testCases = orderedTestCases.iterator();
+      // tests
       while (testCases.hasNext()) {
-        TestCaseChromosome tc = testCases.next();
+        TestCase tc = testCases.next();
         out.name(Integer.toString(tc.getId()));
-        out.beginObject();
-        Iterator<CUTChromosome> cuts = inst.linesCovered.get(tc).keySet().iterator();
-        while (cuts.hasNext()) {
-          CUTChromosome cut = cuts.next();
-          out.name(Integer.toString(cut.getId()));
+        out.beginArray();
+        Iterator<T> goals = coverage.get(tc).iterator();
+        while (goals.hasNext()) {
+          out.beginObject();
+          T l = goals.next();
+          out.name(Integer.toString(l.getParent().getId()));
           out.beginArray();
-          Set<Integer> lines = inst.linesCovered.get(tc).get(cut);
-          for (Integer line : lines) {
-            out.value(line);
+          out.value(l.getLineNumber());
+          if (l instanceof org.kanonizo.framework.objects.Branch) {
+            out.value(((org.kanonizo.framework.objects.Branch) l).getBranchNumber());
           }
           out.endArray();
+          out.endObject();
         }
-        out.endObject();
+        out.endArray();
       }
 //      out.name("branchesCovered").value(inst.coveredString(inst.branchesCovered));
-      out.endObject();
       out.endObject();
     }
 
@@ -418,30 +416,35 @@ public class ScytheInstrumenter implements Instrumenter {
       return inst;
     }
 
-    private Map<TestCaseChromosome, Map<CUTChromosome, Set<Integer>>> readCoverage(
+    private <T extends Goal> Map<TestCase, Set<T>> readCoverage(
         JsonReader in) throws IOException {
-      HashMap<TestCaseChromosome, Map<CUTChromosome, Set<Integer>>> returnMap = new HashMap<>();
+      HashMap<TestCase, Set<T>> returnMap = new HashMap<>();
       // test cases
       in.beginObject();
       while (in.hasNext()) {
         int testCaseId = Integer.parseInt(in.nextName());
-        TestCaseChromosome tc = TestCaseChromosomeStore.get(testCaseId);
-        Map<CUTChromosome, Set<Integer>> linesCovered = new HashMap<>();
-        in.beginObject();
-        // cuts
+        TestCase tc = TestCaseStore.get(testCaseId);
+        Set<T> linesCovered = new HashSet<>();
+        in.beginArray();
+        // lines
         while (in.hasNext()) {
-          int cutId = Integer.parseInt(in.nextName());
-          CUTChromosome cut = CUTChromosomeStore.get(cutId);
-          Set<Integer> linesCoveredInCut = new HashSet<>();
-          in.beginArray();
-          // lines in CUT
+          in.beginObject();
           while (in.hasNext()) {
-            linesCoveredInCut.add(in.nextInt());
+            int cutId = Integer.parseInt(in.nextName());
+            in.beginArray();
+            ClassUnderTest cut = ClassStore.get(cutId);
+            int lineNumber = in.nextInt();
+            if (in.hasNext()) {
+              int branchNumber = in.nextInt();
+              linesCovered.add((T) BranchStore.with(cut, lineNumber, branchNumber));
+            } else {
+              linesCovered.add((T) LineStore.with(cut, lineNumber));
+            }
+            in.endArray();
           }
-          in.endArray();
-          linesCovered.put(cut, linesCoveredInCut);
+          in.endObject();
         }
-        in.endObject();
+        in.endArray();
         returnMap.put(tc, linesCovered);
       }
       in.endObject();

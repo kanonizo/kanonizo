@@ -1,15 +1,16 @@
 package org.kanonizo.algorithms;
 
 import org.kanonizo.algorithms.stoppingconditions.StoppingCondition;
-import org.kanonizo.framework.TestCaseChromosome;
-import org.kanonizo.framework.TestSuiteChromosome;
+import org.kanonizo.framework.objects.SystemUnderTest;
+import org.kanonizo.framework.objects.TestCase;
+import org.kanonizo.framework.objects.TestSuite;
 
 public interface SearchAlgorithm {
-  void setSearchProblem(TestSuiteChromosome problem);
+  void setSearchProblem(SystemUnderTest problem);
 
-  TestSuiteChromosome getCurrentOptimal();
+  TestSuite getCurrentOptimal();
 
-  void setCurrentOptimal(TestSuiteChromosome chr);
+  void setCurrentOptimal(TestSuite chr);
 
   long getStartTime();
 
@@ -27,13 +28,13 @@ public interface SearchAlgorithm {
     return true;
   }
 
-  default double getFitness(TestSuiteChromosome chr) {
+  default double getFitness(TestSuite chr) {
     // TODO remove default implementation once search algorithms have
     // implemented their own fitness functions
     return 0.0;
   }
 
-  default double getFitness(TestCaseChromosome chr) {
+  default double getFitness(TestCase chr) {
     // TODO remove default implementation once search algorithms have
     // implemented their own fitness functiosn
     return 0.0;

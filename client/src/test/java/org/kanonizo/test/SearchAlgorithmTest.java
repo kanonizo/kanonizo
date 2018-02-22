@@ -4,18 +4,18 @@ import java.io.File;
 import org.junit.Before;
 import org.kanonizo.Framework;
 import org.kanonizo.algorithms.SearchAlgorithm;
-import org.kanonizo.framework.TestSuiteChromosome;
+import org.kanonizo.framework.objects.TestSuite;
 
 public abstract class SearchAlgorithmTest extends MockitoTest {
     protected SearchAlgorithm algorithm;
 
-    private TestSuiteChromosome tsc;
+    private TestSuite tsc;
 
     protected SearchAlgorithmTest(SearchAlgorithm algorithm) {
         this.algorithm = algorithm;
     }
 
-    protected TestSuiteChromosome getTsc() {
+    protected TestSuite getTsc() {
         return tsc;
     }
 

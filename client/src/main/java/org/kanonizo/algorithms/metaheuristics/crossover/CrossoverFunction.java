@@ -1,7 +1,7 @@
 package org.kanonizo.algorithms.metaheuristics.crossover;
 
-import org.kanonizo.framework.Chromosome;
+import org.kanonizo.framework.objects.TestSuite;
 
 public interface CrossoverFunction {
-  public void crossover(Chromosome parent1, Chromosome parent2);
+  public void crossover(TestSuite parent1, TestSuite parent2);
 }

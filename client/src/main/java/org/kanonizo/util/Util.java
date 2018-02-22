@@ -7,6 +7,9 @@ import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.Arrays;
+import java.util.List;
+import org.junit.Test;
 import org.kanonizo.Main;
 import org.reflections.Reflections;
 import org.reflections.scanners.FieldAnnotationsScanner;
@@ -25,10 +28,8 @@ public class Util {
   /**
    * Method to add a folder or a jar file to the classpath. Invokes {@link URLClassLoader#addURL} via reflection using the URL from the file object
    *
-   * @param file
-   *          - either a jar file or a directory to be added to the classpath
-   * @throws SecurityException
-   *           - if protected java classes are trying to be added back into the classpath
+   * @param file - either a jar file or a directory to be added to the classpath
+   * @throws SecurityException - if protected java classes are trying to be added back into the classpath
    */
   public static void addToClassPath(File file) throws SecurityException {
     if (file.isDirectory() || file.getName().endsWith(".jar")) {
@@ -40,9 +41,9 @@ public class Util {
           absoluteFile = file.getAbsoluteFile();
         }
         ClassLoader urlClassLoader = ClassLoader.getSystemClassLoader();
-        Method method = URLClassLoader.class.getDeclaredMethod("addURL", new Class[] { URL.class });
+        Method method = URLClassLoader.class.getDeclaredMethod("addURL", new Class[]{URL.class});
         method.setAccessible(true);
-        method.invoke(urlClassLoader, new Object[] { absoluteFile.toURI().toURL() });
+        method.invoke(urlClassLoader, new Object[]{absoluteFile.toURI().toURL()});
       } catch (NoSuchMethodException e) {
         e.printStackTrace();
       } catch (MalformedURLException e) {
@@ -60,12 +61,10 @@ public class Util {
   /**
    * This method serves as a utility for finding files defined by the command line. It first checks in the current directory for a relative path, then checks globally on the file system. If the file
    * doesn't exist in either location, an IllegalArgumentException is thrown.
-   * 
-   * @param property
-   *          - usually one of the command line arguments defined that represent files.
-   * @throws IllegalArgumentException
-   *           - if the file does not exist in the current directory or globally on the file system
+   *
+   * @param property - usually one of the command line arguments defined that represent files.
    * @return
+   * @throws IllegalArgumentException - if the file does not exist in the current directory or globally on the file system
    */
   public static File getFile(String property) {
     if (property == null || property.isEmpty()) {
@@ -85,7 +84,7 @@ public class Util {
     return f;
   }
 
-  @SuppressWarnings({ "unchecked", "rawtypes" })
+  @SuppressWarnings({"unchecked", "rawtypes"})
   public static void setParameter(Field f, String value) throws IllegalArgumentException, IllegalAccessException {
     Class<?> cl = f.getType();
     if (cl.isAssignableFrom(Number.class) || cl.isPrimitive()) {
@@ -119,12 +118,28 @@ public class Util {
   }
 
   private static Reflections r;
-  public static Reflections getReflections(){
-    if (r == null){
+
+  public static Reflections getReflections() {
+    if (r == null) {
       r = new Reflections(new ConfigurationBuilder()
           .setUrls(ClasspathHelper.forClassLoader())
           .setScanners(new SubTypesScanner(), new TypeAnnotationsScanner(), new FieldAnnotationsScanner()));
     }
     return r;
+  }
+
+  public static boolean isTestClass(Class<?> cl) {
+    List<Method> methods = Arrays.asList(cl.getDeclaredMethods());
+    if (cl.isMemberClass() && isTestClass(cl.getEnclosingClass())) {
+      return true;
+    }
+    if (methods.stream().anyMatch(method -> method.getName().startsWith("test"))) {
+      return true;
+    }
+    if (methods.stream()
+        .anyMatch(method -> Arrays.asList(method.getAnnotations()).contains(Test.class))) {
+      return true;
+    }
+    return false;
   }
 }

@@ -3,17 +3,18 @@ package org.kanonizo.framework;
 import java.util.HashMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.kanonizo.framework.objects.TestCase;
 
-public class TestCaseChromosomeStore {
+public class TestCaseStore {
 
-  private static HashMap<Integer, TestCaseChromosome> testCases = new HashMap<>();
-  private static final Logger logger = LogManager.getLogger(TestCaseChromosomeStore.class);
+  private static HashMap<Integer, TestCase> testCases = new HashMap<>();
+  private static final Logger logger = LogManager.getLogger(TestCaseStore.class);
 
-  public static void register(int id, TestCaseChromosome testCase) {
+  public static void register(int id, TestCase testCase) {
     testCases.put(id, testCase);
   }
 
-  public static TestCaseChromosome get(int id) {
+  public static TestCase get(int id) {
     if (testCases.containsKey(id)) {
       return testCases.get(id);
     }

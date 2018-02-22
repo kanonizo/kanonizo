@@ -1,25 +1,45 @@
 package org.kanonizo.framework.instrumentation;
 
-import java.util.Map;
 import java.util.Set;
-import org.kanonizo.framework.CUTChromosome;
-import org.kanonizo.framework.SUTChromosome;
-import org.kanonizo.framework.TestCaseChromosome;
-import org.kanonizo.framework.TestSuiteChromosome;
+import org.kanonizo.framework.objects.Branch;
+import org.kanonizo.framework.objects.ClassUnderTest;
+import org.kanonizo.framework.objects.Line;
+import org.kanonizo.framework.objects.SystemUnderTest;
+import org.kanonizo.framework.objects.TestCase;
+import org.kanonizo.framework.objects.TestSuite;
 
 public interface Instrumenter {
-    Class<?> loadClass(String className) throws ClassNotFoundException;
-    void setTestSuite(TestSuiteChromosome ts);
-    void collectCoverage();
-    Map<CUTChromosome, Set<Integer>> getLinesCovered(TestCaseChromosome testCase);
-    Map<CUTChromosome, Set<Integer>> getBranchesCovered(TestCaseChromosome testCase);
-    int getTotalLines(CUTChromosome cut);
-    int getTotalBranches(CUTChromosome cut);
-    Set<Integer> getLines(CUTChromosome cut);
-    Set<Integer> getBranches(CUTChromosome cut);
-    int getTotalLines(SUTChromosome sut);
-    int getLinesCovered(TestSuiteChromosome testSuite);
-    int getTotalBranches(SUTChromosome sut);
-    int getBranchesCovered(TestSuiteChromosome testSuite);
+  Class<?> loadClass(String className) throws ClassNotFoundException;
 
+  void setTestSuite(TestSuite ts);
+
+  void collectCoverage();
+
+  Set<Line> getLinesCovered(TestCase testCase);
+
+  Set<Branch> getBranchesCovered(TestCase testCase);
+
+  int getTotalLines(ClassUnderTest cut);
+
+  int getTotalBranches(ClassUnderTest cut);
+
+  Set<Line> getLines(ClassUnderTest cut);
+
+  Set<Branch> getBranches(ClassUnderTest cut);
+
+  int getTotalLines(SystemUnderTest sut);
+
+  int getLinesCovered(TestSuite testSuite);
+
+  int getTotalBranches(SystemUnderTest sut);
+
+  int getBranchesCovered(TestSuite testSuite);
+
+  Set<Line> getLinesCovered(ClassUnderTest cut);
+
+  Set<Line> getLinesCovered(SystemUnderTest sut);
+
+  Set<Branch> getBranchesCovered(ClassUnderTest cut);
+
+  Set<Branch> getBranchesCovered(SystemUnderTest sut);
 }

@@ -1,27 +1,26 @@
 package org.kanonizo.algorithms.metaheuristics.fitness;
 
 import java.util.Comparator;
-
-import org.kanonizo.framework.TestCaseChromosome;
-import org.kanonizo.framework.TestSuiteChromosome;
+import org.kanonizo.framework.objects.SystemUnderTest;
+import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.mutation.Mutation;
 
 public class FEPTotalFitnessFunction
-    implements TestCaseFitnessFunction, Comparator<TestCaseChromosome>, FitnessFunction<TestSuiteChromosome> {
+    implements TestCaseFitnessFunction, Comparator<TestCase>, FitnessFunction<SystemUnderTest> {
 
-  protected TestSuiteChromosome tsc;
+  protected SystemUnderTest sut;
 
-  public FEPTotalFitnessFunction(TestSuiteChromosome tsc) {
-    this.tsc = tsc;
+  public FEPTotalFitnessFunction(SystemUnderTest sut) {
+    this.sut = sut;
   }
 
   @Override
-  public double getTestCaseFitness(TestCaseChromosome c) {
+  public double getTestCaseFitness(TestCase c) {
     return Mutation.getKillMap().get(c).size();
   }
 
   @Override
-  public int compare(TestCaseChromosome o1, TestCaseChromosome o2) {
+  public int compare(TestCase o1, TestCase o2) {
     return Double.compare(getTestCaseFitness(o1), getTestCaseFitness(o2));
   }
 
@@ -35,13 +34,14 @@ public class FEPTotalFitnessFunction
   }
 
   @Override
-  public FitnessFunction<TestSuiteChromosome> clone(TestSuiteChromosome chr) {
+  public FitnessFunction<SystemUnderTest> clone(SystemUnderTest chr) {
     return null;
   }
 
   @Override
-  public TestSuiteChromosome getChromosome() {
-    return tsc;
+  public SystemUnderTest getSystem() {
+    return sut;
   }
+
 
 }

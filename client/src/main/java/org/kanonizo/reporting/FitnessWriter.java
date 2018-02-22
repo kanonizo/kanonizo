@@ -4,18 +4,18 @@ import java.util.Calendar;
 
 import org.kanonizo.algorithms.SearchAlgorithm;
 import org.kanonizo.algorithms.metaheuristics.fitness.FitnessFunction;
-import org.kanonizo.framework.TestSuiteChromosome;
+import org.kanonizo.framework.objects.TestSuite;
 import com.scythe.instrumenter.InstrumentationProperties;
 
 public class FitnessWriter extends CsvWriter {
   private SearchAlgorithm algorithm;
-  private FitnessFunction<TestSuiteChromosome> func;
+  private FitnessFunction<TestSuite> func;
 
   public FitnessWriter(SearchAlgorithm algorithm) {
     this.algorithm = algorithm;
   }
 
-  public FitnessWriter(FitnessFunction<TestSuiteChromosome> func) {
+  public FitnessWriter(FitnessFunction<TestSuite> func) {
     this.func = func;
   }
 

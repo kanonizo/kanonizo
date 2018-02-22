@@ -3,13 +3,13 @@ package org.kanonizo.mutation;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.kanonizo.framework.TestCaseChromosome;
+import org.kanonizo.framework.objects.TestCase;
 
 public class Mutant {
   private int mutantId;
   private Class<?> targetClass;
   private int lineNumber;
-  private List<TestCaseChromosome> killedBy = new ArrayList<TestCaseChromosome>();
+  private List<TestCase> killedBy = new ArrayList<TestCase>();
 
   public Mutant(int mutantId, Class<?> targetClass, int lineNumber) {
     this.mutantId = mutantId;
@@ -17,7 +17,7 @@ public class Mutant {
     this.lineNumber = lineNumber;
   }
 
-  public void addKillingTest(TestCaseChromosome tc) {
+  public void addKillingTest(TestCase tc) {
     killedBy.add(tc);
   }
 
@@ -33,7 +33,7 @@ public class Mutant {
     return lineNumber;
   }
 
-  public List<TestCaseChromosome> getKillingTests() {
-    return new ArrayList<TestCaseChromosome>(killedBy);
+  public List<TestCase> getKillingTests() {
+    return new ArrayList<TestCase>(killedBy);
   }
 }

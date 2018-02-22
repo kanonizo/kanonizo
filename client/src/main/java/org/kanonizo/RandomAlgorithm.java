@@ -1,11 +1,11 @@
 package org.kanonizo;
 
-import org.kanonizo.algorithms.AbstractSearchAlgorithm;
-import org.kanonizo.annotations.Algorithm;
-import org.kanonizo.framework.TestCaseChromosome;
-
 import java.util.Collections;
 import java.util.List;
+import org.kanonizo.algorithms.AbstractSearchAlgorithm;
+import org.kanonizo.annotations.Algorithm;
+import org.kanonizo.framework.objects.TestCase;
+import org.kanonizo.framework.objects.TestSuite;
 
 /**
  * Created by davidpaterson on 16/12/2016.
@@ -14,9 +14,10 @@ import java.util.List;
 public class RandomAlgorithm extends AbstractSearchAlgorithm{
     @Override
     protected void generateSolution() {
-        List<TestCaseChromosome> testCases = problem.getTestCases();
+        TestSuite suite = problem.clone().getTestSuite();
+        List<TestCase> testCases = suite.getTestCases();
         Collections.shuffle(testCases);
-        problem.setTestCases(testCases);
+        setCurrentOptimal(suite);
         fitnessEvaluations++;
     }
 

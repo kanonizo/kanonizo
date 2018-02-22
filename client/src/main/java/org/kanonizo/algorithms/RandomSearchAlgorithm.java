@@ -4,8 +4,8 @@ import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import org.kanonizo.Properties;
 import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.commandline.ProgressBar;
-import org.kanonizo.framework.TestCaseChromosome;
-import org.kanonizo.framework.TestSuiteChromosome;
+import org.kanonizo.framework.objects.TestCase;
+import org.kanonizo.framework.objects.TestSuite;
 import org.kanonizo.reporting.FitnessWriter;
 import org.kanonizo.util.RandomInstance;
 
@@ -22,13 +22,13 @@ public class RandomSearchAlgorithm extends AbstractSearchAlgorithm {
     @Override
     public void generateSolution() {
 
-        List<TestCaseChromosome> testCases = problem.getTestCases();
+        List<TestCase> testCases = problem.getTestSuite().getTestCases();
         ProgressBar bar = new ProgressBar(ClassAnalyzer.out);
         bar.setTitle("Running Random Search");
         while (!shouldFinish()) {
             age++;
-            TestSuiteChromosome clone = getCurrentOptimal().clone();
-            List<TestCaseChromosome> randomOrdering = generateRandomOrder(testCases);
+            TestSuite clone = getCurrentOptimal().clone();
+            List<TestCase> randomOrdering = generateRandomOrder(testCases);
             clone.setTestCases(randomOrdering);
             fitnessEvaluations++;
             if (clone.fitter(getCurrentOptimal()).equals(clone)) {
@@ -46,12 +46,12 @@ public class RandomSearchAlgorithm extends AbstractSearchAlgorithm {
         writer.write();
     }
 
-    private List<TestCaseChromosome> generateRandomOrder(List<TestCaseChromosome> testCases) {
-        List<TestCaseChromosome> unorderedCases = new ArrayList<TestCaseChromosome>(testCases);
-        List<TestCaseChromosome> orderedCases = new ArrayList<TestCaseChromosome>();
+    private List<TestCase> generateRandomOrder(List<TestCase> testCases) {
+        List<TestCase> unorderedCases = new ArrayList<TestCase>(testCases);
+        List<TestCase> orderedCases = new ArrayList<TestCase>();
         while (unorderedCases.size() > 0) {
             int index = RandomInstance.nextInt(unorderedCases.size());
-            TestCaseChromosome chr = unorderedCases.get(index);
+            TestCase chr = unorderedCases.get(index);
             orderedCases.add(chr);
             unorderedCases.remove(chr);
         }

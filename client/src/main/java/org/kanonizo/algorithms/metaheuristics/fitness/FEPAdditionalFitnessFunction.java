@@ -1,16 +1,16 @@
 package org.kanonizo.algorithms.metaheuristics.fitness;
 
-import org.kanonizo.framework.TestCaseChromosome;
-import org.kanonizo.framework.TestSuiteChromosome;
+import org.kanonizo.framework.objects.SystemUnderTest;
+import org.kanonizo.framework.objects.TestCase;
 
 public class FEPAdditionalFitnessFunction extends FEPTotalFitnessFunction {
 
-  public FEPAdditionalFitnessFunction(TestSuiteChromosome tsc) {
-    super(tsc);
+  public FEPAdditionalFitnessFunction(SystemUnderTest sut) {
+    super(sut);
   }
 
   @Override
-  public double getTestCaseFitness(TestCaseChromosome c) {
+  public double getTestCaseFitness(TestCase c) {
     return 0;
   }
 

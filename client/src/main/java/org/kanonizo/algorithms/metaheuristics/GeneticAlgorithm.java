@@ -1,5 +1,14 @@
 package org.kanonizo.algorithms.metaheuristics;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.TimeZone;
+import java.util.stream.IntStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kanonizo.Properties;
@@ -11,23 +20,18 @@ import org.kanonizo.algorithms.metaheuristics.selection.SelectionFunction;
 import org.kanonizo.algorithms.stoppingconditions.StoppingCondition;
 import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.commandline.ProgressBar;
-import org.kanonizo.framework.TestCaseChromosome;
-import org.kanonizo.framework.TestSuiteChromosome;
+import org.kanonizo.framework.objects.SystemUnderTest;
+import org.kanonizo.framework.objects.TestCase;
+import org.kanonizo.framework.objects.TestSuite;
 import org.kanonizo.reporting.FitnessWriter;
 import org.kanonizo.util.RandomInstance;
-
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.stream.IntStream;
 
 @Algorithm(readableName = "geneticalgorithm")
 public class GeneticAlgorithm extends AbstractSearchAlgorithm {
 
-  private List<TestSuiteChromosome> population = new ArrayList<TestSuiteChromosome>();
+  private List<TestSuite> population = new ArrayList<TestSuite>();
   private static Logger logger = LogManager.getLogger(GeneticAlgorithm.class);
-  private SelectionFunction<TestSuiteChromosome> selection = new RankSelection<>();
+  private SelectionFunction<TestSuite> selection = new RankSelection<>();
   private CrossoverFunction crossover = new SinglePointCrossover();
   private FitnessWriter writer = new FitnessWriter(this);
 
@@ -35,7 +39,7 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
     this.crossover = crossover;
   }
 
-  public void setSelectionFunction(SelectionFunction<TestSuiteChromosome> function) {
+  public void setSelectionFunction(SelectionFunction<TestSuite> function) {
     this.selection = function;
   }
 
@@ -75,13 +79,13 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
   protected void generateInitialPopulation() {
     logger.info("Generating initial population");
     for (int i = 0; i < Properties.POPULATION_SIZE; i++) {
-      TestSuiteChromosome clone = problem.clone();
+      TestSuite clone = problem.clone().getTestSuite();
       List<Integer> testCaseOrdering = IntStream.range(0, clone.getTestCases().size()).collect(ArrayList::new,
           ArrayList::add, ArrayList::addAll);
-      List<TestCaseChromosome> randomOrdering = new ArrayList<TestCaseChromosome>();
+      List<TestCase> randomOrdering = new ArrayList<TestCase>();
       while (!testCaseOrdering.isEmpty()) {
         int index = RandomInstance.nextInt(testCaseOrdering.size());
-        TestCaseChromosome tc = clone.getTestCases().get(testCaseOrdering.get(index));
+        TestCase tc = clone.getTestCases().get(testCaseOrdering.get(index));
         randomOrdering.add(tc);
         testCaseOrdering.remove(index);
       }
@@ -92,17 +96,17 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
 
   protected void evolve() {
     long startTime = System.currentTimeMillis();
-    List<TestSuiteChromosome> newIndividuals = new ArrayList<>();
+    List<TestSuite> newIndividuals = new ArrayList<>();
     // apply elitism
     newIndividuals.addAll(elitism());
 
     while (!isNewGenerationFull(newIndividuals)) {
 
-      TestSuiteChromosome parent1 = selection.select(population);
-      TestSuiteChromosome parent2 = selection.select(population);
+      TestSuite parent1 = selection.select(population);
+      TestSuite parent2 = selection.select(population);
 
-      TestSuiteChromosome offspring1 = parent1.clone();
-      TestSuiteChromosome offspring2 = parent2.clone();
+      TestSuite offspring1 = parent1.clone();
+      TestSuite offspring2 = parent2.clone();
 
       if (RandomInstance.nextDouble() <= Properties.CROSSOVER_CHANCE) {
         crossover.crossover(offspring1, offspring2);
@@ -122,8 +126,8 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
     }
   }
 
-  protected void evolutionComplete(TestSuiteChromosome... evolved) {
-    for (TestSuiteChromosome ts : evolved) {
+  protected void evolutionComplete(TestSuite... evolved) {
+    for (TestSuite ts : evolved) {
       ts.evolutionComplete();
       fitnessEvaluations++;
       if (!Properties.TRACK_GENERATION_FITNESS) {
@@ -137,11 +141,11 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
   }
 
   @Override
-  public TestSuiteChromosome getCurrentOptimal() {
+  public TestSuite getCurrentOptimal() {
     return population.get(0);
   }
 
-  protected boolean isNewGenerationFull(List<TestSuiteChromosome> newGeneration) {
+  protected boolean isNewGenerationFull(List<TestSuite> newGeneration) {
     return newGeneration.size() > Properties.POPULATION_SIZE - 1;
   }
 
@@ -151,17 +155,17 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
    * 
    * @return a list of elite individuals to automatically add into the next generation
    */
-  protected List<TestSuiteChromosome> elitism() {
+  protected List<TestSuite> elitism() {
     sortPopulation();
-    List<TestSuiteChromosome> elite = new ArrayList<>();
+    List<TestSuite> elite = new ArrayList<>();
     for (int i = 0; i < Properties.ELITE; i++) {
       elite.add(population.get(i).clone());
     }
     return elite;
   }
 
-  protected List<TestSuiteChromosome> getNFittest(int n, TestSuiteChromosome... elements) {
-    List<TestSuiteChromosome> candidates = Arrays.asList(elements);
+  protected List<TestSuite> getNFittest(int n, TestSuite... elements) {
+    List<TestSuite> candidates = Arrays.asList(elements);
     Collections.sort(candidates);
     return candidates.subList(0, n);
   }

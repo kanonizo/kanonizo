@@ -14,12 +14,13 @@ import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kanonizo.algorithms.stoppingconditions.StoppingCondition;
-import org.kanonizo.framework.TestCaseChromosome;
-import org.kanonizo.framework.TestSuiteChromosome;
+import org.kanonizo.framework.objects.SystemUnderTest;
+import org.kanonizo.framework.objects.TestCase;
+import org.kanonizo.framework.objects.TestSuite;
 
 public abstract class AbstractSearchAlgorithm implements SearchAlgorithm {
-  protected TestSuiteChromosome problem;
-  protected TestSuiteChromosome currentOptimal;
+  protected SystemUnderTest problem;
+  protected TestSuite currentOptimal;
   private static final Logger LOGGER = LogManager.getLogger(AbstractSearchAlgorithm.class);
 
   protected int age;
@@ -63,18 +64,18 @@ public abstract class AbstractSearchAlgorithm implements SearchAlgorithm {
   }
 
   @Override
-  public void setSearchProblem(TestSuiteChromosome problem) {
+  public void setSearchProblem(SystemUnderTest problem) {
     this.problem = problem;
-    setCurrentOptimal(problem);
+    setCurrentOptimal(problem.getTestSuite());
   }
 
   @Override
-  public TestSuiteChromosome getCurrentOptimal() {
+  public TestSuite getCurrentOptimal() {
     return currentOptimal;
   }
 
   @Override
-  public void setCurrentOptimal(TestSuiteChromosome chr) {
+  public void setCurrentOptimal(TestSuite chr) {
     this.currentOptimal = chr;
   }
 
@@ -120,15 +121,13 @@ public abstract class AbstractSearchAlgorithm implements SearchAlgorithm {
 
   protected abstract void generateSolution();
 
-  protected class FitnessComparator implements Comparator<TestCaseChromosome> {
+  protected class FitnessComparator implements Comparator<TestCase> {
 
     public FitnessComparator() {
-      // TODO Auto-generated constructor stub
     }
 
     @Override
-    public int compare(TestCaseChromosome o1, TestCaseChromosome o2) {
-      // TODO Auto-generated method stub
+    public int compare(TestCase o1, TestCase o2) {
       return ((Double) getFitness(o2)).compareTo(getFitness(o1));
     }
 

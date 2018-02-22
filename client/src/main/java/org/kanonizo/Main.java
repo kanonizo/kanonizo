@@ -23,9 +23,9 @@ import org.kanonizo.algorithms.stoppingconditions.IterationsStoppingCondition;
 import org.kanonizo.algorithms.stoppingconditions.StagnationStoppingCondition;
 import org.kanonizo.algorithms.stoppingconditions.TimeStoppingCondition;
 import org.kanonizo.annotations.Algorithm;
-import org.kanonizo.framework.SUTChromosome;
-import org.kanonizo.framework.TestCaseChromosome;
-import org.kanonizo.framework.TestSuiteChromosome;
+import org.kanonizo.framework.objects.SystemUnderTest;
+import org.kanonizo.framework.objects.TestCase;
+import org.kanonizo.framework.objects.TestSuite;
 import org.kanonizo.util.Util;
 import org.reflections.Reflections;
 
@@ -37,7 +37,7 @@ public class Main {
 
   public static void main(String[] args) {
     // org.evosuite.Properties.TT = true;
-    ClassAnalyzer.setOut(System.out);
+    ClassAnalyzer.setOut(java.lang.System.out);
     Arrays.asList(forbiddenPackages).stream().forEach(s -> ClassReplacementTransformer.addForbiddenPackage(s));
     Options options = TestSuitePrioritisation.getCommandLineOptions();
     Framework fw = new Framework();
@@ -61,17 +61,17 @@ public class Main {
     }
     // necessary due to random thread creation during test cases (don't do
     // this ever again)
-    System.exit(0);
+    java.lang.System.exit(0);
   }
 
   /**
-   * Takes options from the {@link CommandLine} and creates a {@link TestSuiteChromosome} instance containing all of the test cases and a {@link SUTChromosome} object containing all of the source
+   * Takes options from the {@link CommandLine} and creates a {@link TestSuite} instance containing all of the test cases and a {@link SystemUnderTest} object containing all of the source
    * classes. The command line must contain a -s/--sourceFolder option for the source classes and a -t/--testFolder option for the test cases. Both of these folders will be added to the classpath,
    * and all nested .class files will be loaded in as either source or test cases ready for instrumentation. Currently, instrumentation and JUnit execution takes place in the constructor of a
-   * {@link TestSuiteChromosome}, but this may well be changed as fitness functions are introduced that are not reliant on code coverage.
+   * {@link TestSuite}, but this may well be changed as fitness functions are introduced that are not reliant on code coverage.
    *
    * @param line - the {@link CommandLine} instance which must contain -s and -t options for source and test folders respectively
-   * @return a {@link TestSuiteChromosome} object containing a {@link SUTChromosome} with all of the source classes and a list of {@link TestCaseChromosome} objects for all of the test cases
+   * @return a {@link TestSuite} object containing a {@link SystemUnderTest} with all of the source classes and a list of {@link TestCase} objects for all of the test cases
    * contained within the specified location
    */
   public static void setupFramework(CommandLine line, Framework fw) throws MissingOptionException {

@@ -1,7 +1,7 @@
 package org.kanonizo.reporting;
 
 import org.kanonizo.algorithms.SearchAlgorithm;
-import org.kanonizo.framework.TestSuiteChromosome;
+import org.kanonizo.framework.objects.TestSuite;
 
 public class MiscStatsWriter extends CsvWriter {
 
@@ -18,7 +18,7 @@ public class MiscStatsWriter extends CsvWriter {
 
   @Override
   protected void prepareCsv() {
-    TestSuiteChromosome optimal = algorithm.getCurrentOptimal();
+    TestSuite optimal = algorithm.getCurrentOptimal();
     setHeaders(new String[] { "Fitness", "Iterations", "Algorithm Execution Time", "Fitness Evaluations" });
     addRow(new String[] { Double.toString(optimal.getFitness()), Integer.toString(algorithm.getAge()),
         Long.toString(algorithm.getTotalTime()), Integer.toString(algorithm.getFitnessEvaluations()) });

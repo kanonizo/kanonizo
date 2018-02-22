@@ -1,49 +1,39 @@
 package org.kanonizo.algorithms.metaheuristics.fitness;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import java.util.Set;
 import org.kanonizo.Framework;
-import org.kanonizo.framework.CUTChromosome;
-import org.kanonizo.framework.TestCaseChromosome;
-import org.kanonizo.framework.TestSuiteChromosome;
+import org.kanonizo.framework.objects.Branch;
+import org.kanonizo.framework.objects.Goal;
+import org.kanonizo.framework.objects.SystemUnderTest;
+import org.kanonizo.framework.objects.TestCase;
+import org.kanonizo.util.HashSetCollector;
 
 public class APBCFunction extends APFDFunction {
 
-  public APBCFunction(TestSuiteChromosome chrom) {
-    super(chrom);
+  public APBCFunction(SystemUnderTest sut) {
+    super(sut);
   }
 
   @Override
-  public Map<CUTChromosome, List<Integer>> getCoveredGoals(TestCaseChromosome tc) {
-    Map<CUTChromosome, List<Integer>> returnMap = new HashMap<>();
-    Framework.getInstrumenter().getBranchesCovered(tc).entrySet().forEach(entry -> {
-      List<Integer> goals = new ArrayList<>();
-      goals.addAll(entry.getValue());
-      returnMap.put(entry.getKey(), goals);
-    });
-    return returnMap;
+  public Set<? extends Goal> getCoveredGoals(TestCase tc) {
+    return Framework.getInstrumenter().getLinesCovered(tc);
   }
 
   @Override
-  protected List<Integer> getGoals() {
-    int totalBranches = chrom.getSUT().getClassesUnderTest().stream().mapToInt(cut -> Framework.getInstrumenter().getTotalBranches(cut)).sum();
-    return IntStream.range(1, totalBranches).boxed().collect(Collectors.toList());
+  protected Set<? extends Goal> getGoals() {
+    return sut.getClassesUnderTest().stream().map(cut -> Framework.getInstrumenter().getBranches(cut)).collect(new HashSetCollector<Branch>());
   }
 
   @Override
-  public FitnessFunction<TestSuiteChromosome> clone(TestSuiteChromosome chr) {
-    APBCFunction clone = new APBCFunction(chr);
+  public FitnessFunction<SystemUnderTest> clone(SystemUnderTest sut) {
+    APBCFunction clone = new APBCFunction(sut);
     clone.coveredGoals = coveredGoals;
     return clone;
   }
 
   @Override
   protected void calculateTotalGoalsCovered() {
-    coveredGoals = Framework.getInstrumenter().getBranchesCovered(chrom);
+    coveredGoals = Framework.getInstrumenter().getBranchesCovered(sut).size();
   }
 
 }

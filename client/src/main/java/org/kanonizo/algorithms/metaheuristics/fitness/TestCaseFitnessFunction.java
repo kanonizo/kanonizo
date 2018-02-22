@@ -1,7 +1,7 @@
 package org.kanonizo.algorithms.metaheuristics.fitness;
 
-import org.kanonizo.framework.TestCaseChromosome;
+import org.kanonizo.framework.objects.TestCase;
 
 public interface TestCaseFitnessFunction {
-  double getTestCaseFitness(TestCaseChromosome c);
+  double getTestCaseFitness(TestCase c);
 }

@@ -3,45 +3,34 @@ package org.kanonizo.algorithms.metaheuristics.fitness;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.kanonizo.framework.CUTChromosome;
-import org.kanonizo.framework.TestCaseChromosome;
-import org.kanonizo.framework.TestSuiteChromosome;
+import java.util.Set;
+import org.kanonizo.framework.objects.Goal;
+import org.kanonizo.framework.objects.SystemUnderTest;
+import org.kanonizo.framework.objects.TestCase;
 
 public abstract class APFDFunction extends InstrumentedFitnessFunction {
-  protected List<Integer> totalGoals;
+  protected Set<? extends Goal> totalGoals;
   protected double coveredGoals = 0;
-  protected TestSuiteChromosome chrom;
+  protected SystemUnderTest sut;
 
-  public APFDFunction(TestSuiteChromosome chrom) {
-    this.chrom = chrom;
+  public APFDFunction(SystemUnderTest sut) {
+    this.sut = sut;
     totalGoals = getGoals();
   }
 
   @Override
   protected abstract void calculateTotalGoalsCovered();
 
-  protected Map<Integer, Map<Integer, Integer>> getGoalMap() {
-    Map<Integer, Map<Integer, Integer>> goalMap = new HashMap<>();
-    List<TestCaseChromosome> testCases = chrom.getTestCases();
+  protected Map<Goal, Integer> getGoalMap() {
+    Map<Goal, Integer> goalMap = new HashMap<>();
+    List<TestCase> testCases = sut.getTestSuite().getTestCases();
     for (int i = 0; i < testCases.size(); i++) {
       final int ind = i;
-      TestCaseChromosome tc = testCases.get(i);
-      Map<CUTChromosome, List<Integer>> goalsCovered = getCoveredGoals(tc);
-      goalsCovered.forEach((cut, goals) -> {
-        int classId = cut.getId();
-        if (goalMap.containsKey(classId)) {
-          Map<Integer, Integer> cov = goalMap.get(classId);
-          for (Integer goal : goals) {
-            if (!cov.containsKey(goal)) {
-              cov.put(goal, ind + 1);
-            }
-          }
-        } else {
-          Map<Integer, Integer> cov = new HashMap<>();
-          for (Integer goal : goals) {
-            cov.put(goal, ind + 1);
-          }
-          goalMap.put(classId, cov);
+      TestCase tc = testCases.get(i);
+      Set<? extends Goal> goalsCovered = getCoveredGoals(tc);
+      goalsCovered.forEach(goal -> {
+        if (!goalMap.containsKey(goal)) {
+          goalMap.put(goal, ind + 1);
         }
       });
     }
@@ -50,16 +39,15 @@ public abstract class APFDFunction extends InstrumentedFitnessFunction {
   }
 
   protected double calculateTestCaseIndices() {
-    Map<Integer, Map<Integer, Integer>> goalMap = getGoalMap();
-    return goalMap.values().stream().mapToDouble(value -> value.values().stream().mapToInt(Integer::intValue).sum())
-        .sum();
+    Map<Goal, Integer> goalMap = getGoalMap();
+    return goalMap.values().stream().mapToDouble(Integer::intValue).sum();
   }
 
   @Override
   public double evaluateFitness() {
     double apfd = calculateTestCaseIndices();
     double p = getP();
-    double n = chrom.getTestCases().size();
+    double n = sut.getTestSuite().getTestCases().size();
     double m = totalGoals.size();
     m = Math.max(m, 1);
     return 1 - (p - apfd / (m * n) + p / (2 * n));
@@ -69,9 +57,9 @@ public abstract class APFDFunction extends InstrumentedFitnessFunction {
     return totalGoals.size() == 0 ? 0 : coveredGoals / totalGoals.size();
   }
 
-  public abstract Map<CUTChromosome, List<Integer>> getCoveredGoals(TestCaseChromosome tc);
+  public abstract Set<? extends Goal> getCoveredGoals(TestCase tc);
 
-  protected abstract List<Integer> getGoals();
+  protected abstract Set<? extends Goal> getGoals();
 
   @Override
   public void dispose() {
@@ -80,8 +68,8 @@ public abstract class APFDFunction extends InstrumentedFitnessFunction {
   }
 
   @Override
-  public TestSuiteChromosome getChromosome() {
-    return chrom;
+  public SystemUnderTest getSystem() {
+    return sut;
   }
 
 }

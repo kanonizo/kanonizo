@@ -5,7 +5,7 @@ import java.lang.reflect.Method;
 import org.junit.Test;
 import org.junit.runners.Parameterized.Parameter;
 
-import org.kanonizo.framework.TestCaseChromosome;
+import org.kanonizo.framework.objects.TestCase;
 
 /**
  * Created by davidpaterson on 14/12/2016.
@@ -15,7 +15,7 @@ public class TestingUtils {
         return method.getAnnotation(Test.class) != null;
     }
 
-    public static boolean isParameterizedTest(TestCaseChromosome tc) {
-        return tc.getTestCase().getTestMethod().isAnnotationPresent(Parameter.class);
+    public static boolean isParameterizedTest(TestCase tc) {
+        return tc.getMethod().isAnnotationPresent(Parameter.class);
     }
 }

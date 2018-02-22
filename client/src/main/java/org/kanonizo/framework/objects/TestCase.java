@@ -1,17 +1,14 @@
-package org.kanonizo.framework;
+package org.kanonizo.framework.objects;
 
 import com.scythe.instrumenter.InstrumentationProperties;
 import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import com.scythe.instrumenter.analysis.task.AbstractTask;
 import com.scythe.instrumenter.analysis.task.Task;
 import com.scythe.instrumenter.analysis.task.TaskTimer;
-import com.scythe.instrumenter.testcase.TestCaseWrapper;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -24,25 +21,32 @@ import org.junit.runner.Request;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.kanonizo.Properties;
+import org.kanonizo.framework.TestCaseStore;
 
-public class TestCaseChromosome extends Chromosome {
+public class TestCase {
   private static final long TIMEOUT = Properties.TIMEOUT;
   private static final TimeUnit UNIT = TimeUnit.MILLISECONDS;
   private Class<?> testClass;
   private Method testMethod;
   private int testSize;
-  private Map<CUTChromosome, TestCaseExecutionData> executionData = new HashMap<CUTChromosome, TestCaseExecutionData>();
   private static JUnitCore core = new JUnitCore();
   private long executionTime;
   private List<Failure> failures = new ArrayList<>();
   private static int count = 0;
-  private int id = ++count;
-  private TestCaseWrapper testCase;
+  private int id;
   private Result result;
+  private TestSuite parent;
 
-  public TestCaseChromosome(){
-    TestCaseChromosomeStore.register(id, this);
+  public TestCase(){
+    this.id= ++count;
+    TestCaseStore.register(id, this);
   }
+
+
+  public void setParent(TestSuite parent){
+    this.parent = parent;
+  }
+
   public int getId() {
     return id;
   }
@@ -115,7 +119,6 @@ public class TestCaseChromosome extends Chromosome {
 
   public void setTestClass(Class<?> testClass) {
     this.testClass = testClass;
-    this.testCase = new TestCaseWrapper(testClass, testMethod);
   }
 
   public Class<?> getTestClass() {
@@ -127,27 +130,11 @@ public class TestCaseChromosome extends Chromosome {
     this.testMethod = method;
   }
 
-  public TestCaseWrapper getTestCase() {
-    return testCase;
-  }
-
   public Method getMethod() {
     return testMethod;
   }
 
-  @Override
-  public TestCaseChromosome mutate() {
-    // do nothing, we shouldn't be changing test cases in TCP
-    throw new UnsupportedOperationException("Test Cases cannot be mutated in TCP");
-  }
-
-  @Override
-  public void crossover(Chromosome chr, int point1, int point2) {
-    // do nothing, we shouldn't be changing test cases in TCP
-    throw new UnsupportedOperationException("Test Cases cannot be crossed over in TCP");
-  }
-
-    public double getSize() {
+  public double getSize() {
     return testSize;
   }
 
@@ -156,30 +143,25 @@ public class TestCaseChromosome extends Chromosome {
   }
 
   @Override
-  public TestCaseChromosome clone() {
-    TestCaseChromosome clone = new TestCaseChromosome();
+  public TestCase clone() {
+    TestCase clone = new TestCase();
     clone.testMethod = testMethod;
     clone.testClass = testClass;
     clone.testSize = testSize;
-    clone.executionData = new HashMap<>();
-    executionData.forEach((cut, cov) -> clone.executionData.put(cut, cov.clone()));
+    clone.id = id;
+    clone.parent = parent;
     return clone;
   }
 
   @Override
   public boolean equals(Object other) {
-    return other instanceof TestCaseChromosome && testClass.equals(((TestCaseChromosome) other).testClass)
-        && testMethod.equals(((TestCaseChromosome) other).testMethod);
+    return other instanceof TestCase && testClass.equals(((TestCase) other).testClass)
+        && testMethod.equals(((TestCase) other).testMethod);
   }
 
   @Override
   public String toString() {
     return testClass.getName() + "." + testMethod.getName();
-  }
-
-  @Override
-  public int size() {
-    return 1;
   }
 
   private static final class TestCaseExecutionTimer extends AbstractTask {

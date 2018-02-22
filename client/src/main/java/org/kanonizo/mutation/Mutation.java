@@ -17,19 +17,19 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 
 import org.kanonizo.Properties;
-import org.kanonizo.framework.TestCaseChromosome;
-import org.kanonizo.framework.TestSuiteChromosome;
+import org.kanonizo.framework.objects.TestCase;
+import org.kanonizo.framework.objects.TestSuite;
 import org.kanonizo.util.Util;
 import com.scythe.instrumenter.analysis.ClassAnalyzer;
 
 public class Mutation {
   private static List<Mutant> mutants = new ArrayList<Mutant>();
-  private static Map<TestCaseChromosome, List<Mutant>> killMap = new HashMap<TestCaseChromosome, List<Mutant>>();
+  private static Map<TestCase, List<Mutant>> killMap = new HashMap<TestCase, List<Mutant>>();
 
   private Mutation() {
   }
 
-  public static void initialise(TestSuiteChromosome tsc) {
+  public static void initialise(TestSuite tsc) {
     File mutantLog = Util.getFile(Properties.MUTANT_LOG);
     File killMap = Util.getFile(Properties.KILL_MAP);
     parseMutantLog(mutantLog);
@@ -71,7 +71,7 @@ public class Mutation {
     }
   }
 
-  private static void parseKillMap(File kill, TestSuiteChromosome testSuite) {
+  private static void parseKillMap(File kill, TestSuite testSuite) {
     CSVParser parser = null;
     try {
       parser = new CSVParser(new FileReader(kill), CSVFormat.DEFAULT);
@@ -81,7 +81,7 @@ public class Mutation {
         }
         int testCase = Integer.parseInt(record.get(0));
         int mutantKilled = Integer.parseInt(record.get(1));
-        TestCaseChromosome test = testSuite.getOriginalOrdering().get(testCase - 1);
+        TestCase test = testSuite.getOriginalOrdering().get(testCase - 1);
         if (!killMap.containsKey(test)) {
           killMap.put(test, new ArrayList<Mutant>());
         }
@@ -100,7 +100,7 @@ public class Mutation {
     }
   }
 
-  public static Map<TestCaseChromosome, List<Mutant>> getKillMap() {
+  public static Map<TestCase, List<Mutant>> getKillMap() {
     return killMap;
   }
 

@@ -1,30 +1,29 @@
 package org.kanonizo.algorithms.heuristics;
 
-import org.kanonizo.Framework;
-import org.kanonizo.algorithms.AbstractSearchAlgorithm;
-import org.kanonizo.algorithms.metaheuristics.fitness.APFDFunction;
-import org.kanonizo.annotations.Algorithm;
-import org.kanonizo.framework.TestCaseChromosome;
-
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
+import org.kanonizo.Framework;
+import org.kanonizo.algorithms.AbstractSearchAlgorithm;
+import org.kanonizo.annotations.Algorithm;
+import org.kanonizo.framework.objects.TestCase;
+import org.kanonizo.framework.objects.TestSuite;
 
 @Algorithm(readableName = "greedy")
 public class GreedyAlgorithm extends AbstractSearchAlgorithm {
 
   @Override
   public void generateSolution() {
-    List<TestCaseChromosome> testCases = problem.getTestCases();
+    TestSuite suite = problem.clone().getTestSuite();
+    List<TestCase> testCases = suite.getTestCases();
     Collections.sort(testCases, new FitnessComparator());
-    problem.setTestCases(testCases);
+    suite.setTestCases(testCases);
+    setCurrentOptimal(suite);
     fitnessEvaluations++;
   }
 
   @Override
-  public double getFitness(TestCaseChromosome chr) {
-    return (Framework.getInstrumenter().getLinesCovered(chr).values().stream().mapToInt(Set::size)
-        .sum());
+  public double getFitness(TestCase tc) {
+    return (Framework.getInstrumenter().getLinesCovered(tc).size());
   }
 
 }
