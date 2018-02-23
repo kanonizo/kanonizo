@@ -12,8 +12,6 @@ import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import com.scythe.instrumenter.instrumentation.ClassReplacementTransformer;
 import com.scythe.instrumenter.instrumentation.ClassReplacementTransformer.ShouldInstrumentChecker;
 import com.scythe.instrumenter.instrumentation.InstrumentingClassLoader;
-import com.scythe.instrumenter.instrumentation.objectrepresentation.Branch;
-import com.scythe.instrumenter.instrumentation.objectrepresentation.Line;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -45,6 +43,8 @@ import org.kanonizo.framework.objects.LineStore;
 import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
+import org.kanonizo.framework.objects.Line;
+import org.kanonizo.framework.objects.Branch;
 import org.kanonizo.util.HashSetCollector;
 import org.kanonizo.util.NullPrintStream;
 import org.kanonizo.util.Util;
@@ -237,8 +237,10 @@ public class ScytheInstrumenter implements Instrumenter {
     for (Class<?> cl : changedClasses) {
       if (ClassStore.get(cl.getName()) != null) {
         ClassUnderTest parent = ClassStore.get(cl.getName());
-        List<Line> lines = ClassAnalyzer.getCoverableLines(cl.getName());
-        Set<Line> linesCovered = lines.stream().filter(line -> line.getHits() > 0)
+        List<com.scythe.instrumenter.instrumentation.objectrepresentation.Line> lines = ClassAnalyzer
+            .getCoverableLines(cl.getName());
+        Set<com.scythe.instrumenter.instrumentation.objectrepresentation.Line> linesCovered = lines
+            .stream().filter(line -> line.getHits() > 0)
             .collect(Collectors.toSet());
         Set<org.kanonizo.framework.objects.Line> kanLines = linesCovered
             .stream()
@@ -256,10 +258,12 @@ public class ScytheInstrumenter implements Instrumenter {
     for (Class<?> cl : changedClasses) {
       if (ClassStore.get(cl.getName()) != null) {
         ClassUnderTest parent = ClassStore.get(cl.getName());
-        List<Branch> branches = ClassAnalyzer.getCoverableBranches(cl.getName());
-        Set<Branch> branchesCovered = branches.stream().filter(branch -> branch.getHits() > 0)
+        List<com.scythe.instrumenter.instrumentation.objectrepresentation.Branch> branches = ClassAnalyzer
+            .getCoverableBranches(cl.getName());
+        Set<com.scythe.instrumenter.instrumentation.objectrepresentation.Branch> branchesCovered = branches
+            .stream().filter(branch -> branch.getHits() > 0)
             .collect(Collectors.toSet());
-        Set<org.kanonizo.framework.objects.Branch> kanBranches = branchesCovered
+        Set<Branch> kanBranches = branchesCovered
             .stream()
             .map(branch -> BranchStore.with(parent, branch.getLineNumber(), branch.getGoalId()))
             .collect(Collectors.toSet());
@@ -298,7 +302,8 @@ public class ScytheInstrumenter implements Instrumenter {
   @Override
   public Set<org.kanonizo.framework.objects.Branch> getBranches(ClassUnderTest cut) {
     return ClassAnalyzer.getCoverableBranches(cut.getCUT().getName()).stream()
-        .map(branch -> BranchStore.with(cut, branch.getLineNumber(), branch.getGoalId())).collect(Collectors.toSet());
+        .map(branch -> BranchStore.with(cut, branch.getLineNumber(), branch.getGoalId()))
+        .collect(Collectors.toSet());
   }
 
   @Override
@@ -333,27 +338,29 @@ public class ScytheInstrumenter implements Instrumenter {
   }
 
   @Override
-  public Set<org.kanonizo.framework.objects.Line> getLinesCovered(ClassUnderTest cut) {
-    return cut.getLines().stream().filter(line -> line.getCoveringTests().size() > 0).collect(Collectors.toSet());
+  public Set<Line> getLinesCovered(ClassUnderTest cut) {
+    return linesCovered.values().stream().map(
+        set -> set.stream().filter(line -> line.getParent().equals(cut))
+            .collect(Collectors.toSet())).collect(new HashSetCollector<>());
   }
 
   @Override
-  public Set<org.kanonizo.framework.objects.Line> getLinesCovered(SystemUnderTest sut) {
-    return sut.getClassesUnderTest().stream().map(cut -> getLinesCovered(cut)).collect(new HashSetCollector<>());
-  }
-
-  @Override
-  public Set<org.kanonizo.framework.objects.Branch> getBranchesCovered(ClassUnderTest cut) {
-    return cut.getLines().stream().map(
-        line -> line.getBranches().stream().filter(
-            branch -> branch.getCoveringTests().size() > 0)
-            .collect(Collectors.toSet()))
+  public Set<Line> getLinesCovered(SystemUnderTest sut) {
+    return sut.getClassesUnderTest().stream().map(cut -> getLinesCovered(cut))
         .collect(new HashSetCollector<>());
   }
 
   @Override
-  public Set<org.kanonizo.framework.objects.Branch> getBranchesCovered(SystemUnderTest sut) {
-    return sut.getClassesUnderTest().stream().map(cut -> getBranchesCovered(cut)).collect(new HashSetCollector<>());
+  public Set<Branch> getBranchesCovered(ClassUnderTest cut) {
+    return branchesCovered.values().stream().map(
+        set -> set.stream().filter(line -> line.getParent().equals(cut))
+            .collect(Collectors.toSet())).collect(new HashSetCollector<>());
+  }
+
+  @Override
+  public Set<Branch> getBranchesCovered(SystemUnderTest sut) {
+    return sut.getClassesUnderTest().stream().map(cut -> getBranchesCovered(cut))
+        .collect(new HashSetCollector<>());
   }
 
   private class ScytheTypeWriter extends TypeAdapter<ScytheInstrumenter> {
@@ -369,7 +376,8 @@ public class ScytheInstrumenter implements Instrumenter {
       out.endObject();
     }
 
-    private <T extends Goal> void writeCoverage(JsonWriter out, Map<TestCase, Set<T>> coverage) throws IOException {
+    private <T extends Goal> void writeCoverage(JsonWriter out, Map<TestCase, Set<T>> coverage)
+        throws IOException {
       out.beginObject();
       List<TestCase> orderedTestCases = new ArrayList<>(coverage.keySet());
       Collections.sort(orderedTestCases, Comparator.comparing(TestCase::getId));
@@ -378,23 +386,27 @@ public class ScytheInstrumenter implements Instrumenter {
       while (testCases.hasNext()) {
         TestCase tc = testCases.next();
         out.name(Integer.toString(tc.getId()));
-        out.beginArray();
-        Iterator<T> goals = coverage.get(tc).iterator();
-        while (goals.hasNext()) {
-          out.beginObject();
-          T l = goals.next();
-          out.name(Integer.toString(l.getParent().getId()));
+        Set<ClassUnderTest> classesCovered = coverage.get(tc).stream().map(goal -> goal.getParent())
+            .collect(Collectors.toSet());
+        out.beginObject();
+        for (ClassUnderTest cut : classesCovered) {
+          out.name(Integer.toString(cut.getId()));
           out.beginArray();
-          out.value(l.getLineNumber());
-          if (l instanceof org.kanonizo.framework.objects.Branch) {
-            out.value(((org.kanonizo.framework.objects.Branch) l).getBranchNumber());
+          Set<Goal> goalsCovered = coverage.get(tc).stream()
+              .filter(goal -> goal.getParent().equals(cut)).collect(Collectors.toSet());
+          for (Goal g : goalsCovered) {
+            if (g instanceof Line) {
+              out.value(g.getLineNumber());
+            } else if (g instanceof Branch) {
+              Double value = Double
+                  .parseDouble(((Branch) g).getLineNumber() + "." + ((Branch) g).getBranchNumber());
+              out.value(value);
+            }
           }
           out.endArray();
-          out.endObject();
         }
-        out.endArray();
+        out.endObject();
       }
-//      out.name("branchesCovered").value(inst.coveredString(inst.branchesCovered));
       out.endObject();
     }
 
@@ -425,26 +437,25 @@ public class ScytheInstrumenter implements Instrumenter {
         int testCaseId = Integer.parseInt(in.nextName());
         TestCase tc = TestCaseStore.get(testCaseId);
         Set<T> linesCovered = new HashSet<>();
-        in.beginArray();
-        // lines
+        // classes
+        in.beginObject();
         while (in.hasNext()) {
-          in.beginObject();
+          int cutId = Integer.parseInt(in.nextName());
+          in.beginArray();
           while (in.hasNext()) {
-            int cutId = Integer.parseInt(in.nextName());
-            in.beginArray();
             ClassUnderTest cut = ClassStore.get(cutId);
-            int lineNumber = in.nextInt();
-            if (in.hasNext()) {
-              int branchNumber = in.nextInt();
-              linesCovered.add((T) BranchStore.with(cut, lineNumber, branchNumber));
+            double goalNumber = in.nextDouble();
+            if (goalNumber == (int)goalNumber) {
+              linesCovered.add((T) LineStore.with(cut, (int)goalNumber));
             } else {
-              linesCovered.add((T) LineStore.with(cut, lineNumber));
+              int lineNumber = (int)goalNumber;
+              int branchNumber = (int) (goalNumber - lineNumber);
+              linesCovered.add((T) BranchStore.with(cut, lineNumber, branchNumber));
             }
-            in.endArray();
           }
-          in.endObject();
+          in.endArray();
         }
-        in.endArray();
+        in.endObject();
         returnMap.put(tc, linesCovered);
       }
       in.endObject();

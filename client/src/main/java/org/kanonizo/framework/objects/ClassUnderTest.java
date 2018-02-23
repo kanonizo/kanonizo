@@ -11,16 +11,13 @@ public class ClassUnderTest {
   private static int count = 0;
   private SystemUnderTest parent;
   private Set<Line> lines;
+  private Set<Branch> branches;
 
   public ClassUnderTest(Class<?> cut) {
     this.cut = cut;
     this.id = ++count;
     this.lines = Framework.getInstrumenter().getLines(this);
-    Set<Branch> branches = Framework.getInstrumenter().getBranches(this);
-    for(Branch b : branches){
-      Line l = findLine(b.getLineNumber());
-      l.addBranch(b);
-    }
+    this.branches = Framework.getInstrumenter().getBranches(this);
     ClassStore.add(cut.getName(), this);
   }
 
@@ -48,6 +45,8 @@ public class ClassUnderTest {
     return lines;
   }
 
+  public Set<Branch> getBranches() { return branches; }
+
   public ClassUnderTest clone() {
     return ClassStore.get(cut.getName());
   }
@@ -73,5 +72,12 @@ public class ClassUnderTest {
     }
     ClassUnderTest oc = (ClassUnderTest) other;
     return oc.cut == cut && oc.id == id;
+  }
+
+  public int hashCode(){
+    int prime = 37;
+    int result = prime * ((Integer)id).hashCode();
+    result *= toString().hashCode();
+    return result;
   }
 }

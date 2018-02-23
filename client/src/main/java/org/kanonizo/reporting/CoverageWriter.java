@@ -49,10 +49,9 @@ public class CoverageWriter extends CsvWriter {
         int totalBranches = inst.getTotalBranches(cut);
         Set<Line> linesMissed = cut.getLines().stream().filter(line -> !linesCovered.contains(line))
             .collect(HashSet::new, HashSet::add, HashSet::addAll);
-        Set<Branch> branchesMissed = cut.getLines().stream()
-            .map(line -> line.getBranches()).collect(Collectors.toSet())
-            .stream().filter(branch -> !branchesCovered.contains(branch))
-            .collect(new HashSetCollector<>());
+        Set<Branch> branchesMissed = cut.getBranches().stream()
+            .filter(branch -> !branchesCovered.contains(branch))
+            .collect(HashSet::new, HashSet::add, HashSet::addAll);
         List<Line> orderedLinesCovered = new ArrayList<>(linesCovered);
         Collections.sort(orderedLinesCovered);
         List<Line> orderedLinesMissed = new ArrayList<Line>(linesMissed);

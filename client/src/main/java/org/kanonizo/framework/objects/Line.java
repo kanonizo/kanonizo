@@ -6,9 +6,6 @@ import java.util.List;
 
 public class Line extends Goal implements Comparable<Line> {
 
-  private List<TestCase> coveringTestCases = new ArrayList<>();
-  private List<Branch> branches = new ArrayList<>();
-
   public Line(ClassUnderTest parent, int lineNumber) {
     super(parent, lineNumber);
     LineStore.add(this);
@@ -16,22 +13,6 @@ public class Line extends Goal implements Comparable<Line> {
 
   public ClassUnderTest getParent() {
     return parent;
-  }
-
-  public void addCoveringTest(TestCase testCase) {
-    coveringTestCases.add(testCase);
-  }
-
-  public void addBranch(Branch b) {
-    branches.add(b);
-  }
-
-  public List<Branch> getBranches() {
-    return branches;
-  }
-
-  public List<TestCase> getCoveringTests() {
-    return Collections.unmodifiableList(coveringTestCases);
   }
 
   @Override
