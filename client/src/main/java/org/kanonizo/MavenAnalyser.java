@@ -16,11 +16,13 @@ public class MavenAnalyser {
     if (root.list() == null) {
       return false;
     }
+    if(!testMavenInstallation()){
+      return false;
+    }
     return Arrays.asList(root.list()).stream().anyMatch(name -> name != null && name.equals("pom.xml"));
   }
 
   public static void addMavenDependencies(File root) {
-    assert testMavenInstallation();
     File outputFile = new File(root.getAbsolutePath() + "/deps");
     if (!outputFile.exists()) {
       outputFile.mkdir();
@@ -58,7 +60,7 @@ public class MavenAnalyser {
       proc.waitFor();
       return true;
     } catch (final IOException | InterruptedException e) {
-      e.printStackTrace();
+      //e.printStackTrace();
     }
     return false;
   }

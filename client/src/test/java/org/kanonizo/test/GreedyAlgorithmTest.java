@@ -3,17 +3,22 @@ package org.kanonizo.test;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
+
+import org.junit.Before;
 import org.junit.Test;
 import org.kanonizo.Framework;
 import org.kanonizo.algorithms.heuristics.GreedyAlgorithm;
+import org.kanonizo.framework.instrumentation.Instrumenter;
 import org.kanonizo.framework.objects.ClassUnderTest;
 import org.kanonizo.framework.ClassStore;
 import org.kanonizo.framework.objects.TestCase;
+import org.kanonizo.instrumenters.ScytheInstrumenter;
 
 public class GreedyAlgorithmTest extends SearchAlgorithmTest {
-
+  private Instrumenter scytheInst = new ScytheInstrumenter();
   public GreedyAlgorithmTest() {
     super(new GreedyAlgorithm());
+    Framework.setInstrumenter(scytheInst);
   }
 
   @Test
