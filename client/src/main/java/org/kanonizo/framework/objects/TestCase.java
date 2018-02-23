@@ -22,6 +22,7 @@ import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.kanonizo.Properties;
 import org.kanonizo.framework.TestCaseStore;
+import org.kanonizo.util.Util;
 
 public class TestCase {
   private static final long TIMEOUT = Properties.TIMEOUT;
@@ -37,11 +38,17 @@ public class TestCase {
   private Result result;
   private TestSuite parent;
 
-  public TestCase(){
+  public TestCase(Class<?> testClass, Method testMethod){
+    if(testClass == null || testMethod == null){
+      throw new IllegalArgumentException("Test Class and Test Method must not be null!");
+    }
+    this.testClass = testClass;
+    this.testMethod = testMethod;
     this.id= ++count;
     TestCaseStore.register(id, this);
   }
 
+  private TestCase(){}
 
   public void setParent(TestSuite parent){
     this.parent = parent;
@@ -117,17 +124,9 @@ public class TestCase {
     return executionTime;
   }
 
-  public void setTestClass(Class<?> testClass) {
-    this.testClass = testClass;
-  }
-
   public Class<?> getTestClass() {
     return testClass;
 
-  }
-
-  public void setMethod(Method method) {
-    this.testMethod = method;
   }
 
   public Method getMethod() {
@@ -155,13 +154,27 @@ public class TestCase {
 
   @Override
   public boolean equals(Object other) {
-    return other instanceof TestCase && testClass.equals(((TestCase) other).testClass)
-        && testMethod.equals(((TestCase) other).testMethod);
+    if(this == other){
+      return true;
+    }
+    if (other == null){
+      return false;
+    }
+    if(getClass() != other.getClass()){
+      return false;
+    }
+    TestCase otherTest = (TestCase) other;
+    return testMethod.equals(otherTest.testMethod) && testClass.equals(otherTest.testClass);
+  }
+
+  public int hashCode(){
+    int prime = 41;
+    return prime * testClass.hashCode() * testMethod.hashCode();
   }
 
   @Override
   public String toString() {
-    return testClass.getName() + "." + testMethod.getName();
+    return testClass.getName() + "." + testMethod.getName() + Util.getSignature(testMethod);
   }
 
   private static final class TestCaseExecutionTimer extends AbstractTask {

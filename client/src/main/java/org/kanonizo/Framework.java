@@ -132,9 +132,7 @@ public class Framework {
             .collect(Collectors.toList());
         logger.info("Adding " + testMethods.size() + " test methods from " + cl.getName());
         for (Method m : testMethods) {
-          TestCase t = new TestCase();
-          t.setTestClass(cl);
-          t.setMethod(m);
+          TestCase t = new TestCase(cl,m);
           sut.addTestCase(t);
         }
       } else {

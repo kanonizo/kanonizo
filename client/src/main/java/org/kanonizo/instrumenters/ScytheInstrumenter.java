@@ -73,9 +73,7 @@ public class ScytheInstrumenter implements Instrumenter {
 
   private TestSuite testSuite;
   private static Logger logger;
-  @Expose
   private Map<TestCase, Set<org.kanonizo.framework.objects.Line>> linesCovered = new HashMap<>();
-  @Expose
   private Map<TestCase, Set<org.kanonizo.framework.objects.Branch>> branchesCovered = new HashMap<>();
 
   static {
@@ -226,7 +224,6 @@ public class ScytheInstrumenter implements Instrumenter {
 
   private Gson getGson() {
     GsonBuilder builder = new GsonBuilder();
-    builder.excludeFieldsWithoutExposeAnnotation();
     builder.registerTypeAdapter(ScytheInstrumenter.class, new ScytheTypeWriter());
     return builder.create();
   }
@@ -274,12 +271,12 @@ public class ScytheInstrumenter implements Instrumenter {
   }
 
   @Override
-  public Set<org.kanonizo.framework.objects.Line> getLinesCovered(TestCase testCase) {
+  public Set<Line> getLinesCovered(TestCase testCase) {
     return linesCovered.get(testCase);
   }
 
   @Override
-  public Set<org.kanonizo.framework.objects.Branch> getBranchesCovered(TestCase testCase) {
+  public Set<Branch> getBranchesCovered(TestCase testCase) {
     return branchesCovered.get(testCase);
   }
 
@@ -373,6 +370,12 @@ public class ScytheInstrumenter implements Instrumenter {
       writeCoverage(out, inst.linesCovered);
       out.name("branchesCovered");
       writeCoverage(out, inst.branchesCovered);
+      out.name("testSuite");
+      out.beginArray();
+      for(TestCase tc : inst.testSuite.getTestCases()){
+        out.value(tc.toString());
+      }
+      out.endArray();
       out.endObject();
     }
 
@@ -385,7 +388,7 @@ public class ScytheInstrumenter implements Instrumenter {
       // tests
       while (testCases.hasNext()) {
         TestCase tc = testCases.next();
-        out.name(Integer.toString(tc.getId()));
+        out.name(tc.toString());
         Set<ClassUnderTest> classesCovered = coverage.get(tc).stream().map(goal -> goal.getParent())
             .collect(Collectors.toSet());
         out.beginObject();
@@ -422,6 +425,16 @@ public class ScytheInstrumenter implements Instrumenter {
           case "branchesCovered":
             inst.branchesCovered = readCoverage(in);
             break;
+          case "testSuite":
+            in.beginArray();
+            while(in.hasNext()){
+              String testString = in.nextString();
+              TestCase test = TestCaseStore.with(testString);
+              if(test == null){
+                logger.debug("Error deserialising test case "+testString+".");
+              }
+            }
+            in.endArray();
         }
       }
       in.endObject();
@@ -434,8 +447,11 @@ public class ScytheInstrumenter implements Instrumenter {
       // test cases
       in.beginObject();
       while (in.hasNext()) {
-        int testCaseId = Integer.parseInt(in.nextName());
-        TestCase tc = TestCaseStore.get(testCaseId);
+        String testString = in.nextName();
+        TestCase tc = TestCaseStore.with(testString);
+        if(tc == null){
+          logger.debug("Error deserialising test case "+testString+".");
+        }
         Set<T> linesCovered = new HashSet<>();
         // classes
         in.beginObject();
