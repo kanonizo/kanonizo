@@ -7,7 +7,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.junit.runners.Parameterized.Parameter;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.util.Util;
 
@@ -40,7 +41,13 @@ public class TestingUtils {
   }
 
   public static boolean isParameterizedTest(TestCase tc) {
-    return tc.getMethod().isAnnotationPresent(Parameter.class);
+    if(tc.getTestClass().isAnnotationPresent(RunWith.class)){
+      RunWith runner = tc.getTestClass().getAnnotation(RunWith.class);
+      if(runner.value().equals(Parameterized.class)){
+        return true;
+      }
+    }
+    return false;
   }
 
   public static List<Method> getTestMethods(Class<?> cl) {
