@@ -8,12 +8,10 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 import org.apache.bcel.classfile.ClassParser;
 import org.apache.bcel.classfile.JavaClass;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.Test;
 import org.kanonizo.algorithms.MutationSearchAlgorithm;
 import org.kanonizo.algorithms.SearchAlgorithm;
 import org.kanonizo.algorithms.metaheuristics.fitness.APBCFunction;
@@ -26,6 +24,7 @@ import org.kanonizo.framework.objects.ClassUnderTest;
 import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.instrumenters.NullInstrumenter;
+import org.kanonizo.junit.TestingUtils;
 import org.kanonizo.reporting.CoverageWriter;
 import org.kanonizo.reporting.CsvWriter;
 import org.kanonizo.reporting.MiscStatsWriter;
@@ -126,10 +125,7 @@ public class Framework {
     for (File file : testFiles) {
       Class<?> cl = loadClassFromFile(file);
       if (Util.isTestClass(cl)) {
-        Method[] methods = cl.getMethods();
-        List<Method> testMethods = Arrays.asList(methods).stream()
-            .filter(method -> method.getAnnotation(Test.class) != null || method.getName().startsWith("test"))
-            .collect(Collectors.toList());
+        List<Method> testMethods = TestingUtils.getTestMethods(cl);
         logger.info("Adding " + testMethods.size() + " test methods from " + cl.getName());
         for (Method m : testMethods) {
           TestCase t = new TestCase(cl,m);

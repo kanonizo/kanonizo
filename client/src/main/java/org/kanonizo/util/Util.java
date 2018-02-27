@@ -5,6 +5,7 @@ import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -130,10 +131,10 @@ public class Util {
   }
 
   public static boolean isTestClass(Class<?> cl) {
-    List<Method> methods = Arrays.asList(cl.getDeclaredMethods());
-    if (cl.isMemberClass() && isTestClass(cl.getEnclosingClass())) {
-      return true;
+    if(Modifier.isAbstract(cl.getModifiers())){
+      return false;
     }
+    List<Method> methods = Arrays.asList(cl.getMethods());
     if (methods.stream().anyMatch(method -> method.getName().startsWith("test"))) {
       return true;
     }
