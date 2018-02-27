@@ -9,7 +9,6 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -78,12 +77,7 @@ public class TestCase {
     if (Properties.USE_TIMEOUT) {
       Request req = Request.method(testClass, testMethod.getName());
       ExecutorService service = Executors.newSingleThreadExecutor();
-      Future<Result> res = service.submit(new Callable<Result>() {
-        @Override
-        public Result call() {
-          return core.run(req);
-        }
-      });
+      Future<Result> res = service.submit(() -> core.run(req));
       try {
         setResult(res.get(TIMEOUT, UNIT));
       } catch (TimeoutException e) {

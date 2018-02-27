@@ -3,7 +3,6 @@ package org.kanonizo.instrumenters;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
-import com.google.gson.annotations.Expose;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import com.scythe.instrumenter.InstrumentationProperties;
@@ -36,15 +35,15 @@ import org.kanonizo.commandline.ProgressBar;
 import org.kanonizo.framework.ClassStore;
 import org.kanonizo.framework.TestCaseStore;
 import org.kanonizo.framework.instrumentation.Instrumenter;
+import org.kanonizo.framework.objects.Branch;
 import org.kanonizo.framework.objects.BranchStore;
 import org.kanonizo.framework.objects.ClassUnderTest;
 import org.kanonizo.framework.objects.Goal;
+import org.kanonizo.framework.objects.Line;
 import org.kanonizo.framework.objects.LineStore;
 import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
-import org.kanonizo.framework.objects.Line;
-import org.kanonizo.framework.objects.Branch;
 import org.kanonizo.util.HashSetCollector;
 import org.kanonizo.util.NullPrintStream;
 import org.kanonizo.util.Util;
@@ -146,6 +145,7 @@ public class ScytheInstrumenter implements Instrumenter {
               .fromJson(new FileReader(scytheCoverage), ScytheInstrumenter.class);
           this.linesCovered = inst.linesCovered;
           this.branchesCovered = inst.branchesCovered;
+          this.testSuite = inst.testSuite;
         } catch (FileNotFoundException e) {
           e.printStackTrace();
         }
