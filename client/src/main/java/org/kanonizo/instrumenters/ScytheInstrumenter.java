@@ -30,7 +30,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.runner.notification.Failure;
 import org.kanonizo.commandline.ProgressBar;
 import org.kanonizo.framework.ClassStore;
 import org.kanonizo.framework.TestCaseStore;
@@ -155,7 +154,6 @@ public class ScytheInstrumenter implements Instrumenter {
       }
     } else {
       try {
-        List<Failure> failures = new ArrayList<>();
         PrintStream defaultSysOut = java.lang.System.out;
         PrintStream defaultSysErr = java.lang.System.err;
         // ensure coverage data is collected
@@ -168,9 +166,6 @@ public class ScytheInstrumenter implements Instrumenter {
             testCase.run();
             // debug code to find out where/why failures are occurring. Use
             // breakpoints after execution to locate failures
-            if (testCase.hasFailures()) {
-              failures.addAll(testCase.getFailures());
-            }
             bar.reportProgress((double) testSuite.getTestCases().indexOf(testCase) + 1,
                 testSuite.getTestCases().size());
             ClassAnalyzer.collectHitCounters(true);

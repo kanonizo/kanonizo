@@ -1,12 +1,10 @@
 package org.kanonizo.framework.objects;
 
 import com.scythe.instrumenter.InstrumentationProperties;
-import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import com.scythe.instrumenter.analysis.task.AbstractTask;
 import com.scythe.instrumenter.analysis.task.Task;
 import com.scythe.instrumenter.analysis.task.TaskTimer;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -15,41 +13,44 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import org.junit.runner.JUnitCore;
-import org.junit.runner.Request;
-import org.junit.runner.Result;
-import org.junit.runner.notification.Failure;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.kanonizo.Properties;
 import org.kanonizo.framework.TestCaseStore;
+import org.kanonizo.junit.KanonizoTestFailure;
+import org.kanonizo.junit.KanonizoTestResult;
+import org.kanonizo.junit.TestingUtils;
+import org.kanonizo.junit.runners.JUnit3TestRunner;
+import org.kanonizo.junit.runners.JUnit4TestRunner;
+import org.kanonizo.junit.runners.KanonizoTestRunner;
 import org.kanonizo.util.Util;
 
 public class TestCase {
   private static final long TIMEOUT = Properties.TIMEOUT;
   private static final TimeUnit UNIT = TimeUnit.MILLISECONDS;
+  private final Logger logger = LogManager.getLogger(TestCase.class);
   private Class<?> testClass;
   private Method testMethod;
   private int testSize;
-  private static JUnitCore core = new JUnitCore();
-  private long executionTime;
-  private List<Failure> failures = new ArrayList<>();
   private static int count = 0;
+  private KanonizoTestResult result;
   private int id;
-  private Result result;
   private TestSuite parent;
 
-  public TestCase(Class<?> testClass, Method testMethod){
-    if(testClass == null || testMethod == null){
+  public TestCase(Class<?> testClass, Method testMethod) {
+    if (testClass == null || testMethod == null) {
       throw new IllegalArgumentException("Test Class and Test Method must not be null!");
     }
     this.testClass = testClass;
     this.testMethod = testMethod;
-    this.id= ++count;
+    this.id = ++count;
     TestCaseStore.register(id, this);
   }
 
-  private TestCase(){}
+  private TestCase() {
+  }
 
-  public void setParent(TestSuite parent){
+  public void setParent(TestSuite parent) {
     this.parent = parent;
   }
 
@@ -74,48 +75,43 @@ public class TestCase {
     if (InstrumentationProperties.LOG) {
       TaskTimer.taskStart(timerTask);
     }
+    KanonizoTestRunner testCaseRunner = TestingUtils.isJUnit4Class(testClass) ? new JUnit4TestRunner() : new JUnit3TestRunner();
     if (Properties.USE_TIMEOUT) {
-      Request req = Request.method(testClass, testMethod.getName());
       ExecutorService service = Executors.newSingleThreadExecutor();
-      Future<Result> res = service.submit(() -> core.run(req));
+      Future<KanonizoTestResult> res = service.submit(() -> testCaseRunner.runTest(this));
       try {
         setResult(res.get(TIMEOUT, UNIT));
       } catch (TimeoutException e) {
-        ClassAnalyzer.out.println("Test " + testMethod.getName() + " timed out.");
+        logger.debug("Test " + testMethod.getName() + " timed out.");
         return;
       } catch (InterruptedException e) {
-        e.printStackTrace(ClassAnalyzer.out);
+        logger.error(e);
       } catch (ExecutionException e) {
-        e.printStackTrace(ClassAnalyzer.out);
+        logger.error(e);
       }
     } else {
-      Request r = Request.method(testClass, testMethod.getName());
-      Result res = core.run(r);
+      KanonizoTestResult res = testCaseRunner.runTest(this);
       setResult(res);
     }
     if (InstrumentationProperties.LOG) {
       TaskTimer.taskEnd(timerTask);
     }
-    if (result.getFailureCount() > 0) {
-      failures.addAll(result.getFailures());
-    }
-    executionTime = System.currentTimeMillis() - startTime;
   }
 
-  private void setResult(Result result) {
+  private void setResult(KanonizoTestResult result) {
     this.result = result;
   }
 
   public boolean hasFailures() {
-    return failures.size() > 0;
+    return result.getFailures().size() > 0;
   }
 
-  public List<Failure> getFailures() {
-    return Collections.unmodifiableList(failures);
+  public List<KanonizoTestFailure> getFailures() {
+    return Collections.unmodifiableList(result.getFailures());
   }
 
   public long getExecutionTime() {
-    return executionTime;
+    return result.getExecutionTime();
   }
 
   public Class<?> getTestClass() {
@@ -148,20 +144,20 @@ public class TestCase {
 
   @Override
   public boolean equals(Object other) {
-    if(this == other){
+    if (this == other) {
       return true;
     }
-    if (other == null){
+    if (other == null) {
       return false;
     }
-    if(getClass() != other.getClass()){
+    if (getClass() != other.getClass()) {
       return false;
     }
     TestCase otherTest = (TestCase) other;
     return testMethod.equals(otherTest.testMethod) && testClass.equals(otherTest.testClass);
   }
 
-  public int hashCode(){
+  public int hashCode() {
     int prime = 41;
     return prime * testClass.hashCode() * testMethod.hashCode();
   }

@@ -9,7 +9,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.util.Util;
 
 /**
@@ -40,9 +39,9 @@ public class TestingUtils {
     return method.getAnnotation(Test.class) != null;
   }
 
-  public static boolean isParameterizedTest(TestCase tc) {
-    if(tc.getTestClass().isAnnotationPresent(RunWith.class)){
-      RunWith runner = tc.getTestClass().getAnnotation(RunWith.class);
+  public static boolean isParameterizedTest(Class<?> cl, Method m) {
+    if(cl.isAnnotationPresent(RunWith.class)){
+      RunWith runner = cl.getAnnotation(RunWith.class);
       if(runner.value().equals(Parameterized.class)){
         return true;
       }

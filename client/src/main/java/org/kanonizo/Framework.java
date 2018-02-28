@@ -4,14 +4,17 @@ import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import java.io.File;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import org.apache.bcel.classfile.ClassParser;
 import org.apache.bcel.classfile.JavaClass;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.junit.runners.Parameterized.Parameters;
 import org.kanonizo.algorithms.MutationSearchAlgorithm;
 import org.kanonizo.algorithms.SearchAlgorithm;
 import org.kanonizo.algorithms.metaheuristics.fitness.APBCFunction;
@@ -21,6 +24,7 @@ import org.kanonizo.algorithms.metaheuristics.fitness.FitnessFunction;
 import org.kanonizo.algorithms.metaheuristics.fitness.InstrumentedFitnessFunction;
 import org.kanonizo.framework.instrumentation.Instrumenter;
 import org.kanonizo.framework.objects.ClassUnderTest;
+import org.kanonizo.framework.objects.ParameterisedTestCase;
 import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.instrumenters.NullInstrumenter;
@@ -128,15 +132,35 @@ public class Framework {
         List<Method> testMethods = TestingUtils.getTestMethods(cl);
         logger.info("Adding " + testMethods.size() + " test methods from " + cl.getName());
         for (Method m : testMethods) {
-          TestCase t = new TestCase(cl,m);
-          sut.addTestCase(t);
+          if (TestingUtils.isParameterizedTest(cl, m)) {
+            Optional<Method> parameterMethod = Arrays.asList(cl.getMethods()).stream().filter(method -> method.getAnnotation(Parameters.class) != null).findFirst();
+            if (parameterMethod.isPresent()) {
+              try {
+                Iterable<Object[]> parameters = (Iterable<Object[]>) parameterMethod.get().invoke(null,new Object[]{});
+                for(Object[] inst : parameters){
+                  ParameterisedTestCase ptc = new ParameterisedTestCase(cl, m, inst);
+                  sut.addTestCase(ptc);
+                }
+              } catch (IllegalAccessException e) {
+                logger.error(e);
+              } catch (InvocationTargetException e) {
+                logger.error(e);
+              }
+            } else {
+              logger.error("Trying to create parameterized test case that has no parameter method");
+            }
+          } else {
+            TestCase t = new TestCase(cl, m);
+            sut.addTestCase(t);
+          }
+
         }
       } else {
         sut.addExtraClass(cl);
         logger.info("Adding supporting test class " + cl.getName());
       }
     }
-    logger.info("Finished adding source and test files. Total "+sut.getClassesUnderTest().size()+" classes and "+sut.getTestSuite().size()+" test cases");
+    logger.info("Finished adding source and test files. Total " + sut.getClassesUnderTest().size() + " classes and " + sut.getTestSuite().size() + " test cases");
   }
 
   private Class<?> loadClassFromFile(File file) {

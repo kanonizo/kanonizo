@@ -21,7 +21,7 @@ public class TestCaseOrderingWriter extends CsvWriter {
     TestSuite optimal = algorithm.getCurrentOptimal();
     optimal.getTestCases().forEach(testCase -> {
       String[] csv = new String[]{testCase.getTestClass().getName() + "." + testCase.getMethod().getName(),
-          Long.toString(testCase.getExecutionTime()), Boolean.toString(testCase.getFailures().size() == 0),
+          Long.toString(testCase.getExecutionTime()), Boolean.toString(testCase.hasFailures()),
           Integer.toString(Framework.getInstrumenter().getLinesCovered(testCase).size())};
       addRow(csv);
     });
