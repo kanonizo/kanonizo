@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.junit.runner.Description;
 import org.kanonizo.Properties;
 import org.kanonizo.framework.TestCaseStore;
 import org.kanonizo.junit.KanonizoTestFailure;
@@ -23,7 +24,6 @@ import org.kanonizo.junit.TestingUtils;
 import org.kanonizo.junit.runners.JUnit3TestRunner;
 import org.kanonizo.junit.runners.JUnit4TestRunner;
 import org.kanonizo.junit.runners.KanonizoTestRunner;
-import org.kanonizo.util.Util;
 
 public class TestCase {
   private static final long TIMEOUT = Properties.TIMEOUT;
@@ -76,11 +76,12 @@ public class TestCase {
       TaskTimer.taskStart(timerTask);
     }
     KanonizoTestRunner testCaseRunner = TestingUtils.isJUnit4Class(testClass) ? new JUnit4TestRunner() : new JUnit3TestRunner();
+    KanonizoTestResult result = null;
     if (Properties.USE_TIMEOUT) {
       ExecutorService service = Executors.newSingleThreadExecutor();
       Future<KanonizoTestResult> res = service.submit(() -> testCaseRunner.runTest(this));
       try {
-        setResult(res.get(TIMEOUT, UNIT));
+        result = res.get(TIMEOUT,UNIT);
       } catch (TimeoutException e) {
         logger.debug("Test " + testMethod.getName() + " timed out.");
         return;
@@ -90,9 +91,9 @@ public class TestCase {
         logger.error(e);
       }
     } else {
-      KanonizoTestResult res = testCaseRunner.runTest(this);
-      setResult(res);
+      result = testCaseRunner.runTest(this);
     }
+    setResult(result);
     if (InstrumentationProperties.LOG) {
       TaskTimer.taskEnd(timerTask);
     }
@@ -103,6 +104,10 @@ public class TestCase {
   }
 
   public boolean hasFailures() {
+    if(result == null){
+      logger.debug("Test Case "+this+" is missing its result!");
+      return true;
+    }
     return result.getFailures().size() > 0;
   }
 
@@ -111,6 +116,10 @@ public class TestCase {
   }
 
   public long getExecutionTime() {
+    if(result == null){
+      logger.debug("Test Case "+this+" is missing its result!");
+      return -1;
+    }
     return result.getExecutionTime();
   }
 
@@ -164,7 +173,7 @@ public class TestCase {
 
   @Override
   public String toString() {
-    return testClass.getName() + "." + testMethod.getName() + Util.getSignature(testMethod);
+    return Description.createTestDescription(testClass, testMethod.getName()).toString();
   }
 
   private static final class TestCaseExecutionTimer extends AbstractTask {
