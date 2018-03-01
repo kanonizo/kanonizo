@@ -10,4 +10,8 @@ public class ParameterisedTestCase extends TestCase {
     this.parameters = parameters;
   }
 
+  public Object[] getParameters(){
+    return parameters;
+  }
+
 }
