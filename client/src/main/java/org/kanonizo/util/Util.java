@@ -1,6 +1,7 @@
 package org.kanonizo.util;
 
 import java.io.File;
+import java.io.PrintStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -12,6 +13,7 @@ import java.net.URLClassLoader;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.Test;
+import org.junit.runner.Runner;
 import org.kanonizo.Main;
 import org.reflections.Reflections;
 import org.reflections.scanners.FieldAnnotationsScanner;
@@ -21,6 +23,22 @@ import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 
 public class Util {
+  private static PrintStream defaultSysOut, defaultSysErr;
+
+  static{
+    defaultSysOut = System.out;
+    defaultSysErr = System.err;
+  }
+
+  public static void suppressOutput() {
+    System.setOut(NullPrintStream.instance);
+    System.setErr(NullPrintStream.instance);
+  }
+
+  public static void resumeOutput(){
+    System.setOut(defaultSysOut);
+    System.setErr(defaultSysErr);
+  }
 
   public static String getName(Class<?> cl) {
     return (cl.isAnonymousClass() || cl.isMemberClass() || cl.isLocalClass()
@@ -132,6 +150,9 @@ public class Util {
 
   public static boolean isTestClass(Class<?> cl) {
     if(Modifier.isAbstract(cl.getModifiers())){
+      return false;
+    }
+    if(Runner.class.isAssignableFrom(cl)){
       return false;
     }
     List<Method> methods = Arrays.asList(cl.getMethods());

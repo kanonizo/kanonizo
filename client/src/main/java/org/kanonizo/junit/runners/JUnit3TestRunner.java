@@ -66,10 +66,10 @@ public class JUnit3TestRunner extends TestRunner implements KanonizoTestRunner {
         }
         return null;
       } catch (Exception e1) {
-        logger.error(JUnit3TestRunner.class.getSimpleName() + " was unable to instantiate a new instance of the test class");
+        logger.error(JUnit3TestRunner.class.getSimpleName() + " was unable to instantiate a new instance of the test class "+testClass.getSimpleName() + "." + testMethod.getName());
       }
     } catch (Throwable e) {
-      logger.error(JUnit3TestRunner.class.getSimpleName() + " was unable to instantiate a new instance of the test class");
+      logger.error(JUnit3TestRunner.class.getSimpleName() + " was unable to instantiate a new instance of the test class"+testClass.getSimpleName() + "." + testMethod.getName());
     }
     return null;
   }

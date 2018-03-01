@@ -17,7 +17,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -44,7 +43,6 @@ import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
 import org.kanonizo.util.HashSetCollector;
-import org.kanonizo.util.NullPrintStream;
 import org.kanonizo.util.Util;
 
 //
@@ -154,13 +152,9 @@ public class ScytheInstrumenter implements Instrumenter {
       }
     } else {
       try {
-        PrintStream defaultSysOut = java.lang.System.out;
-        PrintStream defaultSysErr = java.lang.System.err;
-        // ensure coverage data is collected
-        java.lang.System.setOut(NullPrintStream.instance);
-        java.lang.System.setErr(NullPrintStream.instance);
-        ProgressBar bar = new ProgressBar(defaultSysOut);
+        ProgressBar bar = new ProgressBar(System.out);
         bar.setTitle("Running Test Cases");
+        Util.suppressOutput();
         for (TestCase testCase : testSuite.getTestCases()) {
           try {
             testCase.run();
@@ -173,8 +167,7 @@ public class ScytheInstrumenter implements Instrumenter {
             branchesCovered.put(testCase, collectBranches(testCase));
             ClassAnalyzer.resetCoverage();
           } catch (Throwable e) {
-            e.printStackTrace(defaultSysErr);
-            defaultSysErr.println(e.getMessage());
+            e.printStackTrace();
             // as much as I hate to catch throwables, it has to be done in this
             // instance because not all tests can be guaranteed to run at all
             // properly, and sometimes the Java API will
@@ -183,9 +176,8 @@ public class ScytheInstrumenter implements Instrumenter {
 
         }
         bar.complete();
+        Util.resumeOutput();
         logger.info("Finished instrumentation");
-        java.lang.System.setOut(defaultSysOut);
-        java.lang.System.setErr(defaultSysErr);
       } catch (final Exception e) {
         // runtime startup exception
         reportException(e);
