@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.bcel.classfile.ClassParser;
 import org.apache.bcel.classfile.JavaClass;
 import org.apache.logging.log4j.LogManager;
@@ -22,6 +24,7 @@ import org.kanonizo.algorithms.metaheuristics.fitness.APFDFunction;
 import org.kanonizo.algorithms.metaheuristics.fitness.APLCFunction;
 import org.kanonizo.algorithms.metaheuristics.fitness.FitnessFunction;
 import org.kanonizo.algorithms.metaheuristics.fitness.InstrumentedFitnessFunction;
+import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.framework.instrumentation.Instrumenter;
 import org.kanonizo.framework.objects.ClassUnderTest;
 import org.kanonizo.framework.objects.ParameterisedTestCase;
@@ -34,6 +37,7 @@ import org.kanonizo.reporting.CsvWriter;
 import org.kanonizo.reporting.MiscStatsWriter;
 import org.kanonizo.reporting.TestCaseOrderingWriter;
 import org.kanonizo.util.Util;
+import org.reflections.Reflections;
 
 public class Framework {
   private File sourceFolder;
@@ -242,5 +246,19 @@ public class Framework {
     addWriter(new MiscStatsWriter(algorithm));
     reportResults(algorithm);
 
+  }
+
+  public static List<SearchAlgorithm> getAvailableAlgorithms() throws InstantiationException, IllegalAccessException{
+    Reflections r = Util.getReflections();
+    Set<Class<?>> algorithms = r.getTypesAnnotatedWith(Algorithm.class);
+    List<SearchAlgorithm> algorithmsInst = algorithms.stream().map(cl -> {
+      try {
+        return (SearchAlgorithm) cl.newInstance();
+      } catch (InstantiationException e) {
+      } catch (IllegalAccessException e) {
+      }
+      throw new RuntimeException("Could not instantiate one of more search algorithms");
+    }).collect(Collectors.toList());
+    return algorithmsInst;
   }
 }
