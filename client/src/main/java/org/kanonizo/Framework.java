@@ -1,6 +1,5 @@
 package org.kanonizo;
 
-import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import java.io.File;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
@@ -36,6 +35,7 @@ import org.kanonizo.reporting.TestCaseOrderingWriter;
 import org.kanonizo.util.Util;
 
 public class Framework {
+
   private File sourceFolder;
   private File testFolder;
   private List<File> libFolders = new ArrayList<>();
@@ -44,6 +44,9 @@ public class Framework {
   private SystemUnderTest sut;
   private SearchAlgorithm algorithm;
   private static Instrumenter inst = new NullInstrumenter();
+  private static Framework instance;
+
+  private File rootFolder;
 
   public static Instrumenter getInstrumenter() {
     return inst;
@@ -54,15 +57,24 @@ public class Framework {
   }
 
 
-  public Framework() {
-    Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+  private Framework() {
 
-      @Override
-      public void uncaughtException(Thread t, Throwable e) {
-        e.printStackTrace(ClassAnalyzer.out);
-      }
+  }
 
-    });
+  public static Framework getInstance() {
+    if (instance == null) {
+      instance = new Framework();
+      Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+
+        @Override
+        public void uncaughtException(Thread t, Throwable e) {
+          Util.resumeOutput();
+          e.printStackTrace();
+          Util.suppressOutput();
+        }
+      });
+    }
+    return instance;
   }
 
   public void setAlgorithm(SearchAlgorithm algorithm) {
@@ -83,26 +95,34 @@ public class Framework {
     this.testFolder = testFolder;
   }
 
+  public void setRootFolder(File rootFolder) {
+    this.rootFolder = rootFolder;
+  }
+
   List<File> getLibFolders() {
     return libFolders;
   }
 
   /**
-   * Add a library folder containing jar files to the framework. This is particularly important for java applications that aren't built on Maven. Maven applications will automatically add their
+   * Add a library folder containing jar files to the framework. This is particularly important for
+   * java applications that aren't built on Maven. Maven applications will automatically add their
    * dependencies through using maven as a system tool
    *
-   * @param libFolder - a library folder containing JAR files that are required for the test cases to execute properly
+   * @param libFolder - a library folder containing JAR files that are required for the test cases
+   * to execute properly
    */
   public void addLibFolder(File libFolder) {
     libFolders.add(libFolder);
-    Arrays.asList(libFolder.listFiles(file -> file.getName().endsWith(".jar"))).forEach(jar -> Util.addToClassPath(jar));
+    Arrays.asList(libFolder.listFiles(file -> file.getName().endsWith(".jar")))
+        .forEach(jar -> Util.addToClassPath(jar));
   }
 
 
   protected List<File> findClasses(File folder) throws ClassNotFoundException {
     List<File> classes = new ArrayList<>();
     if (folder.isDirectory()) {
-      File[] files = folder.listFiles(file -> file.getName().endsWith(".class") || file.isDirectory());
+      File[] files = folder
+          .listFiles(file -> file.getName().endsWith(".class") || file.isDirectory());
       for (File file : files) {
         if (file.isDirectory()) {
           classes.addAll(findClasses(file));
@@ -133,11 +153,13 @@ public class Framework {
         logger.info("Adding " + testMethods.size() + " test methods from " + cl.getName());
         for (Method m : testMethods) {
           if (TestingUtils.isParameterizedTest(cl, m)) {
-            Optional<Method> parameterMethod = Arrays.asList(cl.getMethods()).stream().filter(method -> method.getAnnotation(Parameters.class) != null).findFirst();
+            Optional<Method> parameterMethod = Arrays.asList(cl.getMethods()).stream()
+                .filter(method -> method.getAnnotation(Parameters.class) != null).findFirst();
             if (parameterMethod.isPresent()) {
               try {
-                Iterable<Object[]> parameters = (Iterable<Object[]>) parameterMethod.get().invoke(null,new Object[]{});
-                for(Object[] inst : parameters){
+                Iterable<Object[]> parameters = (Iterable<Object[]>) parameterMethod.get()
+                    .invoke(null, new Object[]{});
+                for (Object[] inst : parameters) {
                   ParameterisedTestCase ptc = new ParameterisedTestCase(cl, m, inst);
                   sut.addTestCase(ptc);
                 }
@@ -160,7 +182,8 @@ public class Framework {
         logger.info("Adding supporting test class " + cl.getName());
       }
     }
-    logger.info("Finished adding source and test files. Total " + sut.getClassesUnderTest().size() + " classes and " + sut.getTestSuite().size() + " test cases");
+    logger.info("Finished adding source and test files. Total " + sut.getClassesUnderTest().size()
+        + " classes and " + sut.getTestSuite().size() + " test cases");
   }
 
   private Class<?> loadClassFromFile(File file) {
@@ -179,8 +202,10 @@ public class Framework {
   }
 
   /**
-   * Create the instance of the fitness function that will be used to guide a metaheuristic search. It is assumed that the Fitness Function has been set by the main method and is contained in the
-   * {@link Properties#FITNESS_FUNC} object. Default case is an {@link APFDFunction}, and other options include {@link APLCFunction} at present. More will be added soon
+   * Create the instance of the fitness function that will be used to guide a metaheuristic search.
+   * It is assumed that the Fitness Function has been set by the main method and is contained in the
+   * {@link Properties#FITNESS_FUNC} object. Default case is an {@link APFDFunction}, and other
+   * options include {@link APLCFunction} at present. More will be added soon
    */
   protected void setupFitnessFunction() {
     FitnessFunction<SystemUnderTest> func;

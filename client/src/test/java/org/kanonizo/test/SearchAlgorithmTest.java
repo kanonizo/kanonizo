@@ -21,7 +21,7 @@ public abstract class SearchAlgorithmTest extends MockitoTest {
 
     @Before
     public void setup() throws ClassNotFoundException {
-        Framework f = new Framework();
+        Framework f = Framework.getInstance();
         f.setSourceFolder(new File("./testing/sample_classes"));
         f.setTestFolder(new File("./testing/sample_tests"));
         f.setAlgorithm(algorithm);

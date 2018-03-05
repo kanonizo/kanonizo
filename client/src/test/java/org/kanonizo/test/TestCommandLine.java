@@ -18,7 +18,7 @@ public class TestCommandLine extends MockitoTest {
   private static final String ALGORITHM_OPTION = "a";
   private static final String ALGORITHM_CHOICE = "greedy";
   @Mock private CommandLine line;
-  private Framework framework = new Framework();
+  private Framework framework = Framework.getInstance();
 
   @Before
   public void setup() {
