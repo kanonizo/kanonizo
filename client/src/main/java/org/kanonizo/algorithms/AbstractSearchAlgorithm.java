@@ -49,9 +49,9 @@ public abstract class AbstractSearchAlgorithm implements SearchAlgorithm {
   }
 
   protected boolean shouldFinish() {
-    for(StoppingCondition cond : stoppingConditions){
-      if(cond.shouldFinish(this)){
-        LOGGER.info("Algorithm terminated by "+cond.getClass().getName());
+    for (StoppingCondition cond : stoppingConditions) {
+      if (cond.shouldFinish(this)) {
+        LOGGER.info("Algorithm terminated by " + cond.getClass().getName());
         return true;
       }
     }

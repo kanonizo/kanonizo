@@ -1,28 +1,30 @@
 package org.kanonizo;
 
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
-import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import com.scythe.instrumenter.instrumentation.ClassReplacementTransformer;
 import com.scythe.instrumenter.instrumentation.InstrumentingClassLoader;
 import com.scythe.instrumenter.mutation.MutationProperties;
 import java.io.File;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.MissingOptionException;
 import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kanonizo.algorithms.SearchAlgorithm;
-import org.kanonizo.algorithms.stoppingconditions.FitnessStoppingCondition;
-import org.kanonizo.algorithms.stoppingconditions.IterationsStoppingCondition;
-import org.kanonizo.algorithms.stoppingconditions.StagnationStoppingCondition;
-import org.kanonizo.algorithms.stoppingconditions.TimeStoppingCondition;
 import org.kanonizo.annotations.Algorithm;
+import org.kanonizo.annotations.Prerequisite;
+import org.kanonizo.exception.SystemConfigurationException;
 import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
@@ -37,7 +39,6 @@ public class Main {
 
   public static void main(String[] args) {
     // org.evosuite.Properties.TT = true;
-    ClassAnalyzer.setOut(java.lang.System.out);
     Arrays.asList(forbiddenPackages).stream().forEach(s -> ClassReplacementTransformer.addForbiddenPackage(s));
     Options options = TestSuitePrioritisation.getCommandLineOptions();
     Framework fw = new Framework();
@@ -56,7 +57,7 @@ public class Main {
       }
       setupFramework(line, fw);
       fw.run();
-    } catch (final ParseException | ClassNotFoundException e) {
+    } catch (Exception e) {
       logger.error(e);
     }
     // necessary due to random thread creation during test cases (don't do
@@ -74,7 +75,7 @@ public class Main {
    * @return a {@link TestSuite} object containing a {@link SystemUnderTest} with all of the source classes and a list of {@link TestCase} objects for all of the test cases
    * contained within the specified location
    */
-  public static void setupFramework(CommandLine line, Framework fw) throws MissingOptionException {
+  public static void setupFramework(CommandLine line, Framework fw) throws MissingOptionException, IllegalAccessException, InvocationTargetException, InstantiationException {
     File file;
     String folder;
     String[] libFolders;
@@ -129,33 +130,36 @@ public class Main {
     }
   }
 
-  private static SearchAlgorithm getAlgorithm(String algorithmChoice) {
+  private static SearchAlgorithm getAlgorithm(String algorithmChoice) throws InstantiationException, IllegalAccessException, InvocationTargetException {
     Reflections r = new Reflections();
     Set<Class<?>> algorithms = r.getTypesAnnotatedWith(Algorithm.class);
-    SearchAlgorithm algorithm = null;
-    for (Class<?> c : algorithms) {
-      if (algorithmChoice.equals(c.getAnnotation(Algorithm.class).readableName())) {
-        try {
-          algorithm = (SearchAlgorithm) c.newInstance();
-          break;
-        } catch (InstantiationException e) {
-          e.printStackTrace();
-        } catch (IllegalAccessException e) {
-          e.printStackTrace();
+    Optional<Class<?>> algorithmClass = algorithms.stream().filter(c -> c.getAnnotation(Algorithm.class).readableName().equals(algorithmChoice)).findFirst();
+    if (algorithmClass.isPresent()) {
+      SearchAlgorithm algorithm = (SearchAlgorithm) algorithmClass.get().newInstance();
+      List<Method> requirements = Arrays.asList(algorithm.getClass().getMethods()).stream().filter(m -> m.isAnnotationPresent(Prerequisite.class)).collect(Collectors.toList());
+      for (Method requirement : requirements) {
+        if (Modifier.isStatic(requirement.getModifiers())) {
+          if(requirement.getReturnType().equals(Boolean.class) || requirement.getReturnType().equals(boolean.class)){
+            if (!requirement.isAccessible()) {
+              requirement.setAccessible(true);
+            }
+            boolean meetsRequirement = (boolean) requirement.invoke(null, null);
+            if (!meetsRequirement) {
+              throw new SystemConfigurationException("Failed to meet requirement "+requirement.getName()+"\n"+requirement.getAnnotation(Prerequisite.class).failureMessage());
+            }
+          } else {
+            logger.info("Ignoring requirement " + requirement.getName() + " because the return type is not boolean");
+          }
+
+        } else {
+          logger.info("Ignoring requirement " + requirement.getName() + " because it is not static");
         }
       }
+      return algorithm;
     }
-    algorithm.addStoppingCondition(new FitnessStoppingCondition());
-    if (Properties.USE_TIME) {
-      algorithm.addStoppingCondition(new TimeStoppingCondition());
-    }
-    if (Properties.USE_ITERATIONS) {
-      algorithm.addStoppingCondition(new IterationsStoppingCondition());
-    }
-    if (Properties.USE_STAGNATION) {
-      algorithm.addStoppingCondition(new StagnationStoppingCondition());
-    }
-    return algorithm;
+    List<String> algorithmNames = Framework.getAvailableAlgorithms().stream().map(alg -> alg.getClass().getAnnotation(Algorithm.class).readableName()).collect(Collectors.toList());
+    throw new RuntimeException("Algorithm could not be created. The list of available algorithms is given as: " + algorithmNames.stream().reduce((s, s2) -> s + "\n" + s2));
+
   }
 
 }
