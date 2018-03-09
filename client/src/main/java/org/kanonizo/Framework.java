@@ -5,10 +5,13 @@ import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.bcel.classfile.ClassParser;
 import org.apache.bcel.classfile.JavaClass;
 import org.apache.logging.log4j.LogManager;
@@ -21,6 +24,9 @@ import org.kanonizo.algorithms.metaheuristics.fitness.APFDFunction;
 import org.kanonizo.algorithms.metaheuristics.fitness.APLCFunction;
 import org.kanonizo.algorithms.metaheuristics.fitness.FitnessFunction;
 import org.kanonizo.algorithms.metaheuristics.fitness.InstrumentedFitnessFunction;
+import org.kanonizo.annotations.Algorithm;
+import org.kanonizo.annotations.Prerequisite;
+import org.kanonizo.display.Display;
 import org.kanonizo.framework.instrumentation.Instrumenter;
 import org.kanonizo.framework.objects.ClassUnderTest;
 import org.kanonizo.framework.objects.ParameterisedTestCase;
@@ -33,6 +39,7 @@ import org.kanonizo.reporting.CsvWriter;
 import org.kanonizo.reporting.MiscStatsWriter;
 import org.kanonizo.reporting.TestCaseOrderingWriter;
 import org.kanonizo.util.Util;
+import org.reflections.Reflections;
 
 public class Framework {
 
@@ -45,6 +52,7 @@ public class Framework {
   private SearchAlgorithm algorithm;
   private static Instrumenter inst = new NullInstrumenter();
   private static Framework instance;
+  private Display display;
 
   private File rootFolder;
 
@@ -97,6 +105,19 @@ public class Framework {
 
   public void setRootFolder(File rootFolder) {
     this.rootFolder = rootFolder;
+    if(MavenAnalyser.isMavenProject(rootFolder)){
+      int response = display.ask("Maven project detected - would you like to import dependencies from maven?");
+      if(response == Display.RESPONSE_YES){
+        MavenAnalyser.addMavenDependencies(rootFolder);
+      }
+    }
+  }
+
+  public File getRootFolder() {
+    if(rootFolder == null){
+      rootFolder = new File(System.getProperty("user.home"));
+    }
+    return rootFolder;
   }
 
   List<File> getLibFolders() {
@@ -267,5 +288,62 @@ public class Framework {
     addWriter(new MiscStatsWriter(algorithm));
     reportResults(algorithm);
 
+  }
+
+  public static List<SearchAlgorithm> getAvailableAlgorithms()
+      throws InstantiationException, IllegalAccessException {
+    Reflections r = Util.getReflections();
+    Set<Class<?>> algorithms = r.getTypesAnnotatedWith(Algorithm.class);
+    List<SearchAlgorithm> algorithmsInst = algorithms.stream().map(cl -> {
+      try {
+        return (SearchAlgorithm) cl.newInstance();
+      } catch (InstantiationException e) {
+      } catch (IllegalAccessException e) {
+      }
+      throw new RuntimeException("Could not instantiate one of more search algorithms");
+    }).collect(Collectors.toList());
+    return algorithmsInst;
+  }
+
+  public static List<String> runPrerequisites(SearchAlgorithm algorithm) {
+    List<String> errors = new ArrayList<>();
+    List<Method> requirements = Arrays.asList(algorithm.getClass().getMethods()).stream()
+        .filter(m -> m.isAnnotationPresent(Prerequisite.class)).collect(Collectors.toList());
+    for (Method requirement : requirements) {
+      if (Modifier.isStatic(requirement.getModifiers())) {
+        if (requirement.getReturnType().equals(Boolean.class) || requirement.getReturnType()
+            .equals(boolean.class)) {
+          if (!requirement.isAccessible()) {
+            requirement.setAccessible(true);
+          }
+          try {
+            boolean meetsRequirement = (boolean) requirement.invoke(null, null);
+            if (!meetsRequirement) {
+              errors.add(requirement.getAnnotation(Prerequisite.class).failureMessage());
+            }
+          } catch (InvocationTargetException e) {
+            errors.add("InvocationTargetException while trying to run " + requirement.getName());
+          } catch (IllegalAccessException e) {
+            errors.add("IllegalAccessException while trying to run " + requirement.getName()
+                + ". Is the method public?");
+          }
+        } else {
+          logger.info("Ignoring requirement " + requirement.getName()
+              + " because the return type is not boolean");
+        }
+
+      } else {
+        logger.info("Ignoring requirement " + requirement.getName() + " because it is not static");
+      }
+    }
+    return errors;
+  }
+
+  public Display getDisplay() {
+    return display;
+  }
+
+  public void setDisplay(Display display) {
+    this.display = display;
   }
 }

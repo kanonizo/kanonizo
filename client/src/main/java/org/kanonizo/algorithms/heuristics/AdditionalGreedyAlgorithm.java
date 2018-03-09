@@ -1,6 +1,5 @@
 package org.kanonizo.algorithms.heuristics;
 
-import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -9,7 +8,7 @@ import java.util.Set;
 import org.kanonizo.Framework;
 import org.kanonizo.algorithms.AbstractSearchAlgorithm;
 import org.kanonizo.annotations.Algorithm;
-import org.kanonizo.commandline.ProgressBar;
+import org.kanonizo.display.Display;
 import org.kanonizo.framework.objects.Line;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
@@ -26,8 +25,9 @@ public class AdditionalGreedyAlgorithm extends AbstractSearchAlgorithm {
     List<TestCase> testCases = suite.getTestCases();
     List<TestCase> newOrder = new ArrayList<TestCase>();
     FitnessComparator comp = new FitnessComparator();
-    ProgressBar bar = new ProgressBar(ClassAnalyzer.out);
-    bar.setTitle("Performing Additional Greedy sorting algorithm");
+
+    System.out.println("Performing Additional Greedy sorting algorithm");
+    Display d = Framework.getInstance().getDisplay();
     while (!testCases.isEmpty() && !shouldFinish()) {
       age++;
       Collections.sort(testCases, comp);
@@ -36,13 +36,13 @@ public class AdditionalGreedyAlgorithm extends AbstractSearchAlgorithm {
       newOrder.add(tc);
       testCases.remove(tc);
       cache.addAll(Framework.getInstrumenter().getLinesCovered(tc));
-      bar.reportProgress(newOrder.size(), (newOrder.size() + testCases.size()));
+      d.reportProgress(newOrder.size(), (newOrder.size() + testCases.size()));
     }
     // if we ran out of time for stopping conditions, add all remaining in the original order
     if (!testCases.isEmpty()) {
       newOrder.addAll(testCases);
     }
-    bar.complete();
+    System.out.println();
     suite.setTestCases(newOrder);
     setCurrentOptimal(suite);
     fitnessEvaluations++;

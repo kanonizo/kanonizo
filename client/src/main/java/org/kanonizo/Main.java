@@ -7,26 +7,26 @@ import com.scythe.instrumenter.mutation.MutationProperties;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
-import javafx.application.Application;
+import java.util.stream.Collectors;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.MissingOptionException;
 import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kanonizo.algorithms.SearchAlgorithm;
-import org.kanonizo.algorithms.stoppingconditions.FitnessStoppingCondition;
-import org.kanonizo.algorithms.stoppingconditions.IterationsStoppingCondition;
-import org.kanonizo.algorithms.stoppingconditions.StagnationStoppingCondition;
-import org.kanonizo.algorithms.stoppingconditions.TimeStoppingCondition;
 import org.kanonizo.annotations.Algorithm;
+import org.kanonizo.display.ConsoleDisplay;
+import org.kanonizo.display.Display;
+import org.kanonizo.display.KanonizoFrame;
+import org.kanonizo.exception.SystemConfigurationException;
 import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
-import org.kanonizo.gui.KanonizoFrame;
 import org.kanonizo.util.Util;
 import org.reflections.Reflections;
 
@@ -43,31 +43,42 @@ public class Main {
     // org.evosuite.Properties.TT = true;
     Arrays.asList(forbiddenPackages).stream()
         .forEach(s -> ClassReplacementTransformer.addForbiddenPackage(s));
-    if (Arrays.asList(args).stream().anyMatch(arg -> arg.equals("-nogui"))) {
-      Options options = TestSuitePrioritisation.getCommandLineOptions();
+    Options options = TestSuitePrioritisation.getCommandLineOptions();
+    CommandLine line = null;
+    try {
+      line = new DefaultParser().parse(options, args, false);
+      if (TestSuitePrioritisation.hasHelpOption(line)) {
+        HelpFormatter formatter = new HelpFormatter();
+        formatter.printHelp("Search Algorithms", options);
+        return;
+      }
+      Reflections r = Util.getReflections();
+      Set<Field> parameters = r.getFieldsAnnotatedWith(Parameter.class);
+      TestSuitePrioritisation.handleProperties(line, parameters);
+      if (MutationProperties.VISIT_MUTANTS) {
+        InstrumentingClassLoader.getInstance().setVisitMutants(true);
+      }
+      setupFramework(line, fw);
+    } catch (Exception e) {
+      logger.error(e);
+    }
+    Display d = null;
+    if (line.hasOption("nogui")) {
+      d = new ConsoleDisplay();
+      d.initialise();
+      fw.setDisplay(d);
       try {
-        CommandLine line = new DefaultParser().parse(options, args, false);
-        if (TestSuitePrioritisation.hasHelpOption(line)) {
-          HelpFormatter formatter = new HelpFormatter();
-          formatter.printHelp("Search Algorithms", options);
-          return;
-        }
-        Reflections r = Util.getReflections();
-        Set<Field> parameters = r.getFieldsAnnotatedWith(Parameter.class);
-        TestSuitePrioritisation.handleProperties(line, parameters);
-        if (MutationProperties.VISIT_MUTANTS) {
-          InstrumentingClassLoader.getInstance().setVisitMutants(true);
-        }
-        setupFramework(line, fw);
         fw.run();
-      } catch (final ParseException | ClassNotFoundException e) {
+      } catch (Exception e) {
         logger.error(e);
       }
       // necessary due to random thread creation during test cases (don't do
       // this ever again)
       java.lang.System.exit(0);
     } else {
-      Application.launch(KanonizoFrame.class, args);
+      d = new KanonizoFrame();
+      d.initialise();
+      fw.setDisplay(d);
     }
   }
 
@@ -87,7 +98,7 @@ public class Main {
    * classes and a list of {@link TestCase} objects for all of the test cases contained within the
    * specified location
    */
-  public static void setupFramework(CommandLine line, Framework fw) throws MissingOptionException {
+  public static void setupFramework(CommandLine line, Framework fw) throws Exception {
     File file;
     String folder;
     String[] libFolders;
@@ -145,33 +156,31 @@ public class Main {
     }
   }
 
-  private static SearchAlgorithm getAlgorithm(String algorithmChoice) {
+  private static SearchAlgorithm getAlgorithm(String algorithmChoice)
+      throws InstantiationException, IllegalAccessException {
     Reflections r = new Reflections();
     Set<Class<?>> algorithms = r.getTypesAnnotatedWith(Algorithm.class);
-    SearchAlgorithm algorithm = null;
-    for (Class<?> c : algorithms) {
-      if (algorithmChoice.equals(c.getAnnotation(Algorithm.class).readableName())) {
-        try {
-          algorithm = (SearchAlgorithm) c.newInstance();
-          break;
-        } catch (InstantiationException e) {
-          e.printStackTrace();
-        } catch (IllegalAccessException e) {
-          e.printStackTrace();
-        }
+    Optional<Class<?>> algorithmClass = algorithms.stream()
+        .filter(c -> c.getAnnotation(Algorithm.class).readableName().equals(algorithmChoice))
+        .findFirst();
+    if (algorithmClass.isPresent()) {
+      SearchAlgorithm algorithm = (SearchAlgorithm) algorithmClass.get().newInstance();
+      List<String> errors = Framework.runPrerequisites(algorithm);
+      for (String error : errors) {
+        logger.error("System is improperly configured: " + error);
       }
+      if (errors.size() > 0) {
+        throw new SystemConfigurationException("");
+      }
+      return algorithm;
     }
-    algorithm.addStoppingCondition(new FitnessStoppingCondition());
-    if (Properties.USE_TIME) {
-      algorithm.addStoppingCondition(new TimeStoppingCondition());
-    }
-    if (Properties.USE_ITERATIONS) {
-      algorithm.addStoppingCondition(new IterationsStoppingCondition());
-    }
-    if (Properties.USE_STAGNATION) {
-      algorithm.addStoppingCondition(new StagnationStoppingCondition());
-    }
-    return algorithm;
+    List<String> algorithmNames = Framework.getAvailableAlgorithms().stream()
+        .map(alg -> alg.getClass().getAnnotation(Algorithm.class).readableName())
+        .collect(Collectors.toList());
+    throw new RuntimeException(
+        "Algorithm could not be created. The list of available algorithms is given as: "
+            + algorithmNames.stream().reduce((s, s2) -> s + "\n" + s2));
+
   }
 
 }

@@ -29,7 +29,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.kanonizo.commandline.ProgressBar;
+import org.kanonizo.Framework;
 import org.kanonizo.framework.ClassStore;
 import org.kanonizo.framework.TestCaseStore;
 import org.kanonizo.framework.instrumentation.Instrumenter;
@@ -152,15 +152,15 @@ public class ScytheInstrumenter implements Instrumenter {
       }
     } else {
       try {
-        ProgressBar bar = new ProgressBar(System.out);
-        bar.setTitle("Running Test Cases");
+        System.out.println("Running Test Cases:");
         Util.suppressOutput();
         for (TestCase testCase : testSuite.getTestCases()) {
           try {
             testCase.run();
             // debug code to find out where/why failures are occurring. Use
             // breakpoints after execution to locate failures
-            bar.reportProgress((double) testSuite.getTestCases().indexOf(testCase) + 1,
+            Framework
+                .getInstance().getDisplay().reportProgress((double) testSuite.getTestCases().indexOf(testCase) + 1,
                 testSuite.getTestCases().size());
             ClassAnalyzer.collectHitCounters(true);
             linesCovered.put(testCase, collectLines(testCase));
@@ -175,8 +175,8 @@ public class ScytheInstrumenter implements Instrumenter {
           }
 
         }
-        bar.complete();
         Util.resumeOutput();
+        System.out.println("");
         logger.info("Finished instrumentation");
       } catch (final Exception e) {
         // runtime startup exception

@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-
 import org.kanonizo.util.Util;
 
 public class MavenAnalyser {
@@ -16,7 +15,7 @@ public class MavenAnalyser {
     if (root.list() == null) {
       return false;
     }
-    if(!testMavenInstallation()){
+    if (!testMavenInstallation()) {
       return false;
     }
     return Arrays.asList(root.list()).stream().anyMatch(name -> name != null && name.equals("pom.xml"));
@@ -55,7 +54,7 @@ public class MavenAnalyser {
   private static boolean testMavenInstallation() {
     try {
       // test maven installation. If maven isn't installed we can't run the tool
-      ProcessBuilder builder = new ProcessBuilder(new String[] { "mvn", "-v" });
+      ProcessBuilder builder = new ProcessBuilder("mvn", "-v");
       Process proc = builder.start();
       proc.waitFor();
       return true;

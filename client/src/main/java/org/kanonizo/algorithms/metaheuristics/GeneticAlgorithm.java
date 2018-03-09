@@ -11,6 +11,7 @@ import java.util.TimeZone;
 import java.util.stream.IntStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.kanonizo.Framework;
 import org.kanonizo.Properties;
 import org.kanonizo.algorithms.AbstractSearchAlgorithm;
 import org.kanonizo.algorithms.metaheuristics.crossover.CrossoverFunction;
@@ -19,8 +20,7 @@ import org.kanonizo.algorithms.metaheuristics.selection.RankSelection;
 import org.kanonizo.algorithms.metaheuristics.selection.SelectionFunction;
 import org.kanonizo.algorithms.stoppingconditions.StoppingCondition;
 import org.kanonizo.annotations.Algorithm;
-import org.kanonizo.commandline.ProgressBar;
-import org.kanonizo.framework.objects.SystemUnderTest;
+import org.kanonizo.display.Display;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
 import org.kanonizo.reporting.FitnessWriter;
@@ -52,8 +52,8 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
     startTime = System.currentTimeMillis();
     logger.info("Genetic Algorithm running for: " + Properties.MAX_EXECUTION_TIME / 1000 + " seconds");
     setCurrentOptimal(population.get(0));
-    ProgressBar bar = new ProgressBar();
-    bar.setTitle("Genetic Algorithm");
+    Display d = Framework.getInstance().getDisplay();
+    System.out.println("Genetic Algorithm");
     while (!shouldFinish()) {
       age++;
       evolve();
@@ -62,11 +62,11 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
       if (Properties.TRACK_GENERATION_FITNESS) {
         writer.addRow(age, getCurrentOptimal().getFitness());
       }
-      bar.reportProgress(Math.min((double) System.currentTimeMillis() - startTime, Properties.MAX_EXECUTION_TIME),
+      d.reportProgress(Math.min((double) System.currentTimeMillis() - startTime, Properties.MAX_EXECUTION_TIME),
           Properties.MAX_EXECUTION_TIME);
     }
     writer.write();
-    bar.complete();
+    System.out.println();
     StoppingCondition terminatingStoppingCondition=stoppingConditions.stream().filter(cond -> cond.shouldFinish(this)).findFirst().get();
     LocalDateTime enddate = LocalDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()),
         TimeZone.getDefault().toZoneId());

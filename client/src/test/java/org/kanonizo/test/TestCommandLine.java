@@ -1,9 +1,9 @@
 package org.kanonizo.test;
 
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.MissingOptionException;
 import org.junit.Before;
 import org.junit.Test;
 import org.kanonizo.Framework;
@@ -31,20 +31,34 @@ public class TestCommandLine extends MockitoTest {
   }
 
   @Test
-  public void testSetupFramework() throws MissingOptionException {
-    Main.setupFramework(line, framework);
+  public void testSetupFramework() {
+    try {
+      Main.setupFramework(line, framework);
+    } catch(Exception e){
+      fail("Not expecting exception to be thrown");
+    }
   }
 
-  @Test(expected = MissingOptionException.class)
-  public void testMissingSource() throws MissingOptionException {
+  @Test
+  public void testMissingSource() {
     when(line.hasOption(SOURCE_OPTION)).thenReturn(false);
-    Main.setupFramework(line, framework);
+    try{
+      Main.setupFramework(line, framework);
+      fail("Expected Missing Option exception");
+    }catch(Exception e){
+
+    }
   }
 
-  @Test(expected = MissingOptionException.class)
-  public void testMissingTest() throws MissingOptionException {
+  @Test
+  public void testMissingTest() {
     when(line.hasOption(TEST_OPTION)).thenReturn(false);
-    Main.setupFramework(line, framework);
+    try {
+      Main.setupFramework(line, framework);
+      fail("Expected Missing Option Exception");
+    }catch(Exception e){
+
+    }
   }
 
   @Test

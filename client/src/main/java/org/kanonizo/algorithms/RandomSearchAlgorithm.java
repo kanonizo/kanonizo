@@ -1,16 +1,15 @@
 package org.kanonizo.algorithms;
 
-import com.scythe.instrumenter.analysis.ClassAnalyzer;
+import java.util.ArrayList;
+import java.util.List;
+import org.kanonizo.Framework;
 import org.kanonizo.Properties;
 import org.kanonizo.annotations.Algorithm;
-import org.kanonizo.commandline.ProgressBar;
+import org.kanonizo.display.Display;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
 import org.kanonizo.reporting.FitnessWriter;
 import org.kanonizo.util.RandomInstance;
-
-import java.util.ArrayList;
-import java.util.List;
 @Algorithm(readableName = "randomsearch")
 public class RandomSearchAlgorithm extends AbstractSearchAlgorithm {
     static {
@@ -23,8 +22,8 @@ public class RandomSearchAlgorithm extends AbstractSearchAlgorithm {
     public void generateSolution() {
 
         List<TestCase> testCases = problem.getTestSuite().getTestCases();
-        ProgressBar bar = new ProgressBar(ClassAnalyzer.out);
-        bar.setTitle("Running Random Search");
+        Display d = Framework.getInstance().getDisplay();
+        System.out.println("Running Random Search");
         while (!shouldFinish()) {
             age++;
             TestSuite clone = getCurrentOptimal().clone();
@@ -39,10 +38,10 @@ public class RandomSearchAlgorithm extends AbstractSearchAlgorithm {
             } else {
                 writer.addRow(age, clone.getFitness());
             }
-            bar.reportProgress(Math.min((double) System.currentTimeMillis() - startTime, Properties.MAX_EXECUTION_TIME),
+            d.reportProgress(Math.min((double) System.currentTimeMillis() - startTime, Properties.MAX_EXECUTION_TIME),
                     Properties.MAX_EXECUTION_TIME);
         }
-        bar.complete();
+        System.out.println();
         writer.write();
     }
 

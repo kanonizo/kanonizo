@@ -12,11 +12,12 @@ import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
 
 /**
- * Class to not instrument classes, not interested in the output of test cases, defers class loading to the system class
- * loader
+ * Class to not instrument classes, not interested in the output of test cases, defers class loading
+ * to the system class loader
  */
 @org.kanonizo.annotations.Instrumenter(readableName = "null")
 public class NullInstrumenter implements Instrumenter {
+
   @Override
   public Class<?> loadClass(String className) throws ClassNotFoundException {
     return ClassLoader.getSystemClassLoader().loadClass(className);
@@ -85,13 +86,11 @@ public class NullInstrumenter implements Instrumenter {
 
   @Override
   public Set<Line> getLinesCovered(ClassUnderTest cut) {
-    return null;
+    return Collections.emptySet();
   }
 
   @Override
-  public Set<Line> getLinesCovered(SystemUnderTest sut) {
-    return null;
-  }
+  public Set<Line> getLinesCovered(SystemUnderTest sut) { return Collections.emptySet(); }
 
   @Override
   public Set<Branch> getBranchesCovered(ClassUnderTest cut) {

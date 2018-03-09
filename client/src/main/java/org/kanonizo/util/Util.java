@@ -188,4 +188,10 @@ public class Util {
         )
         .toString();
   }
+
+  static final double EPSILON = 0.0000001d;
+  public static boolean doubleEquals (final double a, final double b) {
+    if (a==b) return true;
+    return Math.abs(a - b) < EPSILON; //EPSILON = 0.0000001d
+  }
 }

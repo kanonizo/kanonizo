@@ -22,6 +22,8 @@ public class TestSuitePrioritisation {
   private static final String TEST_FOLDER_LONG = "testFolder";
   private static final String LIB_FOLDER_SHORT = "l";
   private static final String LIB_FOLDER_LONG = "libFolder";
+  private static final String NO_GUI_SHORT = "n";
+  private static final String NO_GUI_LONG = "nogui";
 
   private static Logger logger = LogManager.getLogger(TestSuitePrioritisation.class);
 
@@ -52,6 +54,8 @@ public class TestSuitePrioritisation {
             "Library of all jar files required in order to run the source or the tests. This is an optional parameter, in the case of this project being controlled by maven dependencies will be automatically resolved assuming a project structure of {project_root}/target/classes and {project_root}/target/tests")
         .hasArgs().longOpt(LIB_FOLDER_LONG).build();
     options.addOption(libFolder);
+    Option noGui = Option.builder(NO_GUI_LONG).desc("Option to disable to gui. To use this option, the user must specify the source, lib and test folders on the command line.").build();
+    options.addOption(noGui);
     return options;
   }
 

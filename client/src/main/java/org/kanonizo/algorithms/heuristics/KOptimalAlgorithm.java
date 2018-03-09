@@ -1,13 +1,12 @@
 package org.kanonizo.algorithms.heuristics;
 
-import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.kanonizo.Framework;
 import org.kanonizo.algorithms.AbstractSearchAlgorithm;
-import org.kanonizo.commandline.ProgressBar;
+import org.kanonizo.display.Display;
 import org.kanonizo.framework.objects.Line;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
@@ -26,8 +25,8 @@ public class KOptimalAlgorithm extends AbstractSearchAlgorithm {
         TestSuite suite = problem.clone().getTestSuite();
         List<TestCase> testCases = new ArrayList<TestCase>(suite.getTestCases());
         List<TestCase> newOrder = new ArrayList<TestCase>();
-        ProgressBar bar = new ProgressBar(ClassAnalyzer.out);
-        bar.setTitle("Performing KOptimal Algorithm");
+        Display d = Framework.getInstance().getDisplay();
+        System.out.println("Performing KOptimal Algorithm");
         while (testCases.size() > k - 1) {
             age++;
             List<TestCase> bestK = selectOptimal(testCases);
@@ -37,9 +36,9 @@ public class KOptimalAlgorithm extends AbstractSearchAlgorithm {
                 testCases.remove(testCase);
                 cache.addAll(Framework.getInstrumenter().getLinesCovered(testCase));
             }
-            bar.reportProgress(newOrder.size(), newOrder.size() + testCases.size());
+            d.reportProgress(newOrder.size(), newOrder.size() + testCases.size());
         }
-        bar.complete();
+        System.out.println();
         newOrder.add(testCases.get(0));
         testCases.remove(0);
         suite.setTestCases(newOrder);
