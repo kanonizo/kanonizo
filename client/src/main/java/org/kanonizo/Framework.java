@@ -1,6 +1,15 @@
 package org.kanonizo;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.TypeAdapter;
+import com.google.gson.annotations.Expose;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.reflect.InvocationTargetException;
@@ -43,17 +52,24 @@ import org.reflections.Reflections;
 
 public class Framework {
 
+
+
+  @Expose
   private File sourceFolder;
+  @Expose
   private File testFolder;
-  private List<File> libFolders = new ArrayList<>();
+  @Expose
+  private List<File> libraries = new ArrayList<>();
+  @Expose
   private List<CsvWriter> writers = new ArrayList<>();
   private static final Logger logger = LogManager.getLogger(Framework.class);
   private SystemUnderTest sut;
+  @Expose
   private SearchAlgorithm algorithm;
   private static Instrumenter inst = new NullInstrumenter();
   private static Framework instance;
   private Display display;
-
+  @Expose
   private File rootFolder;
 
   public static Instrumenter getInstrumenter() {
@@ -94,11 +110,17 @@ public class Framework {
   }
 
   public void setSourceFolder(File sourceFolder) {
+    if(this.sourceFolder != null && sourceFolder != this.sourceFolder){
+      Util.removeFromClassPath(this.sourceFolder);
+    }
     Util.addToClassPath(sourceFolder);
     this.sourceFolder = sourceFolder;
   }
 
   public void setTestFolder(File testFolder) {
+    if(this.testFolder != null && testFolder != this.testFolder){
+      Util.removeFromClassPath(this.testFolder);
+    }
     Util.addToClassPath(testFolder);
     this.testFolder = testFolder;
   }
@@ -120,8 +142,8 @@ public class Framework {
     return rootFolder;
   }
 
-  List<File> getLibFolders() {
-    return libFolders;
+  public List<File> getLibraries() {
+    return libraries;
   }
 
   /**
@@ -129,13 +151,20 @@ public class Framework {
    * java applications that aren't built on Maven. Maven applications will automatically add their
    * dependencies through using maven as a system tool
    *
-   * @param libFolder - a library folder containing JAR files that are required for the test cases
+   * @param lib - a library folder containing JAR files that are required for the test cases
    * to execute properly
    */
-  public void addLibFolder(File libFolder) {
-    libFolders.add(libFolder);
-    Arrays.asList(libFolder.listFiles(file -> file.getName().endsWith(".jar")))
-        .forEach(jar -> Util.addToClassPath(jar));
+  public void addLibrary(File lib) {
+    if(lib.isDirectory()){
+      Arrays.asList(lib.listFiles(file -> file.getName().endsWith(".jar")))
+          .forEach(jar -> {
+            libraries.add(jar);
+            Util.addToClassPath(jar);
+          });
+    } else if (lib.getName().endsWith(".jar")){
+      libraries.add(lib);
+    }
+
   }
 
 
@@ -339,11 +368,58 @@ public class Framework {
     return errors;
   }
 
+  public void write(File out) throws IOException {
+    Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().registerTypeAdapter(File.class,new FileTypeAdapter()).create();
+    FileOutputStream w = new FileOutputStream(out);
+    w.write(gson.toJson(this).getBytes());
+    w.flush();
+  }
+
+  public Framework read(File in) throws FileNotFoundException {
+    Gson gson = new GsonBuilder().registerTypeAdapter(File.class, new FileTypeAdapter()).create();
+    Framework fw = gson.fromJson(new FileReader(in), Framework.class);
+    instance = fw;
+    Util.addToClassPath(fw.sourceFolder);
+    Util.addToClassPath(fw.testFolder);
+    fw.libraries.forEach(f -> Util.addToClassPath(f));
+    return fw;
+  }
+
   public Display getDisplay() {
     return display;
   }
 
   public void setDisplay(Display display) {
     this.display = display;
+  }
+
+  public File getSourceFolder() {
+    return sourceFolder;
+  }
+
+  public File getTestFolder() {
+    return testFolder;
+  }
+
+  private class FileTypeAdapter extends TypeAdapter<File> {
+    @Override
+    public void write(JsonWriter out, File file) throws IOException {
+      out.beginObject();
+      out.name("path");
+      out.value(file.getAbsolutePath());
+      out.endObject();
+    }
+
+    @Override
+    public File read(JsonReader in) throws IOException {
+      in.beginObject();
+      String name = in.nextName();
+      File f = null;
+      if(name.equals("path")) {
+        f = new File(in.nextString());
+      }
+      in.endObject();
+      return f;
+    }
   }
 }

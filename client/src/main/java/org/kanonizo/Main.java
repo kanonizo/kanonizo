@@ -22,7 +22,7 @@ import org.kanonizo.algorithms.SearchAlgorithm;
 import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.display.ConsoleDisplay;
 import org.kanonizo.display.Display;
-import org.kanonizo.display.KanonizoFrame;
+import org.kanonizo.display.fx.KanonizoFrame;
 import org.kanonizo.exception.SystemConfigurationException;
 import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
@@ -78,7 +78,6 @@ public class Main {
     } else {
       d = new KanonizoFrame();
       d.initialise();
-      fw.setDisplay(d);
     }
   }
 
@@ -111,7 +110,7 @@ public class Main {
       libFolders = line.getOptionValues("l");
       for (String libFolder : libFolders) {
         file = Util.getFile(libFolder);
-        fw.addLibFolder(file);
+        fw.addLibrary(file);
       }
     }
     if (!MutationProperties.MAJOR_ROOT.equals("")) {
@@ -123,7 +122,7 @@ public class Main {
     file = Util.getFile(folder);
     fw.setSourceFolder(file);
     File root = file.getParentFile().getParentFile();
-    if (MavenAnalyser.isMavenProject(root) && fw.getLibFolders().isEmpty()) {
+    if (MavenAnalyser.isMavenProject(root) && fw.getLibraries().isEmpty()) {
       MavenAnalyser.addMavenDependencies(root);
     }
     // test folder

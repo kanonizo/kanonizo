@@ -2,6 +2,7 @@ package org.kanonizo.test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
+import static org.kanonizo.algorithms.metaheuristics.GeneticAlgorithm.POPULATION_SIZE;
 import static org.mockito.Mockito.when;
 
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
@@ -41,10 +42,10 @@ public class TestSuitePrioritisationTest extends MockitoTest {
 
   @Test
   public void testSetPropertyFromSource() throws IllegalAccessException {
-    assertEquals(50, Properties.POPULATION_SIZE);
+    assertEquals(50, POPULATION_SIZE);
     Field populationSize = parameters.stream().filter(field -> field.getAnnotation(Parameter.class).key().equals("population_size")).findFirst().get();
     Util.setParameter(populationSize, "100");
-    assertEquals(100, Properties.POPULATION_SIZE);
+    assertEquals(100, POPULATION_SIZE);
   }
 
   @Test(expected = IllegalArgumentException.class)

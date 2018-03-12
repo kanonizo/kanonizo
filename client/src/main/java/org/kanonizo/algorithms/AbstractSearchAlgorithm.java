@@ -13,6 +13,7 @@ import java.util.Comparator;
 import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.kanonizo.Framework;
 import org.kanonizo.algorithms.stoppingconditions.StoppingCondition;
 import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
@@ -28,6 +29,8 @@ public abstract class AbstractSearchAlgorithm implements SearchAlgorithm {
   protected long startTime;
   protected long totalTime;
   protected int fitnessEvaluations;
+
+  protected Framework fw = Framework.getInstance();
 
   public int getFitnessEvaluations() {
     return fitnessEvaluations;

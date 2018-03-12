@@ -10,6 +10,7 @@ import java.lang.reflect.Modifier;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.junit.Test;
@@ -23,9 +24,10 @@ import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 
 public class Util {
+
   private static PrintStream defaultSysOut, defaultSysErr;
 
-  static{
+  static {
     defaultSysOut = System.out;
     defaultSysErr = System.err;
   }
@@ -35,23 +37,33 @@ public class Util {
     System.setErr(NullPrintStream.instance);
   }
 
-  public static void resumeOutput(){
+  public static void resumeOutput() {
     System.setOut(defaultSysOut);
     System.setErr(defaultSysErr);
   }
 
   public static String getName(Class<?> cl) {
     return (cl.isAnonymousClass() || cl.isMemberClass() || cl.isLocalClass()
-        ? cl.getName().substring(cl.getName().lastIndexOf(".") + 1) : cl.getSimpleName()) + ".class";
+        ? cl.getName().substring(cl.getName().lastIndexOf(".") + 1) : cl.getSimpleName())
+        + ".class";
+  }
+
+  private static List<File> userEntries = new ArrayList<>();
+
+  public static List<File> getUserEntries() {
+    return userEntries;
   }
 
   /**
-   * Method to add a folder or a jar file to the classpath. Invokes {@link URLClassLoader#addURL} via reflection using the URL from the file object
+   * Method to add a folder or a jar file to the classpath. Invokes {@link URLClassLoader#addURL}
+   * via reflection using the URL from the file object
    *
    * @param file - either a jar file or a directory to be added to the classpath
-   * @throws SecurityException - if protected java classes are trying to be added back into the classpath
+   * @throws SecurityException - if protected java classes are trying to be added back into the
+   * classpath
    */
   public static void addToClassPath(File file) throws SecurityException {
+    userEntries.add(file);
     if (file.isDirectory() || file.getName().endsWith(".jar")) {
       Main.logger.info("Adding " + file.getName() + " to class path");
       try {
@@ -78,13 +90,19 @@ public class Util {
     }
   }
 
+  public static void removeFromClassPath(File file) throws SecurityException {
+    userEntries.remove(file);
+    Main.logger.info("Removed "+file.getName() + " from class path");
+  }
+
   /**
-   * This method serves as a utility for finding files defined by the command line. It first checks in the current directory for a relative path, then checks globally on the file system. If the file
-   * doesn't exist in either location, an IllegalArgumentException is thrown.
+   * This method serves as a utility for finding files defined by the command line. It first checks
+   * in the current directory for a relative path, then checks globally on the file system. If the
+   * file doesn't exist in either location, an IllegalArgumentException is thrown.
    *
    * @param property - usually one of the command line arguments defined that represent files.
-   * @return
-   * @throws IllegalArgumentException - if the file does not exist in the current directory or globally on the file system
+   * @throws IllegalArgumentException - if the file does not exist in the current directory or
+   * globally on the file system
    */
   public static File getFile(String property) {
     if (property == null || property.isEmpty()) {
@@ -98,14 +116,16 @@ public class Util {
       f = new File(property);
       if (!f.exists()) {
         throw new IllegalArgumentException(
-            "File " + property + " could not be found in the current directory or on the global file system");
+            "File " + property
+                + " could not be found in the current directory or on the global file system");
       }
     }
     return f;
   }
 
   @SuppressWarnings({"unchecked", "rawtypes"})
-  public static void setParameter(Field f, String value) throws IllegalArgumentException, IllegalAccessException {
+  public static void setParameter(Field f, String value)
+      throws IllegalArgumentException, IllegalAccessException {
     Class<?> cl = f.getType();
     if (cl.isAssignableFrom(Number.class) || cl.isPrimitive()) {
       if (cl.equals(Long.class) || cl.equals(long.class)) {
@@ -143,16 +163,17 @@ public class Util {
     if (r == null) {
       r = new Reflections(new ConfigurationBuilder()
           .setUrls(ClasspathHelper.forClassLoader())
-          .setScanners(new SubTypesScanner(), new TypeAnnotationsScanner(), new FieldAnnotationsScanner()));
+          .setScanners(new SubTypesScanner(), new TypeAnnotationsScanner(),
+              new FieldAnnotationsScanner()));
     }
     return r;
   }
 
   public static boolean isTestClass(Class<?> cl) {
-    if(Modifier.isAbstract(cl.getModifiers())){
+    if (Modifier.isAbstract(cl.getModifiers())) {
       return false;
     }
-    if(Runner.class.isAssignableFrom(cl)){
+    if (Runner.class.isAssignableFrom(cl)) {
       return false;
     }
     List<Method> methods = Arrays.asList(cl.getMethods());
@@ -166,32 +187,39 @@ public class Util {
     return false;
   }
 
-  public static String getSignature(Method m){
+  public static String getSignature(Method m) {
     String sig;
     try {
       Field gSig = Method.class.getDeclaredField("signature");
       gSig.setAccessible(true);
       sig = (String) gSig.get(m);
-      if(sig!=null) return sig;
+      if (sig != null) {
+        return sig;
+      }
     } catch (IllegalAccessException | NoSuchFieldException e) {
       e.printStackTrace();
     }
 
     StringBuilder sb = new StringBuilder("(");
-    for(Class<?> c : m.getParameterTypes())
-      sb.append((sig= Array.newInstance(c, 0).toString())
+    for (Class<?> c : m.getParameterTypes()) {
+      sb.append((sig = Array.newInstance(c, 0).toString())
           .substring(1, sig.indexOf('@')));
+    }
     return sb.append(')')
         .append(
-            m.getReturnType()==void.class?"V":
-                (sig=Array.newInstance(m.getReturnType(), 0).toString()).substring(1, sig.indexOf('@'))
+            m.getReturnType() == void.class ? "V" :
+                (sig = Array.newInstance(m.getReturnType(), 0).toString())
+                    .substring(1, sig.indexOf('@'))
         )
         .toString();
   }
 
   static final double EPSILON = 0.0000001d;
-  public static boolean doubleEquals (final double a, final double b) {
-    if (a==b) return true;
+
+  public static boolean doubleEquals(final double a, final double b) {
+    if (a == b) {
+      return true;
+    }
     return Math.abs(a - b) < EPSILON; //EPSILON = 0.0000001d
   }
 }

@@ -1,6 +1,7 @@
 package org.kanonizo.framework.objects;
 
 import com.scythe.instrumenter.InstrumentationProperties;
+import com.scythe.instrumenter.InstrumentationProperties.Parameter;
 import com.scythe.instrumenter.analysis.task.AbstractTask;
 import com.scythe.instrumenter.analysis.task.Task;
 import com.scythe.instrumenter.analysis.task.TaskTimer;
@@ -16,7 +17,6 @@ import java.util.concurrent.TimeoutException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.runner.Description;
-import org.kanonizo.Properties;
 import org.kanonizo.framework.TestCaseStore;
 import org.kanonizo.junit.KanonizoTestFailure;
 import org.kanonizo.junit.KanonizoTestResult;
@@ -26,7 +26,12 @@ import org.kanonizo.junit.runners.JUnit4TestRunner;
 import org.kanonizo.junit.runners.KanonizoTestRunner;
 
 public class TestCase {
-  private static final long TIMEOUT = Properties.TIMEOUT;
+  @Parameter(key = "timeout", description = "Test cases can in some cases run infinitely. The timeout property allows the user to define a point at which to cut off long running test cases. The use of this property is controlled by Properties.USE_TIMEOUT", category="TCP")
+  public static int TIMEOUT = 100000;
+
+  @Parameter(key = "use_timeout", description = "Whether or not to use the test case timeout defined by Properties.TIMEOUT. Since for deterministic test cases we should not be expecting any infinite loops, it becomes less likely that timeouts will be hit", category = "TCP")
+  public static boolean USE_TIMEOUT = true;
+
   private static final TimeUnit UNIT = TimeUnit.MILLISECONDS;
   private final Logger logger = LogManager.getLogger(TestCase.class);
   private Class<?> testClass;
@@ -77,7 +82,7 @@ public class TestCase {
     }
     KanonizoTestRunner testCaseRunner = TestingUtils.isJUnit4Class(testClass) ? new JUnit4TestRunner() : new JUnit3TestRunner();
     KanonizoTestResult result = null;
-    if (Properties.USE_TIMEOUT) {
+    if (USE_TIMEOUT) {
       ExecutorService service = Executors.newSingleThreadExecutor();
       Future<KanonizoTestResult> res = service.submit(() -> testCaseRunner.runTest(this));
       try {
@@ -125,11 +130,18 @@ public class TestCase {
 
   public Class<?> getTestClass() {
     return testClass;
+  }
 
+  public String getTestClassName(){
+    return testClass.getSimpleName();
   }
 
   public Method getMethod() {
     return testMethod;
+  }
+
+  public String getMethodName(){
+    return testMethod.getName();
   }
 
   public double getSize() {

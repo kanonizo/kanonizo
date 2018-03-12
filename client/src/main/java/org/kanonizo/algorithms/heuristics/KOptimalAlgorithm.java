@@ -5,15 +5,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.kanonizo.Framework;
-import org.kanonizo.algorithms.AbstractSearchAlgorithm;
-import org.kanonizo.display.Display;
+import org.kanonizo.algorithms.TestCasePrioritiser;
 import org.kanonizo.framework.objects.Line;
 import org.kanonizo.framework.objects.TestCase;
-import org.kanonizo.framework.objects.TestSuite;
 
-public class KOptimalAlgorithm extends AbstractSearchAlgorithm {
+public class KOptimalAlgorithm extends TestCasePrioritiser {
 
     Set<Line> cache = new HashSet<>();
+    private List<TestCase> bestK = new ArrayList<>();
     private int k;
 
     public KOptimalAlgorithm() {
@@ -21,28 +20,14 @@ public class KOptimalAlgorithm extends AbstractSearchAlgorithm {
     }
 
     @Override
-    public void generateSolution() {
-        TestSuite suite = problem.clone().getTestSuite();
-        List<TestCase> testCases = new ArrayList<TestCase>(suite.getTestCases());
-        List<TestCase> newOrder = new ArrayList<TestCase>();
-        Display d = Framework.getInstance().getDisplay();
-        System.out.println("Performing KOptimal Algorithm");
-        while (testCases.size() > k - 1) {
-            age++;
-            List<TestCase> bestK = selectOptimal(testCases);
-            for (int i = 0; i < bestK.size(); i++) {
-                TestCase testCase = bestK.get(i);
-                newOrder.add(testCase);
-                testCases.remove(testCase);
-                cache.addAll(Framework.getInstrumenter().getLinesCovered(testCase));
-            }
-            d.reportProgress(newOrder.size(), newOrder.size() + testCases.size());
+    public TestCase selectTestCase(List<TestCase> testCases) {
+        if(bestK.size() == 0) {
+            bestK = selectOptimal(testCases);
         }
-        System.out.println();
-        newOrder.add(testCases.get(0));
-        testCases.remove(0);
-        suite.setTestCases(newOrder);
-        setCurrentOptimal(suite);
+        TestCase best = bestK.get(0);
+        bestK.remove(0);
+        cache.addAll(Framework.getInstrumenter().getLinesCovered(best));
+        return best;
     }
 
     private List<TestCase> selectOptimal(List<TestCase> testCases) {

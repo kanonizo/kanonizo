@@ -3,22 +3,21 @@ package org.kanonizo.algorithms.heuristics;
 import java.util.Collections;
 import java.util.List;
 import org.kanonizo.Framework;
-import org.kanonizo.algorithms.AbstractSearchAlgorithm;
+import org.kanonizo.algorithms.TestCasePrioritiser;
 import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.framework.objects.TestCase;
-import org.kanonizo.framework.objects.TestSuite;
 
 @Algorithm(readableName = "greedy")
-public class GreedyAlgorithm extends AbstractSearchAlgorithm {
-
+public class GreedyAlgorithm extends TestCasePrioritiser {
+  private FitnessComparator comp = new FitnessComparator();
+  private boolean first = true;
   @Override
-  public void generateSolution() {
-    TestSuite suite = problem.clone().getTestSuite();
-    List<TestCase> testCases = suite.getTestCases();
-    Collections.sort(testCases, new FitnessComparator());
-    suite.setTestCases(testCases);
-    setCurrentOptimal(suite);
-    fitnessEvaluations++;
+  public TestCase selectTestCase(List<TestCase> testCases) {
+    if(first){
+      first = false;
+      Collections.sort(testCases, comp);
+    }
+    return testCases.get(0);
   }
 
   @Override

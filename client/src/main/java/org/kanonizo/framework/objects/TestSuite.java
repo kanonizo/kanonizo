@@ -1,5 +1,6 @@
 package org.kanonizo.framework.objects;
 
+import com.scythe.instrumenter.InstrumentationProperties.Parameter;
 import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -21,6 +22,17 @@ import org.kanonizo.framework.instrumentation.Instrumenter;
 import org.kanonizo.util.RandomInstance;
 
 public class TestSuite implements Comparable<TestSuite>, Disposable {
+  //Probability of a test case being removed during mutation
+  @Parameter(key = "removal_chance", description = "The probability of a test case being removed during mutation. When removing test cases, where there are n test cases, each test case is removed with probability 1/n. This means that in some cases 2 test cases may be removed, and in others none will be", category = "TCP")
+  public static double REMOVAL_CHANCE = 0d;
+
+  //Probability of a test case being inserted during mutation
+  @Parameter(key = "insertion_chance", description = "The probability of a test case being inserted during mutation. This relies on tests having already been removed, as we cannot introduce new tests during TCP", category = "TCP")
+  public static double INSERTION_CHANCE = 0d;
+
+  //Probability of re-ordering some existing test cases during mutation
+  @Parameter(key = "reorder_chance", description = "The probability of test cases being reordered during mutation. If this chance is passed, two tests are selected at random and will have their places switched in the test suite", category = "TCP")
+  public static double REORDER_CHANCE = 1d;
   private SystemUnderTest parent;
   // needs to represent the test case ordering
   private List<TestCase> removedTestCases = new ArrayList<TestCase>();
@@ -81,13 +93,13 @@ public class TestSuite implements Comparable<TestSuite>, Disposable {
   public TestSuite mutate() {
     long startTime = java.lang.System.currentTimeMillis();
     TestSuite clone = this.clone();
-    if (RandomInstance.nextDouble() < Properties.REMOVAL_CHANCE) {
+    if (RandomInstance.nextDouble() < REMOVAL_CHANCE) {
       clone.removeTestCase();
     }
-    if (RandomInstance.nextDouble() < Properties.INSERTION_CHANCE) {
+    if (RandomInstance.nextDouble() < INSERTION_CHANCE) {
       clone.insertTestCase();
     }
-    if (RandomInstance.nextDouble() < Properties.REORDER_CHANCE) {
+    if (RandomInstance.nextDouble() < REORDER_CHANCE) {
       clone.reorderTestCase();
     }
     clone.setChanged(true);

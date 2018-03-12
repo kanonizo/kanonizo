@@ -1,9 +1,11 @@
 package org.kanonizo.algorithms;
 
+import static org.kanonizo.algorithms.metaheuristics.GeneticAlgorithm.TRACK_GENERATION_FITNESS;
+import static org.kanonizo.algorithms.stoppingconditions.TimeStoppingCondition.MAX_EXECUTION_TIME;
+
 import java.util.ArrayList;
 import java.util.List;
 import org.kanonizo.Framework;
-import org.kanonizo.Properties;
 import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.display.Display;
 import org.kanonizo.framework.objects.TestCase;
@@ -12,9 +14,6 @@ import org.kanonizo.reporting.FitnessWriter;
 import org.kanonizo.util.RandomInstance;
 @Algorithm(readableName = "randomsearch")
 public class RandomSearchAlgorithm extends AbstractSearchAlgorithm {
-    static {
-        Properties.POPULATION_SIZE = 1;
-    }
 
     private FitnessWriter writer = new FitnessWriter(this);
 
@@ -33,13 +32,13 @@ public class RandomSearchAlgorithm extends AbstractSearchAlgorithm {
             if (clone.fitter(getCurrentOptimal()).equals(clone)) {
                 setCurrentOptimal(clone);
             }
-            if (Properties.TRACK_GENERATION_FITNESS) {
+            if (TRACK_GENERATION_FITNESS) {
                 writer.addRow(age, getCurrentOptimal().getFitness());
             } else {
                 writer.addRow(age, clone.getFitness());
             }
-            d.reportProgress(Math.min((double) System.currentTimeMillis() - startTime, Properties.MAX_EXECUTION_TIME),
-                    Properties.MAX_EXECUTION_TIME);
+            d.reportProgress(Math.min((double) System.currentTimeMillis() - startTime, MAX_EXECUTION_TIME),
+                    MAX_EXECUTION_TIME);
         }
         System.out.println();
         writer.write();

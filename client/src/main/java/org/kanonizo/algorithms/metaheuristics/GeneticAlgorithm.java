@@ -1,5 +1,8 @@
 package org.kanonizo.algorithms.metaheuristics;
 
+import static org.kanonizo.algorithms.stoppingconditions.TimeStoppingCondition.MAX_EXECUTION_TIME;
+
+import com.scythe.instrumenter.InstrumentationProperties.Parameter;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -28,6 +31,24 @@ import org.kanonizo.util.RandomInstance;
 
 @Algorithm(readableName = "geneticalgorithm")
 public class GeneticAlgorithm extends AbstractSearchAlgorithm {
+  @Parameter(key = "track_generation_fitness", description = "In the FitnessWriter it is possible to track the current fitness evaluation or the entire generation max fitness. Seeing the entire generation max fitness allows the user to see the progression of the population over time (for example in the GA), while seeing the individual fitness allows to see the spread of fitness scores across the population/evolutions. Set to true to track the whole generation fitness, set to false to see individual evaluation fitness", category = "TCP")
+  public static boolean TRACK_GENERATION_FITNESS = true;
+
+  @Parameter(key = "elite", description = "The number of individuals to automatically pass through to the next generation", hasArgs = true, category = "Genetic Algorithm")
+  public static int ELITE = 1;
+  //Population size for metaheuristic search
+  @Parameter(key = "population_size", description = "Population size for the genetic algorithm", category = "TCP")
+  public static int POPULATION_SIZE = 50;
+
+  // Chance of a mutation occurring in a metaheuristic search
+  @Parameter(key = "mutation_chance", description = "The probability during any evolution that an individual is mutated", category = "TCP")
+  public static double MUTATION_CHANCE = 0.2;
+
+  //Chance of a crossover event occurring in a metaheuristic search
+  @Parameter(key = "crossover_chance", description = "The probability during any evolution that an individual is crossed over", category = "TCP")
+  public static double CROSSOVER_CHANCE = 0.7;
+
+
 
   private List<TestSuite> population = new ArrayList<TestSuite>();
   private static Logger logger = LogManager.getLogger(GeneticAlgorithm.class);
@@ -45,12 +66,14 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
 
   @Override
   public void generateSolution() {
-    LocalDateTime date = LocalDateTime.ofInstant(Instant.ofEpochMilli(startTime), TimeZone.getDefault().toZoneId());
+    LocalDateTime date = LocalDateTime
+        .ofInstant(Instant.ofEpochMilli(startTime), TimeZone.getDefault().toZoneId());
     DateTimeFormatter format = DateTimeFormatter.ofPattern("dd/MM/yyyy 'at' HH:mm:ss");
     logger.info("Genetic Algorithm started searching at : " + date.format(format));
     generateInitialPopulation();
     startTime = System.currentTimeMillis();
-    logger.info("Genetic Algorithm running for: " + Properties.MAX_EXECUTION_TIME / 1000 + " seconds");
+    logger.info(
+        "Genetic Algorithm running for: " + MAX_EXECUTION_TIME / 1000 + " seconds");
     setCurrentOptimal(population.get(0));
     Display d = Framework.getInstance().getDisplay();
     System.out.println("Genetic Algorithm");
@@ -59,29 +82,34 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
       evolve();
       sortPopulation();
       setCurrentOptimal(population.get(0));
-      if (Properties.TRACK_GENERATION_FITNESS) {
+      if (TRACK_GENERATION_FITNESS) {
         writer.addRow(age, getCurrentOptimal().getFitness());
       }
-      d.reportProgress(Math.min((double) System.currentTimeMillis() - startTime, Properties.MAX_EXECUTION_TIME),
-          Properties.MAX_EXECUTION_TIME);
+      d.reportProgress(
+          Math.min((double) System.currentTimeMillis() - startTime, MAX_EXECUTION_TIME),
+          MAX_EXECUTION_TIME);
     }
     writer.write();
     System.out.println();
-    StoppingCondition terminatingStoppingCondition=stoppingConditions.stream().filter(cond -> cond.shouldFinish(this)).findFirst().get();
-    LocalDateTime enddate = LocalDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()),
-        TimeZone.getDefault().toZoneId());
+    StoppingCondition terminatingStoppingCondition = stoppingConditions.stream()
+        .filter(cond -> cond.shouldFinish(this)).findFirst().get();
+    LocalDateTime enddate = LocalDateTime
+        .ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()),
+            TimeZone.getDefault().toZoneId());
     logger.info("Total Number of iterations: " + age + "\n");
     logger.info("Genetic Algorithm finished execution at : " + enddate.format(format));
-    logger.info("Genetic Algorithm terminated by: "+terminatingStoppingCondition.getClass().getSimpleName());
+    logger.info("Genetic Algorithm terminated by: " + terminatingStoppingCondition.getClass()
+        .getSimpleName());
 
   }
 
   protected void generateInitialPopulation() {
     logger.info("Generating initial population");
-    for (int i = 0; i < Properties.POPULATION_SIZE; i++) {
+    for (int i = 0; i < POPULATION_SIZE; i++) {
       TestSuite clone = problem.clone().getTestSuite();
-      List<Integer> testCaseOrdering = IntStream.range(0, clone.getTestCases().size()).collect(ArrayList::new,
-          ArrayList::add, ArrayList::addAll);
+      List<Integer> testCaseOrdering = IntStream.range(0, clone.getTestCases().size())
+          .collect(ArrayList::new,
+              ArrayList::add, ArrayList::addAll);
       List<TestCase> randomOrdering = new ArrayList<TestCase>();
       while (!testCaseOrdering.isEmpty()) {
         int index = RandomInstance.nextInt(testCaseOrdering.size());
@@ -108,11 +136,11 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
       TestSuite offspring1 = parent1.clone();
       TestSuite offspring2 = parent2.clone();
 
-      if (RandomInstance.nextDouble() <= Properties.CROSSOVER_CHANCE) {
+      if (RandomInstance.nextDouble() <= CROSSOVER_CHANCE) {
         crossover.crossover(offspring1, offspring2);
       }
 
-      if (RandomInstance.nextDouble() <= Properties.MUTATION_CHANCE) {
+      if (RandomInstance.nextDouble() <= MUTATION_CHANCE) {
         offspring1 = offspring1.mutate();
         offspring2 = offspring2.mutate();
       }
@@ -121,7 +149,8 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
     }
     population = newIndividuals;
     if (Properties.PROFILE) {
-      System.out.println("Evolution completed in: " + (System.currentTimeMillis() - startTime) + "ms");
+      System.out
+          .println("Evolution completed in: " + (System.currentTimeMillis() - startTime) + "ms");
       System.out.println("Fittest individual has fitness: " + population.get(0).getFitness());
     }
   }
@@ -130,7 +159,7 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
     for (TestSuite ts : evolved) {
       ts.evolutionComplete();
       fitnessEvaluations++;
-      if (!Properties.TRACK_GENERATION_FITNESS) {
+      if (!TRACK_GENERATION_FITNESS) {
         writer.addRow(fitnessEvaluations, ts.getFitness());
       }
     }
@@ -146,19 +175,20 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
   }
 
   protected boolean isNewGenerationFull(List<TestSuite> newGeneration) {
-    return newGeneration.size() > Properties.POPULATION_SIZE - 1;
+    return newGeneration.size() > POPULATION_SIZE - 1;
   }
 
   /**
-   * Elitism in Genetic Algorithms is the automatic addition of the fittest individuals into the next generation. It guarantees a certain number of individuals will not be subject to mutation or
-   * crossover. The number of elite individuals is determined by {@link Properties.ELITE}.
-   * 
+   * Elitism in Genetic Algorithms is the automatic addition of the fittest individuals into the
+   * next generation. It guarantees a certain number of individuals will not be subject to mutation
+   * or crossover. The number of elite individuals is determined by the ELITE property.
+   *
    * @return a list of elite individuals to automatically add into the next generation
    */
   protected List<TestSuite> elitism() {
     sortPopulation();
     List<TestSuite> elite = new ArrayList<>();
-    for (int i = 0; i < Properties.ELITE; i++) {
+    for (int i = 0; i < ELITE; i++) {
       elite.add(population.get(i).clone());
     }
     return elite;

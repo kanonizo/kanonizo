@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.TreeView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane prefHeight="540" prefWidth="960" xmlns="http://javafx.com/javafx/8.0.121"
+  xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.kanonizo.display.fx.KanonizoFrame">
+  <padding>
+    <Insets bottom="5" left="10" right="10" top="5"/>
+  </padding>
+  <!-- Menu Bar -->
+  <top>
+    <VBox spacing="10">
+      <children>
+        <MenuBar GridPane.columnIndex="0" GridPane.rowIndex="0">
+          <Menu text="File">
+            <MenuItem text="New Configuration..."/>
+            <MenuItem text="Open Configuration..." onAction="#load"/>
+            <MenuItem text="Save Configuration..." onAction="#save"/>
+            <MenuItem fx:id="exitButton" onAction="#exit" text="Exit"/>
+          </Menu>
+        </MenuBar>
+        <HBox alignment="CENTER_LEFT" maxHeight="30" minHeight="30" spacing="10">
+          <children>
+            <Label prefWidth="100">Project Root:</Label>
+            <TextField fx:id="rootFolderTextField" editable="false" prefWidth="480"/>
+            <Button fx:id="selectRoot" prefWidth="100">Select Project Root</Button>
+          </children>
+        </HBox>
+      </children>
+    </VBox>
+  </top>
+  <center>
+    <GridPane hgap="10" prefWidth="960" vgap="10">
+      <Label text="Source Folder:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+      <TreeView fx:id="sourceTree" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+      <Label text="Test Folder:" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+      <TreeView fx:id="testTree" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+      <Label text="Libraries:" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+      <ListView fx:id="libs" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+
+    </GridPane>
+  </center>
+  <bottom>
+    <GridPane fx:id="bottom">
+      <GridPane hgap="10" prefWidth="960" vgap="10">
+        <Label text="Algorithm Choice:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+        <ComboBox fx:id="algorithmChoices" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+        <GridPane fx:id="paramLayout" GridPane.columnIndex="2" GridPane.rowIndex="0" minWidth="0"
+          minHeight="0">
+
+        </GridPane>
+        <Button onAction="#go" styleClass="button-green" GridPane.columnIndex="2"
+          GridPane.rowIndex="0">Go
+        </Button>
+      </GridPane>
+    </GridPane>
+  </bottom>
+</BorderPane>

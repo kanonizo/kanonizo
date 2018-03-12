@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.GridPane?>
+<BorderPane xmlns="http://javafx.com/javafx"
+  xmlns:fx="http://javafx.com/fxml"
+  fx:controller="org.kanonizo.display.fx.KanonizoScene"
+  prefWidth="960" prefHeight="540">
+  <padding>
+    <Insets top="5" right="10" bottom="5" left="10"/>
+  </padding>
+  <center>
+    <GridPane prefWidth="960" prefHeight="540" hgap="10" vgap="10">
+      <Button onAction="#interrupt" GridPane.rowIndex="0" GridPane.columnIndex="0">Back</Button>
+      <TableView fx:id="testCases" minWidth="940" minHeight="500" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+      <ProgressBar fx:id="pb" minWidth="940" minHeight="30" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+    </GridPane>
+  </center>
+</BorderPane>

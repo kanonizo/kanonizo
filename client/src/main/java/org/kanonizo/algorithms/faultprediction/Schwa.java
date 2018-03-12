@@ -1,16 +1,19 @@
 package org.kanonizo.algorithms.faultprediction;
 
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
+import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.kanonizo.algorithms.AbstractSearchAlgorithm;
+import org.kanonizo.algorithms.TestCasePrioritiser;
 import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.annotations.Prerequisite;
+import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.util.Util;
 
 @Algorithm(readableName = "schwa")
-public class Schwa extends AbstractSearchAlgorithm {
+public class Schwa extends TestCasePrioritiser {
 
   private static Logger logger = LogManager.getLogger(Schwa.class);
 
@@ -23,9 +26,19 @@ public class Schwa extends AbstractSearchAlgorithm {
   @Parameter(key = "schwa_fixes_weight", description = "How much influence the number of times a file has been associated with a \"fix\" should have over its likelihood of containing a fault", category = "schwa")
   public static double FIXES_WEIGHT = 0.5;
 
-  @Override
-  protected void generateSolution() {
+  public void init(){
+    // run schwa
+    try {
+      File temp = File.createTempFile("schwa-json-output", ".tmp");
+      runProcess("schwa", fw.getSourceFolder().getAbsolutePath(), "-j", ">", temp.getAbsolutePath());
+    }catch(IOException e){
+      e.printStackTrace();
+    }
+  }
 
+  @Override
+  public TestCase selectTestCase(List<TestCase> testCases) {
+    return null;
   }
 
   @Prerequisite(failureMessage = "Feature weights do not add up to 1. -Dschwa_revisions_weight, -Dschwa_authors_weight and -Dschwa_fixes_weight should sum to 1")
