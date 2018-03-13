@@ -239,9 +239,9 @@ public class TestSuite implements Comparable<TestSuite>, Disposable {
     sb.append("\n-------------------------------------------\nMAXIMUM FITNESS: " + String.format("%.4f", getFitness())
         + "\n-------------------------------------------\n");
     Set<Line> covered = new HashSet<>();
-    Instrumenter inst = Framework.getInstrumenter();
+    Instrumenter inst = Framework.getInstance().getInstrumenter();
     testCases.stream().forEach(tc -> {
-      Set<Line> branches = Framework.getInstrumenter().getLinesCovered(tc);
+      Set<Line> branches = inst.getLinesCovered(tc);
       covered.addAll(branches);
     });
     int coveredBranches = covered.size();

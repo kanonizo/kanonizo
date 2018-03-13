@@ -151,6 +151,8 @@ public class Util {
       }
     } else if (cl.isAssignableFrom(String.class)) {
       f.set(null, value);
+    } else if (cl.isAssignableFrom(File.class)){
+      f.set(null, new File(value));
     }
     if (f.getType().isEnum()) {
       f.set(null, Enum.valueOf((Class<Enum>) f.getType(), value.toUpperCase()));

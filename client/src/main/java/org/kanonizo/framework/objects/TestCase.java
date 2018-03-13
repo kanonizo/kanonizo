@@ -26,7 +26,7 @@ import org.kanonizo.junit.runners.JUnit4TestRunner;
 import org.kanonizo.junit.runners.KanonizoTestRunner;
 
 public class TestCase {
-  @Parameter(key = "timeout", description = "Test cases can in some cases run infinitely. The timeout property allows the user to define a point at which to cut off long running test cases. The use of this property is controlled by Properties.USE_TIMEOUT", category="TCP")
+  @Parameter(key = "timeout", description = "Test cases can in some cases run infinitely. The timeout property allows the user to define a point at which to cut off long running test cases. The use of this property is controlled by Properties.USE_TIMEOUT", category = "TCP")
   public static int TIMEOUT = 100000;
 
   @Parameter(key = "use_timeout", description = "Whether or not to use the test case timeout defined by Properties.TIMEOUT. Since for deterministic test cases we should not be expecting any infinite loops, it becomes less likely that timeouts will be hit", category = "TCP")
@@ -86,7 +86,7 @@ public class TestCase {
       ExecutorService service = Executors.newSingleThreadExecutor();
       Future<KanonizoTestResult> res = service.submit(() -> testCaseRunner.runTest(this));
       try {
-        result = res.get(TIMEOUT,UNIT);
+        result = res.get(TIMEOUT, UNIT);
       } catch (TimeoutException e) {
         logger.debug("Test " + testMethod.getName() + " timed out.");
         return;
@@ -109,9 +109,9 @@ public class TestCase {
   }
 
   public boolean hasFailures() {
-    if(result == null){
-      logger.debug("Test Case "+this+" is missing its result!");
-      return true;
+    if (result == null) {
+      // deserialised test case maybe?
+      return false;
     }
     return result.getFailures().size() > 0;
   }
@@ -121,8 +121,8 @@ public class TestCase {
   }
 
   public long getExecutionTime() {
-    if(result == null){
-      logger.debug("Test Case "+this+" is missing its result!");
+    if (result == null) {
+      // deserialised test case maybe?
       return -1;
     }
     return result.getExecutionTime();
@@ -132,7 +132,7 @@ public class TestCase {
     return testClass;
   }
 
-  public String getTestClassName(){
+  public String getTestClassName() {
     return testClass.getSimpleName();
   }
 
@@ -140,7 +140,7 @@ public class TestCase {
     return testMethod;
   }
 
-  public String getMethodName(){
+  public String getMethodName() {
     return testMethod.getName();
   }
 

@@ -16,8 +16,8 @@ public class ClassUnderTest {
   public ClassUnderTest(Class<?> cut) {
     this.cut = cut;
     this.id = ++count;
-    this.lines = Framework.getInstrumenter().getLines(this);
-    this.branches = Framework.getInstrumenter().getBranches(this);
+    this.lines = Framework.getInstance().getInstrumenter().getLines(this);
+    this.branches = Framework.getInstance().getInstrumenter().getBranches(this);
     ClassStore.add(cut.getName(), this);
   }
 
@@ -57,7 +57,7 @@ public class ClassUnderTest {
   }
 
   public int size() {
-    return Framework.getInstrumenter().getTotalLines(this);
+    return Framework.getInstance().getInstrumenter().getTotalLines(this);
   }
 
   public boolean equals(Object other){
@@ -79,5 +79,9 @@ public class ClassUnderTest {
     int result = prime * ((Integer)id).hashCode();
     result *= toString().hashCode();
     return result;
+  }
+
+  public static void resetCount(){
+    count = 0;
   }
 }

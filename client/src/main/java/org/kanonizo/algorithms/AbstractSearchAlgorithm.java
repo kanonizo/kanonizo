@@ -51,6 +51,14 @@ public abstract class AbstractSearchAlgorithm implements SearchAlgorithm {
     stoppingConditions.add(cond);
   }
 
+  public void removeStoppingCondition(StoppingCondition cond){
+    stoppingConditions.remove(cond);
+  }
+
+  public List<StoppingCondition> getStoppingConditions(){
+    return stoppingConditions;
+  }
+
   protected boolean shouldFinish() {
     for (StoppingCondition cond : stoppingConditions) {
       if (cond.shouldFinish(this)) {

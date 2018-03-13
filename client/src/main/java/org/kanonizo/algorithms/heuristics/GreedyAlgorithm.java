@@ -22,7 +22,7 @@ public class GreedyAlgorithm extends TestCasePrioritiser {
 
   @Override
   public double getFitness(TestCase tc) {
-    return (Framework.getInstrumenter().getLinesCovered(tc).size());
+    return (inst.getLinesCovered(tc).size());
   }
 
 }

@@ -31,7 +31,7 @@ public class JUnit3TestRunner extends TestRunner implements KanonizoTestRunner {
       throw new RuntimeException();
     }
     long startTime = System.currentTimeMillis();
-    TestResult result = doRun(test, true);
+    TestResult result = doRun(test, false);
     long runTime = System.currentTimeMillis() - startTime;
     List<KanonizoTestFailure> failures = new ArrayList<>();
     Enumeration<TestFailure> errors = result.failures();

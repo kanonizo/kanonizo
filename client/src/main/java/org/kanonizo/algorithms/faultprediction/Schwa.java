@@ -27,6 +27,7 @@ public class Schwa extends TestCasePrioritiser {
   public static double FIXES_WEIGHT = 0.5;
 
   public void init(){
+    super.init();
     // run schwa
     try {
       File temp = File.createTempFile("schwa-json-output", ".tmp");

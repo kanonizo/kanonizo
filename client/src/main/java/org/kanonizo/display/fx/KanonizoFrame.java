@@ -4,11 +4,12 @@ import com.scythe.instrumenter.InstrumentationProperties.Parameter;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -17,6 +18,7 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -44,15 +46,17 @@ import javafx.util.StringConverter;
 import org.kanonizo.Framework;
 import org.kanonizo.algorithms.SearchAlgorithm;
 import org.kanonizo.annotations.Algorithm;
+import org.kanonizo.annotations.Instrumenter;
 import org.kanonizo.display.Display;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
 import org.kanonizo.gui.AlertUtils;
 import org.kanonizo.gui.GuiUtils;
 import org.kanonizo.gui.KanonizoFxApplication;
+import org.kanonizo.listeners.TestCaseSelectionListener;
 import org.kanonizo.util.Util;
 
-public class KanonizoFrame implements Display, Initializable {
+public class KanonizoFrame implements Display, Initializable, TestCaseSelectionListener {
 
   @FXML
   private MenuItem exitButton;
@@ -72,6 +76,10 @@ public class KanonizoFrame implements Display, Initializable {
   private GridPane paramLayout;
   @FXML
   private GridPane bottom;
+  @FXML
+  private ComboBox instrumenterChoices;
+  @FXML
+  private GridPane instParamLayout;
 
   private KanonizoScene scene;
   private Framework fw;
@@ -144,7 +152,7 @@ public class KanonizoFrame implements Display, Initializable {
   }
 
 
-  private void addParams(SearchAlgorithm alg, GridPane paramLayout) {
+  private void addParams(Object alg, GridPane paramLayout) {
     List<Field> params = Arrays.asList(alg.getClass().getFields()).stream()
         .filter(f -> f.getAnnotation(Parameter.class) != null).collect(
             Collectors.toList());
@@ -152,30 +160,24 @@ public class KanonizoFrame implements Display, Initializable {
     int col = -1;
     for (Field param : params) {
       if (col + 2 > ITEMS_PER_ROW * 2) {
-        col = 0;
+        col = -1;
         row++;
       }
       Label paramLabel = new Label(param.getName() + ":");
+      paramLabel.setAlignment(Pos.CENTER_LEFT);
       Control paramField = getParameterField(param);
       if (paramField instanceof TextField) {
-        ((TextField) paramField).textProperty().addListener((obs, old, nw) -> {
-          try {
-            Util.setParameter(param, nw);
-          } catch (IllegalAccessException e) {
-            e.printStackTrace();
-          }
-        });
+
+        try {
+          ((TextField) paramField).setText(param.get(null).toString());
+        } catch (IllegalAccessException e) {
+          e.printStackTrace();
+        }
       } else if (paramField instanceof CheckBox) {
-        ((CheckBox) paramField).selectedProperty().addListener((obs, old, nw) -> {
-          try {
-            Util.setParameter(param, nw.toString());
-          } catch (IllegalAccessException e) {
-            e.printStackTrace();
-          }
-        });
+
       }
-      paramLayout.add(paramLabel, ++col, row);
-      paramLayout.add(paramField, ++col, row);
+      paramLayout.add(paramLabel, ++col, row, 1, 1);
+      paramLayout.add(paramField, ++col, row, 1, 1);
     }
   }
 
@@ -184,8 +186,50 @@ public class KanonizoFrame implements Display, Initializable {
     Class<?> type = param.getType();
     if (type.equals(boolean.class) || type.equals(Boolean.class)) {
       parameterField = new CheckBox();
-    } else {
+      ((CheckBox) parameterField).selectedProperty().addListener((obs, old, nw) -> {
+        try {
+          Util.setParameter(param, nw.toString());
+          addErrors(fw.getAlgorithm());
+        } catch (IllegalAccessException e) {
+          e.printStackTrace();
+        }
+      });
+      try {
+        ((CheckBox) parameterField).setSelected((Boolean) param.get(null));
+      } catch (IllegalAccessException e) {
+        e.printStackTrace();
+      }
+    } else if (param.getType().equals(String.class) || param.getType().isPrimitive() || param.getType().isAssignableFrom(Number.class)) {
       parameterField = new TextField();
+      ((TextField) parameterField).textProperty().addListener((obs, old, nw) -> {
+        try {
+          Util.setParameter(param, nw);
+          addErrors(fw.getAlgorithm());
+        } catch (IllegalAccessException e) {
+          e.printStackTrace();
+        }
+      });
+    } else if (param.getType().equals(File.class)) {
+
+      try {
+        Button control = new Button(((File) param.get(null)).getName());
+        control.setOnAction(ev -> {
+          FileChooser fc = new FileChooser();
+          File f = fc.showOpenDialog(KanonizoFxApplication.stage);
+          if (f != null) {
+            try {
+              Util.setParameter(param, f.getAbsolutePath());
+              addErrors(fw.getAlgorithm());
+            } catch (IllegalAccessException e) {
+              e.printStackTrace();
+            }
+            control.setText(f.getName());
+          }
+        });
+        parameterField = control;
+      } catch (IllegalAccessException e) {
+        e.printStackTrace();
+      }
     }
     return parameterField;
   }
@@ -196,8 +240,7 @@ public class KanonizoFrame implements Display, Initializable {
     Application.launch(KanonizoFxApplication.class, null);
   }
 
-  @Override
-  public void fireTestCaseSelected(TestCase tc) {
+  public void testCaseSelected(TestCase tc) {
     if (scene != null) {
       scene.addTestCase(tc);
     }
@@ -239,10 +282,11 @@ public class KanonizoFrame implements Display, Initializable {
     assert sourceTree != null : "fx:id sourceTree was not injected";
 
     this.fw = Framework.getInstance();
+    fw.addSelectionListener(this);
     fw.setDisplay(this);
     Screen main = Screen.getPrimary();
     Rectangle2D bounds = main.getVisualBounds();
-
+    rootFolderTextField.setText(fw.getRootFolder().getAbsolutePath());
     addSourceListeners();
     addTestListeners();
     addLibListeners();
@@ -266,26 +310,63 @@ public class KanonizoFrame implements Display, Initializable {
           }
         }
       });
-      final List<Label> activeErrors = new ArrayList<>();
+
       algorithmChoices.valueProperty().addListener((ov, t, t1) -> {
         SearchAlgorithm alg = (SearchAlgorithm) ov.getValue();
         fw.setAlgorithm(alg);
         //remove existing children
         paramLayout.getChildren().clear();
-        bottom.getChildren().removeAll(activeErrors);
-        activeErrors.clear();
         addParams(alg, paramLayout);
-        List<String> errors = Framework.runPrerequisites(alg);
-        int row = 1;
-        for (String error : errors) {
-          Label er = new Label(error);
-          activeErrors.add(er);
-          er.getStyleClass().add("error");
-          bottom.add(er, 0, row++, 2, 1);
+        addErrors(alg);
+      });
+      algorithmChoices.getSelectionModel().select(fw.getAlgorithm());
+      instrumenterChoices.getItems().addAll(Framework.getAvailableInstrumenters());
+      instrumenterChoices.setConverter(new StringConverter() {
+
+        @Override
+        public String toString(Object object) {
+          return object.getClass().getAnnotation(Instrumenter.class).readableName();
+        }
+
+        @Override
+        public Object fromString(String string) {
+          try {
+            return Framework.getAvailableInstrumenters().stream().filter(
+                inst -> inst.getClass().getAnnotation(Instrumenter.class).readableName().equals(string))
+                .findFirst().get();
+          } catch (Exception e) {
+            return null;
+          }
         }
       });
+      instrumenterChoices.valueProperty().addListener((ov, t, t1) -> {
+        org.kanonizo.framework.instrumentation.Instrumenter inst = (org.kanonizo.framework.instrumentation.Instrumenter) ov.getValue();
+        fw.setInstrumenter(inst);
+        //remove existing children
+        instParamLayout.getChildren().clear();
+        addParams(inst, instParamLayout);
+        addErrors(inst);
+      });
+      instrumenterChoices.getSelectionModel().select(fw.getInstrumenter());
     } catch (Exception e) {
       e.printStackTrace();
+    }
+  }
+
+  private Set<Label> activeErrors = new HashSet<>();
+
+  private void addErrors(Object alg) {
+    if (alg instanceof SearchAlgorithm) {
+      bottom.getChildren().removeAll(activeErrors);
+      activeErrors.clear();
+      List<String> errors = Framework.runPrerequisites((SearchAlgorithm) alg);
+      int row = 2;
+      for (String error : errors) {
+        Label er = new Label(error);
+        activeErrors.add(er);
+        er.getStyleClass().add("error");
+        bottom.add(er, 0, row++, 2, 1);
+      }
     }
   }
 
@@ -337,22 +418,32 @@ public class KanonizoFrame implements Display, Initializable {
       }
       fc.setInitialDirectory(loadLocation);
       File toRead = fc.showOpenDialog(KanonizoFxApplication.stage);
-      new Thread(() -> {
-        try {
-          this.fw = fw.read(toRead);
-          Platform.runLater(() -> {
-            File root = fw.getRootFolder();
-            rootFolderTextField.setText(root.getAbsolutePath());
-            sourceTree.setRoot(GuiUtils.createDynamicFileTree(root));
-            sourceTree.scrollTo(findIndexOfChild(fw.getSourceFolder(), sourceTree));
-            testTree.setRoot(GuiUtils.createDynamicFileTree(root));
-            testTree.scrollTo(findIndexOfChild(fw.getTestFolder(), testTree));
-            libs.getItems().addAll(fw.getLibraries());
-          });
-        } catch (Exception e) {
-          e.printStackTrace();
-        }
-      }).start();
+      if(toRead != null) {
+        new Thread(() -> {
+          try {
+            Framework read = fw.read(toRead);
+            this.fw.setSourceFolder(read.getSourceFolder());
+            this.fw.setRootFolder(read.getRootFolder());
+            this.fw.setTestFolder(read.getTestFolder());
+            this.fw.setAlgorithm(read.getAlgorithm());
+            this.fw.setInstrumenter(read.getInstrumenter());
+            read.getLibraries().forEach(lib -> this.fw.addLibrary(lib));
+            Platform.runLater(() -> {
+              File root = fw.getRootFolder();
+              rootFolderTextField.setText(root.getAbsolutePath());
+              sourceTree.setRoot(GuiUtils.createDynamicFileTree(root));
+              sourceTree.scrollTo(findIndexOfChild(fw.getSourceFolder(), sourceTree));
+              testTree.setRoot(GuiUtils.createDynamicFileTree(root));
+              testTree.scrollTo(findIndexOfChild(fw.getTestFolder(), testTree));
+              libs.getItems().addAll(fw.getLibraries());
+              algorithmChoices.getSelectionModel().select(fw.getAlgorithm());
+              instrumenterChoices.getSelectionModel().select(fw.getInstrumenter());
+            });
+          } catch (Exception e) {
+            e.printStackTrace();
+          }
+        }).start();
+      }
 
     } catch (Exception e) {
       AlertUtils.alert(AlertType.ERROR, e.getClass().getName(), e.getMessage());
@@ -360,9 +451,9 @@ public class KanonizoFrame implements Display, Initializable {
 
   }
 
-  private int findIndexOfChild(File folder, TreeView<File> view){
+  private int findIndexOfChild(File folder, TreeView<File> view) {
     ObservableList<Node> children = view.getChildrenUnmodifiable();
-    for(Node child : children){
+    for (Node child : children) {
 
     }
     return -1;

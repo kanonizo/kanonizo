@@ -19,6 +19,8 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import org.kanonizo.Framework;
+import org.kanonizo.algorithms.SearchAlgorithm;
+import org.kanonizo.algorithms.stoppingconditions.StoppingCondition;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.gui.KanonizoFxApplication;
 
@@ -29,22 +31,10 @@ public class KanonizoScene implements Initializable {
   private TableView testCases;
   @FXML
   private ProgressBar pb;
-  private Task<Void> runnerTask = new Task<Void>() {
-    public Void call() {
-      try {
-        Framework.getInstance().run();
-      } catch (Exception e) {
-        Alert alert = new Alert(AlertType.ERROR);
-        alert.setContentText(e.getMessage());
-        alert.setTitle(e.getClass().getName());
-        Platform.runLater(() -> alert.show());
-      }
-      return null;
-    }
-  };
-  private Thread runnerThread = new Thread(runnerTask);
+  private Task<Void> runnerTask;
+  private KanonizoThread runnerThread;
 
-  public void setCaller(KanonizoFrame caller){
+  public void setCaller(KanonizoFrame caller) {
     this.caller = caller;
   }
 
@@ -72,12 +62,32 @@ public class KanonizoScene implements Initializable {
   }
 
   public void run() {
+    runnerTask = new Task<Void>() {
+      public Void call() {
+        try {
+          Framework.getInstance().run();
+        } catch (Exception e) {
+          e.printStackTrace();
+          Platform.runLater(() -> {
+            Alert alert = new Alert(AlertType.ERROR);
+            alert.setContentText(e.getMessage());
+            alert.setTitle(e.getClass().getName());
+            alert.show();
+          });
+        }
+        return null;
+      }
+    };
+    runnerThread = new KanonizoThread(runnerTask);
     runnerThread.start();
   }
 
   @FXML
   public void interrupt() {
-    runnerThread.interrupt();
+    orderedTests.clear();
+    if (runnerThread != null) {
+      runnerThread.interrupt();
+    }
     try {
       FXMLLoader loader = new FXMLLoader(getClass().getResource("MainScreen.fxml"));
       loader.load();
@@ -104,5 +114,35 @@ public class KanonizoScene implements Initializable {
     testName.setMinWidth(200);
     testName.setCellValueFactory(new PropertyValueFactory<>("methodName"));
     testCases.getColumns().addAll(id, className, testName);
+  }
+
+  private class KanonizoThread extends Thread {
+    private boolean interrupted = false;
+
+    public KanonizoThread(Runnable run) {
+      super(run);
+      SearchAlgorithm alg = Framework.getInstance().getAlgorithm();
+      alg.getStoppingConditions().removeIf(cond -> cond.getClass().equals(ThreadInterruptedStoppingCondition.class));
+
+      alg.addStoppingCondition(new ThreadInterruptedStoppingCondition(this));
+    }
+
+    public void interrupt() {
+      super.interrupt();
+      this.interrupted = true;
+    }
+  }
+
+  private class ThreadInterruptedStoppingCondition implements StoppingCondition {
+    private KanonizoThread thread;
+
+    public ThreadInterruptedStoppingCondition(KanonizoThread thread) {
+      this.thread = thread;
+    }
+
+    @Override
+    public boolean shouldFinish(SearchAlgorithm algorithm) {
+      return thread.interrupted;
+    }
   }
 }

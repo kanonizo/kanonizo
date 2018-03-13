@@ -11,7 +11,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
-import java.lang.Thread.UncaughtExceptionHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -43,6 +42,7 @@ import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.instrumenters.NullInstrumenter;
 import org.kanonizo.junit.TestingUtils;
+import org.kanonizo.listeners.TestCaseSelectionListener;
 import org.kanonizo.reporting.CoverageWriter;
 import org.kanonizo.reporting.CsvWriter;
 import org.kanonizo.reporting.MiscStatsWriter;
@@ -51,8 +51,7 @@ import org.kanonizo.util.Util;
 import org.reflections.Reflections;
 
 public class Framework {
-
-
+  private List<TestCaseSelectionListener> listeners = new ArrayList<>();
 
   @Expose
   private File sourceFolder;
@@ -60,25 +59,17 @@ public class Framework {
   private File testFolder;
   @Expose
   private List<File> libraries = new ArrayList<>();
-  @Expose
   private List<CsvWriter> writers = new ArrayList<>();
   private static final Logger logger = LogManager.getLogger(Framework.class);
   private SystemUnderTest sut;
   @Expose
   private SearchAlgorithm algorithm;
-  private static Instrumenter inst = new NullInstrumenter();
+  @Expose
+  private Instrumenter inst = new NullInstrumenter();
   private static Framework instance;
   private Display display;
   @Expose
   private File rootFolder;
-
-  public static Instrumenter getInstrumenter() {
-    return inst;
-  }
-
-  public static void setInstrumenter(Instrumenter inst) {
-    Framework.inst = inst;
-  }
 
 
   private Framework() {
@@ -88,14 +79,10 @@ public class Framework {
   public static Framework getInstance() {
     if (instance == null) {
       instance = new Framework();
-      Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-
-        @Override
-        public void uncaughtException(Thread t, Throwable e) {
-          Util.resumeOutput();
-          e.printStackTrace();
-          Util.suppressOutput();
-        }
+      Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
+        Util.resumeOutput();
+        e.printStackTrace();
+        Util.suppressOutput();
       });
     }
     return instance;
@@ -105,38 +92,54 @@ public class Framework {
     this.algorithm = algorithm;
   }
 
+  public SearchAlgorithm getAlgorithm() {
+    return algorithm;
+  }
+
+  public Instrumenter getInstrumenter() {
+    return inst;
+  }
+
+  public void setInstrumenter(Instrumenter inst) {
+    this.inst = inst;
+  }
+
   public void addWriter(CsvWriter writer) {
     writers.add(writer);
   }
 
   public void setSourceFolder(File sourceFolder) {
-    if(this.sourceFolder != null && sourceFolder != this.sourceFolder){
-      Util.removeFromClassPath(this.sourceFolder);
+    if (sourceFolder != null && !sourceFolder.equals(this.sourceFolder)) {
+      if (this.sourceFolder != null) {
+        Util.removeFromClassPath(this.sourceFolder);
+      }
+      Util.addToClassPath(sourceFolder);
+      this.sourceFolder = sourceFolder;
     }
-    Util.addToClassPath(sourceFolder);
-    this.sourceFolder = sourceFolder;
   }
 
   public void setTestFolder(File testFolder) {
-    if(this.testFolder != null && testFolder != this.testFolder){
-      Util.removeFromClassPath(this.testFolder);
+    if (testFolder != null && !testFolder.equals(this.testFolder)) {
+      if (this.testFolder != null) {
+        Util.removeFromClassPath(this.testFolder);
+      }
+      Util.addToClassPath(testFolder);
+      this.testFolder = testFolder;
     }
-    Util.addToClassPath(testFolder);
-    this.testFolder = testFolder;
   }
 
   public void setRootFolder(File rootFolder) {
     this.rootFolder = rootFolder;
-    if(MavenAnalyser.isMavenProject(rootFolder)){
+    if (MavenAnalyser.isMavenProject(rootFolder)) {
       int response = display.ask("Maven project detected - would you like to import dependencies from maven?");
-      if(response == Display.RESPONSE_YES){
+      if (response == Display.RESPONSE_YES) {
         MavenAnalyser.addMavenDependencies(rootFolder);
       }
     }
   }
 
   public File getRootFolder() {
-    if(rootFolder == null){
+    if (rootFolder == null) {
       rootFolder = new File(System.getProperty("user.home"));
     }
     return rootFolder;
@@ -152,16 +155,17 @@ public class Framework {
    * dependencies through using maven as a system tool
    *
    * @param lib - a library folder containing JAR files that are required for the test cases
-   * to execute properly
+   *            to execute properly
    */
   public void addLibrary(File lib) {
-    if(lib.isDirectory()){
+    if (lib.isDirectory()) {
       Arrays.asList(lib.listFiles(file -> file.getName().endsWith(".jar")))
           .forEach(jar -> {
             libraries.add(jar);
             Util.addToClassPath(jar);
           });
-    } else if (lib.getName().endsWith(".jar")){
+    } else if (lib.getName().endsWith(".jar")) {
+      Util.addToClassPath(lib);
       libraries.add(lib);
     }
 
@@ -232,6 +236,8 @@ public class Framework {
         logger.info("Adding supporting test class " + cl.getName());
       }
     }
+
+    ClassUnderTest.resetCount();
     logger.info("Finished adding source and test files. Total " + sut.getClassesUnderTest().size()
         + " classes and " + sut.getTestSuite().size() + " test cases");
   }
@@ -305,16 +311,18 @@ public class Framework {
 
   public void run() throws ClassNotFoundException {
     loadClasses();
+
     algorithm.setSearchProblem(sut);
     if (algorithm.needsFitnessFunction()) {
       setupFitnessFunction();
     }
+    TestCaseOrderingWriter writer = new TestCaseOrderingWriter(algorithm);
+    addWriter(writer);
+    addWriter(new CoverageWriter(sut));
+    addWriter(new MiscStatsWriter(algorithm));
     if (Properties.PRIORITISE) {
       algorithm.start();
     }
-    addWriter(new CoverageWriter(sut));
-    addWriter(new TestCaseOrderingWriter(algorithm));
-    addWriter(new MiscStatsWriter(algorithm));
     reportResults(algorithm);
 
   }
@@ -330,6 +338,21 @@ public class Framework {
       } catch (IllegalAccessException e) {
       }
       throw new RuntimeException("Could not instantiate one of more search algorithms");
+    }).collect(Collectors.toList());
+    return algorithmsInst;
+  }
+
+  public static List<Instrumenter> getAvailableInstrumenters()
+      throws InstantiationException, IllegalAccessException {
+    Reflections r = Util.getReflections();
+    Set<Class<?>> algorithms = r.getTypesAnnotatedWith(org.kanonizo.annotations.Instrumenter.class);
+    List<Instrumenter> algorithmsInst = algorithms.stream().map(cl -> {
+      try {
+        return (Instrumenter) cl.newInstance();
+      } catch (InstantiationException e) {
+      } catch (IllegalAccessException e) {
+      }
+      throw new RuntimeException("Could not instantiate one of more instrumenters");
     }).collect(Collectors.toList());
     return algorithmsInst;
   }
@@ -369,19 +392,25 @@ public class Framework {
   }
 
   public void write(File out) throws IOException {
-    Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().registerTypeAdapter(File.class,new FileTypeAdapter()).create();
+    Gson gson = new GsonBuilder()
+        .excludeFieldsWithoutExposeAnnotation()
+        .registerTypeAdapter(File.class, new FileTypeAdapter())
+        .registerTypeAdapter(SearchAlgorithm.class, new AlgorithmAdapter())
+        .registerTypeAdapter(Instrumenter.class, new InstrumenterAdapter())
+        .create();
     FileOutputStream w = new FileOutputStream(out);
     w.write(gson.toJson(this).getBytes());
     w.flush();
   }
 
   public Framework read(File in) throws FileNotFoundException {
-    Gson gson = new GsonBuilder().registerTypeAdapter(File.class, new FileTypeAdapter()).create();
+    Gson gson = new GsonBuilder()
+        .registerTypeAdapter(File.class, new FileTypeAdapter())
+        .registerTypeAdapter(SearchAlgorithm.class, new AlgorithmAdapter())
+        .registerTypeAdapter(Instrumenter.class, new InstrumenterAdapter())
+        .excludeFieldsWithoutExposeAnnotation()
+        .create();
     Framework fw = gson.fromJson(new FileReader(in), Framework.class);
-    instance = fw;
-    Util.addToClassPath(fw.sourceFolder);
-    Util.addToClassPath(fw.testFolder);
-    fw.libraries.forEach(f -> Util.addToClassPath(f));
     return fw;
   }
 
@@ -401,12 +430,26 @@ public class Framework {
     return testFolder;
   }
 
+  public void addSelectionListener(TestCaseSelectionListener list){
+    listeners.add(list);
+  }
+
+  public void notifyTestCaseSelection(TestCase tc){
+    for(TestCaseSelectionListener list : listeners){
+      list.testCaseSelected(tc);
+    }
+  }
+
   private class FileTypeAdapter extends TypeAdapter<File> {
     @Override
     public void write(JsonWriter out, File file) throws IOException {
       out.beginObject();
       out.name("path");
-      out.value(file.getAbsolutePath());
+      if (file == null) {
+        out.value((String) null);
+      } else {
+        out.value(file.getAbsolutePath());
+      }
       out.endObject();
     }
 
@@ -415,11 +458,80 @@ public class Framework {
       in.beginObject();
       String name = in.nextName();
       File f = null;
-      if(name.equals("path")) {
-        f = new File(in.nextString());
+      if (name.equals("path")) {
+        String fileName = in.nextString();
+        if (fileName == null) {
+          f = null;
+        } else {
+          f = new File(fileName);
+        }
       }
       in.endObject();
       return f;
+    }
+  }
+
+  private class AlgorithmAdapter extends TypeAdapter<SearchAlgorithm> {
+
+    @Override
+    public void write(JsonWriter out, SearchAlgorithm searchAlgorithm) throws IOException {
+      out.beginObject();
+      out.name("name");
+      out.value(searchAlgorithm.getClass().getName());
+      out.endObject();
+    }
+
+    @Override
+    public SearchAlgorithm read(JsonReader in) throws IOException {
+      in.beginObject();
+      String name = in.nextName();
+      SearchAlgorithm sa = null;
+      if (name.equals("name")) {
+        String className = in.nextString();
+        try {
+          sa = (SearchAlgorithm) Class.forName(className).newInstance();
+        } catch (InstantiationException e) {
+          e.printStackTrace();
+        } catch (IllegalAccessException e) {
+          e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+          e.printStackTrace();
+        }
+      }
+      in.endObject();
+      return sa;
+    }
+  }
+
+  private class InstrumenterAdapter extends TypeAdapter<Instrumenter> {
+
+    @Override
+    public void write(JsonWriter out, Instrumenter instrumenter) throws IOException {
+      out.beginObject();
+      out.name("class");
+      out.value(instrumenter.getClass().getName());
+      out.endObject();
+    }
+
+    @Override
+    public Instrumenter read(JsonReader in) throws IOException {
+      in.beginObject();
+      String cl = in.nextName();
+      Instrumenter inst = new NullInstrumenter();
+      if (cl.equals("class")) {
+        String clName = in.nextString();
+        try {
+          inst = (Instrumenter) Class.forName(clName).newInstance();
+        } catch (IllegalAccessException e) {
+          e.printStackTrace();
+        } catch (InstantiationException e) {
+          e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+          e.printStackTrace();
+        }
+      }
+      in.endObject();
+      return inst;
     }
   }
 }

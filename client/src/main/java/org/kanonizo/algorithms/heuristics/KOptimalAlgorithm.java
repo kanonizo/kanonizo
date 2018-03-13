@@ -26,7 +26,7 @@ public class KOptimalAlgorithm extends TestCasePrioritiser {
         }
         TestCase best = bestK.get(0);
         bestK.remove(0);
-        cache.addAll(Framework.getInstrumenter().getLinesCovered(best));
+        cache.addAll(inst.getLinesCovered(best));
         return best;
     }
 
@@ -54,8 +54,8 @@ public class KOptimalAlgorithm extends TestCasePrioritiser {
     private double getFitness(TestCase tc1, TestCase tc2) {
         int previousLines = cache.size();
         Set<Line> temp = new HashSet<>(cache);
-        temp.addAll(Framework.getInstrumenter().getLinesCovered(tc1));
-        temp.addAll(Framework.getInstrumenter().getLinesCovered(tc2));
+        temp.addAll(inst.getLinesCovered(tc1));
+        temp.addAll(inst.getLinesCovered(tc2));
         return temp.size() - previousLines;
     }
 
