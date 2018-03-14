@@ -1,9 +1,8 @@
 package org.kanonizo.algorithms.faultprediction;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kanonizo.algorithms.TestCasePrioritiser;
@@ -11,6 +10,12 @@ import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.annotations.Prerequisite;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.util.Util;
+
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.util.List;
 
 @Algorithm(readableName = "schwa")
 public class Schwa extends TestCasePrioritiser {
@@ -31,6 +36,9 @@ public class Schwa extends TestCasePrioritiser {
     try {
       File temp = File.createTempFile("schwa-json-output", ".tmp");
       runProcess("schwa", fw.getSourceFolder().getAbsolutePath(), "-j", ">", temp.getAbsolutePath());
+      Gson gson = new Gson();
+      Type type = new TypeToken<List<SchwaClass>>(){}.getType();
+      List<SchwaClass> classes = gson.fromJson(new FileReader(temp), type);
     }catch(IOException e){
       e.printStackTrace();
     }
