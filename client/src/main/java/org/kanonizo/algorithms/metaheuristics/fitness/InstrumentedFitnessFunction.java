@@ -8,7 +8,7 @@ import org.kanonizo.framework.objects.TestSuite;
 public abstract class InstrumentedFitnessFunction implements FitnessFunction<SystemUnderTest> {
 
   public void instrument(TestSuite chrom) {
-    Instrumenter inst = Framework.getInstrumenter();
+    Instrumenter inst = Framework.getInstance().getInstrumenter();
     inst.setTestSuite(chrom);
     inst.collectCoverage();
     calculateTotalGoalsCovered();

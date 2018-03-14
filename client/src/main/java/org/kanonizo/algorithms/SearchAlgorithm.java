@@ -1,5 +1,6 @@
 package org.kanonizo.algorithms;
 
+import java.util.List;
 import org.kanonizo.algorithms.stoppingconditions.StoppingCondition;
 import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
@@ -21,6 +22,10 @@ public interface SearchAlgorithm {
   int getFitnessEvaluations();
 
   void addStoppingCondition(StoppingCondition cond);
+
+  void removeStoppingCondition(StoppingCondition cond);
+
+  List<StoppingCondition> getStoppingConditions();
 
   long getTotalTime();
 

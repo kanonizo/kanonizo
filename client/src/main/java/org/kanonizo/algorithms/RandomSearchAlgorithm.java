@@ -15,11 +15,9 @@ import org.kanonizo.util.RandomInstance;
 @Algorithm(readableName = "randomsearch")
 public class RandomSearchAlgorithm extends AbstractSearchAlgorithm {
 
-    private FitnessWriter writer = new FitnessWriter(this);
-
     @Override
     public void generateSolution() {
-
+        FitnessWriter writer = new FitnessWriter(this);
         List<TestCase> testCases = problem.getTestSuite().getTestCases();
         Display d = Framework.getInstance().getDisplay();
         System.out.println("Running Random Search");

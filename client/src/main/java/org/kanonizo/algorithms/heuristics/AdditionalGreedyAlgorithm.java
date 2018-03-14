@@ -14,17 +14,16 @@ import org.kanonizo.framework.objects.TestCase;
 public class AdditionalGreedyAlgorithm extends TestCasePrioritiser {
   private Set<Line> cache = new HashSet<>();
   private FitnessComparator comp = new FitnessComparator();
-
   @Override
   public TestCase selectTestCase(List<TestCase> testCases) {
     Collections.sort(testCases, comp);
     TestCase next = testCases.get(0);
-    cache.addAll(Framework.getInstrumenter().getLinesCovered(next));
+    cache.addAll(inst.getLinesCovered(next));
     return next;
   }
 
   @Override
   public double getFitness(TestCase tc) {
-    return Framework.getInstrumenter().getLinesCovered(tc).stream().mapToInt(line -> cache.contains(line) ? 0 : 1).sum();
+    return inst.getLinesCovered(tc).stream().mapToInt(line -> cache.contains(line) ? 0 : 1).sum();
   }
 }

@@ -8,8 +8,9 @@ import java.util.stream.Stream;
 import org.kanonizo.commandline.ProgressBar;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
+import org.kanonizo.listeners.TestCaseSelectionListener;
 
-public class ConsoleDisplay implements Display {
+public class ConsoleDisplay implements Display, TestCaseSelectionListener {
 
   private ProgressBar bar = new ProgressBar(System.out);
 
@@ -19,7 +20,7 @@ public class ConsoleDisplay implements Display {
   }
 
   @Override
-  public void fireTestCaseSelected(TestCase tc) {
+  public void testCaseSelected(TestCase tc) {
 
   }
 

@@ -34,7 +34,7 @@ public class CoverageWriter extends CsvWriter {
     setHeaders(headers);
     List<ClassUnderTest> cuts = system.getClassesUnderTest();
     List<TestCase> testCases = system.getTestSuite().getTestCases();
-    Instrumenter inst = Framework.getInstrumenter();
+    Instrumenter inst = Framework.getInstance().getInstrumenter();
     for (ClassUnderTest cut : cuts) {
       if (!cut.getCUT().isInterface()) {
         Set<Line> linesCovered = new HashSet<>();

@@ -18,7 +18,7 @@ public class GreedyAlgorithmTest extends SearchAlgorithmTest {
   private Instrumenter scytheInst = new ScytheInstrumenter();
   public GreedyAlgorithmTest() {
     super(new GreedyAlgorithm());
-    Framework.setInstrumenter(scytheInst);
+    Framework.getInstance().setInstrumenter(scytheInst);
   }
 
   @Test
@@ -28,8 +28,8 @@ public class GreedyAlgorithmTest extends SearchAlgorithmTest {
     for (int i = 0; i < testCases.size() - 2; i++) {
       TestCase test1 = testCases.get(i);
       TestCase test2 = testCases.get(i + 1);
-      int linesCovered1 = Framework.getInstrumenter().getLinesCovered(test1).size();
-      int linesCovered2 = Framework.getInstrumenter().getLinesCovered(test2).size();
+      int linesCovered1 = scytheInst.getLinesCovered(test1).size();
+      int linesCovered2 = scytheInst.getLinesCovered(test2).size();
       assertTrue("Test Case: " + test1 + " has lower coverage than " + test2,
           linesCovered1 >= linesCovered2);
     }

@@ -1,21 +1,40 @@
 package org.kanonizo.reporting;
 
+import com.scythe.instrumenter.InstrumentationProperties;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
-
-import com.scythe.instrumenter.InstrumentationProperties;
 
 public abstract class CsvWriter {
 
   protected static final DateFormat FORMAT = new SimpleDateFormat("yyyyMMdd-HHmmss");
   private String[] headers;
   private ArrayList<String[]> rows = new ArrayList<String[]>();
+  private File logFile;
+  private FileOutputStream stream;
+
+  public CsvWriter() {
+    String logDir = InstrumentationProperties.LOG_DIR + "/" + getDir() + "/";
+    String logFileName = logDir + getLogFileName();
+    File dir = new File(logDir);
+    logFile = new File(logFileName);
+    try {
+      if (!dir.exists()) {
+        dir.mkdirs();
+      }
+      if (!logFile.exists()) {
+        logFile.createNewFile();
+      }
+      stream = new FileOutputStream(logFile, true);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
 
   public abstract String getDir();
 
@@ -28,52 +47,34 @@ public abstract class CsvWriter {
 
   public void write() {
     prepareCsv();
-    String logDir = InstrumentationProperties.LOG_DIR + "/" + getDir() + "/";
-    String logFile = logDir + getLogFileName();
-    File dir = new File(logDir);
-    File file = new File(logFile);
-    FileOutputStream stream = null;
-    try {
-      if (!dir.exists()) {
-        dir.mkdirs();
-      }
-      if (!file.exists()) {
-        file.createNewFile();
-      }
-      stream = new FileOutputStream(file);
-      for (int i = 0; i < headers.length - 1; i++) {
-        stream.write((headers[i] + ",").getBytes());
-      }
-      stream.write(headers[headers.length - 1].getBytes());
-      stream.write("\n".getBytes());
-      for (String[] row : rows) {
-        for (int i = 0; i < row.length - 1; i++) {
-          stream.write((row[i] + ",").getBytes());
-        }
-        stream.write(row[row.length - 1].getBytes());
-        stream.write("\n".getBytes());
-      }
-      stream.flush();
-    } catch (FileNotFoundException e) {
-      e.printStackTrace();
-    } catch (IOException e) {
-      e.printStackTrace();
-    } finally {
-      if (stream != null) {
-        try {
-          stream.close();
-        } catch (final IOException e) {
-          e.printStackTrace();
-        }
+    for (String[] row : rows) {
+      writeRow(row);
+    }
+    if (stream != null) {
+      try {
+        stream.close();
+      } catch (final IOException e) {
+        e.printStackTrace();
       }
     }
+
   }
 
   protected void setHeaders(String[] headers) {
     this.headers = headers;
+    writeRow(headers);
   }
 
   protected void addRow(String[] row) {
     rows.add(row);
+  }
+
+  protected void writeRow(String[] row) {
+    try {
+      stream.write((Arrays.stream(row).reduce((a, b) -> a + "," + b).get() + "\n").getBytes());
+      stream.flush();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
   }
 }

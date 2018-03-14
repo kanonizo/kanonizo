@@ -67,6 +67,7 @@ public class Main {
       d = new ConsoleDisplay();
       d.initialise();
       fw.setDisplay(d);
+      fw.addSelectionListener((ConsoleDisplay)d);
       try {
         fw.run();
       } catch (Exception e) {
@@ -133,10 +134,10 @@ public class Main {
     String algorithmChoice = line.hasOption("a") ? line.getOptionValue("a") : "";
     fw.setAlgorithm(getAlgorithm(algorithmChoice));
     String instrumenter = Properties.INSTRUMENTER;
-    setInstrumenter(instrumenter);
+    setInstrumenter(fw, instrumenter);
   }
 
-  private static void setInstrumenter(String instrumenter) {
+  private static void setInstrumenter(Framework fw, String instrumenter) {
     Reflections r = new Reflections();
     Set<Class<?>> instrumenters = r
         .getTypesAnnotatedWith(org.kanonizo.annotations.Instrumenter.class);
@@ -144,7 +145,7 @@ public class Main {
       if (instrumenter
           .equals(inst.getAnnotation(org.kanonizo.annotations.Instrumenter.class).readableName())) {
         try {
-          Framework.setInstrumenter(
+          fw.setInstrumenter(
               (org.kanonizo.framework.instrumentation.Instrumenter) inst.newInstance());
         } catch (InstantiationException e) {
           e.printStackTrace();

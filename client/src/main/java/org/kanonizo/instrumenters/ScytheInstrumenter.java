@@ -50,22 +50,18 @@ import org.kanonizo.util.Util;
 public class ScytheInstrumenter implements Instrumenter {
 
   @Parameter(key = "scythe_write", description = "Whether to write coverage to a file. If true, "
-      + "uses the values of SCYTHE_FILENAME and SCYTHE_OUTPUT_DIR to determine where the file"
+      + "uses the values of SCYTHE_FILE and SCYTHE_OUTPUT_DIR to determine where the file"
       + "should be written", category = "Instrumentation")
   public static boolean SCYTHE_WRITE = false;
   @Parameter(key = "scythe_read", description =
       "Whether to write a coverage file after execution of"
-          + "the test cases. If true, uses the values of SCYTHE_FILENAME and SCYTHE_OUTPUT_DIR to determine"
+          + "the test cases. If true, uses the values of SCYTHE_FILE and SCYTHE_OUTPUT_DIR to determine"
           + "where the file should be written", category = "Instrumentation")
   public static boolean SCYTHE_READ = false;
   @Parameter(key = "scythe_filename", description =
       "Name of the file to read if SCYTHE_READ is true or write"
           + "if SCYTHE_WRITE is true, used to contain coverage information", category = "Instrumentation")
-  public static String SCYTHE_FILENAME = "scythe_coverage.json";
-  @Parameter(key = "scythe_output_dir", description =
-      "Directory containing scythe coverage files or directory"
-          + "to write coverage file(s) to", category = "Instrumentation")
-  public static String SCYTHE_OUTPUT_DIR = "";
+  public static File SCYTHE_FILE = new File("scythe_coverage.json");
 
   private TestSuite testSuite;
   private static Logger logger;
@@ -102,16 +98,11 @@ public class ScytheInstrumenter implements Instrumenter {
   }
 
   private boolean validReadFile() {
-    String path = SCYTHE_OUTPUT_DIR + File.separator + SCYTHE_FILENAME;
-    File readFile = new File(path);
-    return readFile.exists();
+    return SCYTHE_FILE.exists();
   }
 
   @Override
   public Class<?> loadClass(String className) throws ClassNotFoundException {
-    if (SCYTHE_READ && validReadFile()) {
-      return ClassLoader.getSystemClassLoader().loadClass(className);
-    }
     return InstrumentingClassLoader.getInstance().loadClass(className);
   }
 
@@ -120,26 +111,15 @@ public class ScytheInstrumenter implements Instrumenter {
     this.testSuite = ts;
   }
 
-  private File getScytheFile() {
-    StringBuilder sb = new StringBuilder();
-    sb.append(SCYTHE_OUTPUT_DIR);
-    if (!sb.toString().isEmpty()) {
-      sb.append(File.separator);
-    }
-    sb.append(SCYTHE_FILENAME);
-    String path = sb.toString();
-    return new File(path);
-  }
 
   @Override
   public void collectCoverage() {
     if (SCYTHE_READ) {
-      File scytheCoverage = getScytheFile();
-      if (scytheCoverage.exists()) {
+      if (SCYTHE_FILE.exists()) {
         Gson gson = getGson();
         try {
           ScytheInstrumenter inst = gson
-              .fromJson(new FileReader(scytheCoverage), ScytheInstrumenter.class);
+              .fromJson(new FileReader(SCYTHE_FILE), ScytheInstrumenter.class);
           this.linesCovered = inst.linesCovered;
           this.branchesCovered = inst.branchesCovered;
           this.testSuite = inst.testSuite;
@@ -183,10 +163,9 @@ public class ScytheInstrumenter implements Instrumenter {
         reportException(e);
       }
       if (!SCYTHE_READ && SCYTHE_WRITE) {
-        File scytheCoverage = getScytheFile();
-        if (!scytheCoverage.exists()) {
+        if (!SCYTHE_FILE.exists()) {
           try {
-            scytheCoverage.createNewFile();
+            SCYTHE_FILE.createNewFile();
           } catch (IOException e) {
             logger.debug("Failed to create coverage file");
           }
@@ -195,7 +174,7 @@ public class ScytheInstrumenter implements Instrumenter {
         String serialised = gson.toJson(this);
         try {
           BufferedOutputStream out = new BufferedOutputStream(
-              new FileOutputStream(scytheCoverage, false));
+              new FileOutputStream(SCYTHE_FILE, false));
           out.write(serialised.getBytes());
           out.flush();
         } catch (FileNotFoundException e) {
@@ -359,7 +338,7 @@ public class ScytheInstrumenter implements Instrumenter {
       writeCoverage(out, inst.branchesCovered);
       out.name("testSuite");
       out.beginArray();
-      for(TestCase tc : inst.testSuite.getTestCases()){
+      for (TestCase tc : inst.testSuite.getTestCases()) {
         out.value(tc.toString());
       }
       out.endArray();
@@ -403,6 +382,7 @@ public class ScytheInstrumenter implements Instrumenter {
     @Override
     public ScytheInstrumenter read(JsonReader in) throws IOException {
       final ScytheInstrumenter inst = new ScytheInstrumenter();
+      inst.testSuite = new TestSuite();
       in.beginObject();
       while (in.hasNext()) {
         switch (in.nextName()) {
@@ -414,11 +394,12 @@ public class ScytheInstrumenter implements Instrumenter {
             break;
           case "testSuite":
             in.beginArray();
-            while(in.hasNext()){
+            while (in.hasNext()) {
               String testString = in.nextString();
               TestCase test = TestCaseStore.with(testString);
-              if(test == null){
-                logger.debug("Error deserialising test case "+testString+".");
+              inst.testSuite.addTestCase(test);
+              if (test == null) {
+                logger.debug("Error deserialising test case " + testString + ".");
               }
             }
             in.endArray();
@@ -431,13 +412,14 @@ public class ScytheInstrumenter implements Instrumenter {
     private <T extends Goal> Map<TestCase, Set<T>> readCoverage(
         JsonReader in) throws IOException {
       HashMap<TestCase, Set<T>> returnMap = new HashMap<>();
+
       // test cases
       in.beginObject();
       while (in.hasNext()) {
         String testString = in.nextName();
         TestCase tc = TestCaseStore.with(testString);
-        if(tc == null){
-          logger.debug("Error deserialising test case "+testString+".");
+        if (tc == null) {
+          logger.debug("Error deserialising test case " + testString + ".");
         }
         Set<T> linesCovered = new HashSet<>();
         // classes
@@ -448,10 +430,10 @@ public class ScytheInstrumenter implements Instrumenter {
           while (in.hasNext()) {
             ClassUnderTest cut = ClassStore.get(cutId);
             double goalNumber = in.nextDouble();
-            if (goalNumber == (int)goalNumber) {
-              linesCovered.add((T) LineStore.with(cut, (int)goalNumber));
+            if (goalNumber == (int) goalNumber) {
+              linesCovered.add((T) LineStore.with(cut, (int) goalNumber));
             } else {
-              int lineNumber = (int)goalNumber;
+              int lineNumber = (int) goalNumber;
               int branchNumber = (int) (goalNumber - lineNumber);
               linesCovered.add((T) BranchStore.with(cut, lineNumber, branchNumber));
             }

@@ -54,8 +54,7 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
   private static Logger logger = LogManager.getLogger(GeneticAlgorithm.class);
   private SelectionFunction<TestSuite> selection = new RankSelection<>();
   private CrossoverFunction crossover = new SinglePointCrossover();
-  private FitnessWriter writer = new FitnessWriter(this);
-
+  private FitnessWriter writer;
   public void setCrossoverFunction(CrossoverFunction crossover) {
     this.crossover = crossover;
   }
@@ -64,8 +63,12 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
     this.selection = function;
   }
 
+
   @Override
   public void generateSolution() {
+    if(writer == null){
+      writer = new FitnessWriter(this);
+    }
     LocalDateTime date = LocalDateTime
         .ofInstant(Instant.ofEpochMilli(startTime), TimeZone.getDefault().toZoneId());
     DateTimeFormatter format = DateTimeFormatter.ofPattern("dd/MM/yyyy 'at' HH:mm:ss");
