@@ -4,6 +4,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
 
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.MissingOptionException;
 import org.junit.Before;
 import org.junit.Test;
 import org.kanonizo.Framework;
@@ -11,13 +12,15 @@ import org.kanonizo.Main;
 import org.mockito.Mock;
 
 public class TestCommandLine extends MockitoTest {
+
   private static final String SOURCE_OPTION = "s";
-  private static final String SOURCE_FOLDER = "testing/sample_classes";
+  private static final String SOURCE_FOLDER = "testing/src/sample_classes";
   private static final String TEST_OPTION = "t";
-  private static final String TEST_FOLDER = "testing/sample_tests";
+  private static final String TEST_FOLDER = "testing/test/sample_tests";
   private static final String ALGORITHM_OPTION = "a";
   private static final String ALGORITHM_CHOICE = "greedy";
-  @Mock private CommandLine line;
+  @Mock
+  private CommandLine line;
   private Framework framework = Framework.getInstance();
 
   @Before
@@ -34,7 +37,8 @@ public class TestCommandLine extends MockitoTest {
   public void testSetupFramework() {
     try {
       Main.setupFramework(line, framework);
-    } catch(Exception e){
+    } catch (Exception e) {
+      e.printStackTrace();
       fail("Not expecting exception to be thrown");
     }
   }
@@ -42,11 +46,13 @@ public class TestCommandLine extends MockitoTest {
   @Test
   public void testMissingSource() {
     when(line.hasOption(SOURCE_OPTION)).thenReturn(false);
-    try{
+    try {
       Main.setupFramework(line, framework);
       fail("Expected Missing Option exception");
-    }catch(Exception e){
+    } catch (MissingOptionException e) {
 
+    } catch (Exception e) {
+      fail("Got the wrong type of exception");
     }
   }
 
@@ -56,8 +62,10 @@ public class TestCommandLine extends MockitoTest {
     try {
       Main.setupFramework(line, framework);
       fail("Expected Missing Option Exception");
-    }catch(Exception e){
+    } catch (MissingOptionException e) {
 
+    } catch (Exception e) {
+      fail("Got the wrong type of exception");
     }
   }
 
@@ -65,7 +73,7 @@ public class TestCommandLine extends MockitoTest {
   public void testHelpOption() {
     // ensure that the main class can be run using just the -h flag to display
     // help (and that no other prioritisation happens in that case)
-    Main.main(new String[] { "-h" });
+    Main.main(new String[]{"-h"});
 
   }
 }

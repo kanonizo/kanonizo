@@ -9,10 +9,11 @@ import org.kanonizo.framework.objects.TestCase;
 
 @Algorithm(readableName = "greedy")
 public class GreedyAlgorithm extends TestCasePrioritiser {
-  private GreedyComparator comp = new GreedyComparator();
+  private GreedyComparator comp;
   @Override
   public void init(List<TestCase> testCases){
     super.init(testCases);
+    comp = new GreedyComparator();
     Collections.sort(testCases, comp);
   }
   @Override

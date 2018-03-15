@@ -15,10 +15,10 @@ import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.instrumenters.ScytheInstrumenter;
 
 public class GreedyAlgorithmTest extends SearchAlgorithmTest {
-  private Instrumenter scytheInst = new ScytheInstrumenter();
+
   public GreedyAlgorithmTest() {
     super(new GreedyAlgorithm());
-    Framework.getInstance().setInstrumenter(scytheInst);
+
   }
 
   @Test

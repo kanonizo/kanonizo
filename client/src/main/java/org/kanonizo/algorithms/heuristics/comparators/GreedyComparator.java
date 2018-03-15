@@ -15,6 +15,6 @@ public class GreedyComparator implements Comparator<TestCase> {
   public int compare(TestCase o1, TestCase o2) {
     int fitness1 = inst.getLinesCovered(o1).size();
     int fitness2 = inst.getLinesCovered(o2).size();
-    return Integer.compare(fitness1, fitness2);
+    return -Integer.compare(fitness1, fitness2);
   }
 }
