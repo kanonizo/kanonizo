@@ -132,6 +132,8 @@ public class ScytheInstrumenter implements Instrumenter {
           Framework.getInstance().getDisplay().notifyTaskStart("Reading Coverage File", true);
           ScytheInstrumenter inst = gson
               .fromJson(new FileReader(SCYTHE_FILE), ScytheInstrumenter.class);
+          // removing loading window
+          Framework.getInstance().getDisplay().reportProgress(1,1);
           this.linesCovered = inst.linesCovered;
           this.branchesCovered = inst.branchesCovered;
           this.testSuite = inst.testSuite;
