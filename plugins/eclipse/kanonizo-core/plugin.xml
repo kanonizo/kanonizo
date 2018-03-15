@@ -1,0 +1,17 @@
+<plugin>
+   <extension
+         id="org.kanonizo.plugin.views"
+         point="org.eclipse.ui.views">
+      <category
+            id="kanonizo.prioritisation.category"
+            name="Test Suite Prioritisation">
+      </category>
+      <view
+            category="kanonizo.prioritisation.category"
+            class="eclipse.kanonizo.views.TestSuiteView"
+            id="org.kanonizo.plugin.TestSuiteView"
+            name="Test Suite"
+            restorable="true">
+      </view>
+   </extension>
+</plugin>

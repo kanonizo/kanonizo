@@ -1,4 +1,4 @@
-/target/
+target/
 .DS_Store
 .classpath
 .idea/
@@ -6,3 +6,7 @@
 .settings/
 *.iml
 .metadata/
+classes/
+**/target
+out/
+dependency-reduced-pom.xml
