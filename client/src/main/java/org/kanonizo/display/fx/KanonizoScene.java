@@ -14,25 +14,40 @@ import javafx.fxml.Initializable;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.kanonizo.Framework;
 import org.kanonizo.algorithms.SearchAlgorithm;
 import org.kanonizo.algorithms.stoppingconditions.StoppingCondition;
+import org.kanonizo.display.Display;
 import org.kanonizo.framework.objects.TestCase;
+import org.kanonizo.framework.objects.TestSuite;
+import org.kanonizo.gui.GuiUtils;
 import org.kanonizo.gui.KanonizoFxApplication;
+import org.kanonizo.gui.ProgressForm;
+import org.kanonizo.listeners.TestCaseSelectionListener;
+import org.kanonizo.util.Util;
 
-public class KanonizoScene implements Initializable {
+public class KanonizoScene implements Display, Initializable, TestCaseSelectionListener {
+
   private KanonizoFrame caller;
   private ObservableList<TestCase> orderedTests = FXCollections.observableArrayList();
   @FXML
   private TableView testCases;
   @FXML
   private ProgressBar pb;
+  @FXML
+  private Label taskLabel;
   private Task<Void> runnerTask;
   private KanonizoThread runnerThread;
+  private ProgressForm form;
+
+  private static Logger logger = LogManager.getLogger(KanonizoScene.class);
 
   public void setCaller(KanonizoFrame caller) {
     this.caller = caller;
@@ -57,8 +72,47 @@ public class KanonizoScene implements Initializable {
 
   }
 
+
+  @Override
+  public void initialise() {
+
+  }
+
+  @Override
+  public void fireTestSuiteChange(TestSuite ts) {
+    setTestCases(ts.getTestCases());
+  }
+
   public void reportProgress(double current, double max) {
-    Platform.runLater(() -> pb.setProgress(current / max));
+    Platform.runLater(() -> {
+      if (form != null) {
+        form.updateProgress(current, max);
+        if (current / max == 1) {
+          form.getDialogStage().close();
+          form = null;
+        }
+      } else {
+        Platform.runLater(() -> pb.setProgress(current / max));
+
+      }
+    });
+  }
+
+  @Override
+  public int ask(String question) {
+    return GuiUtils.ask(question);
+  }
+
+  @Override
+  public void notifyTaskStart(String name, boolean progress) {
+    Platform.runLater(() -> {
+      if (progress) {
+        form = new ProgressForm(name);
+        form.show();
+      } else {
+        setTaskLabel(name);
+      }
+    });
   }
 
   public void run() {
@@ -67,7 +121,8 @@ public class KanonizoScene implements Initializable {
         try {
           Framework.getInstance().run();
         } catch (Exception e) {
-          e.printStackTrace();
+          logger.error(e);
+          e.printStackTrace(Util.getSysErr());
           Platform.runLater(() -> {
             Alert alert = new Alert(AlertType.ERROR);
             alert.setContentText(e.getMessage());
@@ -92,6 +147,7 @@ public class KanonizoScene implements Initializable {
       FXMLLoader loader = new FXMLLoader(getClass().getResource("MainScreen.fxml"));
       loader.load();
       loader.setController(caller);
+      Framework.getInstance().setDisplay(caller);
       Platform.runLater(() -> KanonizoFxApplication.stage.setScene(new Scene(loader.getRoot())));
     } catch (Exception e) {
       e.printStackTrace();
@@ -114,15 +170,28 @@ public class KanonizoScene implements Initializable {
     testName.setMinWidth(200);
     testName.setCellValueFactory(new PropertyValueFactory<>("methodName"));
     testCases.getColumns().addAll(id, className, testName);
+    Framework.getInstance().setDisplay(this);
+    Framework.getInstance().addSelectionListener(this);
+  }
+
+  private void setTaskLabel(String text) {
+    taskLabel.setText(text);
+  }
+
+  @Override
+  public void testCaseSelected(TestCase tc) {
+    addTestCase(tc);
   }
 
   private class KanonizoThread extends Thread {
+
     private boolean interrupted = false;
 
     public KanonizoThread(Runnable run) {
       super(run);
       SearchAlgorithm alg = Framework.getInstance().getAlgorithm();
-      alg.getStoppingConditions().removeIf(cond -> cond.getClass().equals(ThreadInterruptedStoppingCondition.class));
+      alg.getStoppingConditions()
+          .removeIf(cond -> cond.getClass().equals(ThreadInterruptedStoppingCondition.class));
 
       alg.addStoppingCondition(new ThreadInterruptedStoppingCondition(this));
     }
@@ -134,6 +203,7 @@ public class KanonizoScene implements Initializable {
   }
 
   private class ThreadInterruptedStoppingCondition implements StoppingCondition {
+
     private KanonizoThread thread;
 
     public ThreadInterruptedStoppingCondition(KanonizoThread thread) {

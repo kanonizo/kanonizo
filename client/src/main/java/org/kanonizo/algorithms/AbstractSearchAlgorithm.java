@@ -102,6 +102,7 @@ public abstract class AbstractSearchAlgorithm implements SearchAlgorithm {
     if (InstrumentationProperties.LOG) {
       TaskTimer.taskStart(timerTask);
     }
+    fw.getDisplay().notifyTaskStart("Running Test Prioritisation", false);
     generateSolution();
     TaskTimer.taskEnd(timerTask);
     BufferedOutputStream stream = null;

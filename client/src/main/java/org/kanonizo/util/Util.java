@@ -32,6 +32,14 @@ public class Util {
     defaultSysErr = System.err;
   }
 
+  public static PrintStream getSysOut(){
+    return defaultSysOut;
+  }
+
+  public static PrintStream getSysErr(){
+    return defaultSysErr;
+  }
+
   public static void suppressOutput() {
     System.setOut(NullPrintStream.instance);
     System.setErr(NullPrintStream.instance);
@@ -46,6 +54,12 @@ public class Util {
     return (cl.isAnonymousClass() || cl.isMemberClass() || cl.isLocalClass()
         ? cl.getName().substring(cl.getName().lastIndexOf(".") + 1) : cl.getSimpleName())
         + ".class";
+  }
+
+  public static String humanise(String paramName){
+    String[] parts = paramName.split("_");
+    String human = Arrays.asList(parts).stream().map(str -> str.substring(0,1) + str.substring(1).toLowerCase()).reduce((a,b) -> a + " " + b).get();
+    return human;
   }
 
   private static List<File> userEntries = new ArrayList<>();

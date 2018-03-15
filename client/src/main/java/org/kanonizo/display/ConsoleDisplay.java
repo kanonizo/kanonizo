@@ -60,6 +60,11 @@ public class ConsoleDisplay implements Display, TestCaseSelectionListener {
     }
   }
 
+  @Override
+  public void notifyTaskStart(String name, boolean progress) {
+    bar.setTitle(name);
+  }
+
   private boolean valid(String resp) {
     return validResponses.contains(resp);
   }

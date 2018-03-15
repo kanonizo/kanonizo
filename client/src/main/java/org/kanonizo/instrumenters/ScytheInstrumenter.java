@@ -118,6 +118,7 @@ public class ScytheInstrumenter implements Instrumenter {
       if (SCYTHE_FILE.exists()) {
         Gson gson = getGson();
         try {
+          Framework.getInstance().getDisplay().notifyTaskStart("Reading Coverage File", true);
           ScytheInstrumenter inst = gson
               .fromJson(new FileReader(SCYTHE_FILE), ScytheInstrumenter.class);
           this.linesCovered = inst.linesCovered;
@@ -134,6 +135,7 @@ public class ScytheInstrumenter implements Instrumenter {
       try {
         System.out.println("Running Test Cases:");
         Util.suppressOutput();
+        Framework.getInstance().getDisplay().notifyTaskStart("Running Test Cases", true);
         for (TestCase testCase : testSuite.getTestCases()) {
           try {
             testCase.run();

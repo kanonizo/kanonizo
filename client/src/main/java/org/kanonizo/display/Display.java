@@ -1,6 +1,5 @@
 package org.kanonizo.display;
 
-import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
 
 public interface Display {
@@ -11,4 +10,5 @@ public interface Display {
   void fireTestSuiteChange(TestSuite ts);
   void reportProgress(double current, double max);
   int ask(String question);
+  void notifyTaskStart(String name, boolean progress);
 }

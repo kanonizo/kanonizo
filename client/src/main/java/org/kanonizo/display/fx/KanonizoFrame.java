@@ -3,6 +3,9 @@ package org.kanonizo.display.fx;
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
 import java.io.File;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -22,10 +25,8 @@ import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
@@ -34,6 +35,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.control.TreeView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -43,20 +45,21 @@ import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Screen;
 import javafx.util.StringConverter;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.kanonizo.Framework;
 import org.kanonizo.algorithms.SearchAlgorithm;
 import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.annotations.Instrumenter;
+import org.kanonizo.annotations.OptionProvider;
 import org.kanonizo.display.Display;
-import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
 import org.kanonizo.gui.AlertUtils;
 import org.kanonizo.gui.GuiUtils;
 import org.kanonizo.gui.KanonizoFxApplication;
-import org.kanonizo.listeners.TestCaseSelectionListener;
 import org.kanonizo.util.Util;
 
-public class KanonizoFrame implements Display, Initializable, TestCaseSelectionListener {
+public class KanonizoFrame implements Display, Initializable {
 
   @FXML
   private MenuItem exitButton;
@@ -83,6 +86,8 @@ public class KanonizoFrame implements Display, Initializable, TestCaseSelectionL
 
   private KanonizoScene scene;
   private Framework fw;
+
+  private static Logger logger = LogManager.getLogger(KanonizoFrame.class);
   private static final int ITEMS_PER_ROW = 2;
 
   @FXML
@@ -152,7 +157,7 @@ public class KanonizoFrame implements Display, Initializable, TestCaseSelectionL
   }
 
 
-  private void addParams(Object alg, GridPane paramLayout) {
+  private void addParams(Object alg, GridPane paramLayout, boolean runPrerequisites) {
     List<Field> params = Arrays.asList(alg.getClass().getFields()).stream()
         .filter(f -> f.getAnnotation(Parameter.class) != null).collect(
             Collectors.toList());
@@ -163,25 +168,17 @@ public class KanonizoFrame implements Display, Initializable, TestCaseSelectionL
         col = -1;
         row++;
       }
-      Label paramLabel = new Label(param.getName() + ":");
+      Label paramLabel = new Label(Util.humanise(param.getName()) + ":");
       paramLabel.setAlignment(Pos.CENTER_LEFT);
-      Control paramField = getParameterField(param);
-      if (paramField instanceof TextField) {
-
-        try {
-          ((TextField) paramField).setText(param.get(null).toString());
-        } catch (IllegalAccessException e) {
-          e.printStackTrace();
-        }
-      } else if (paramField instanceof CheckBox) {
-
-      }
+      paramLabel.setTooltip(new Tooltip(Util.humanise(param.getName())));
+      Control paramField = getParameterField(param, runPrerequisites);
+      paramField.setTooltip(new Tooltip(param.getAnnotation(Parameter.class).description()));
       paramLayout.add(paramLabel, ++col, row, 1, 1);
       paramLayout.add(paramField, ++col, row, 1, 1);
     }
   }
 
-  private Control getParameterField(Field param) {
+  private Control getParameterField(Field param, boolean runPrerequisites) {
     Control parameterField = null;
     Class<?> type = param.getType();
     if (type.equals(boolean.class) || type.equals(Boolean.class)) {
@@ -189,7 +186,9 @@ public class KanonizoFrame implements Display, Initializable, TestCaseSelectionL
       ((CheckBox) parameterField).selectedProperty().addListener((obs, old, nw) -> {
         try {
           Util.setParameter(param, nw.toString());
-          addErrors(fw.getAlgorithm());
+          if (runPrerequisites) {
+            addErrors(fw.getAlgorithm());
+          }
         } catch (IllegalAccessException e) {
           e.printStackTrace();
         }
@@ -199,16 +198,24 @@ public class KanonizoFrame implements Display, Initializable, TestCaseSelectionL
       } catch (IllegalAccessException e) {
         e.printStackTrace();
       }
-    } else if (param.getType().equals(String.class) || param.getType().isPrimitive() || param.getType().isAssignableFrom(Number.class)) {
+    } else if (param.getType().equals(String.class) || param.getType().isPrimitive() || param
+        .getType().isAssignableFrom(Number.class)) {
       parameterField = new TextField();
       ((TextField) parameterField).textProperty().addListener((obs, old, nw) -> {
         try {
           Util.setParameter(param, nw);
-          addErrors(fw.getAlgorithm());
+          if (runPrerequisites) {
+            addErrors(fw.getAlgorithm());
+          }
         } catch (IllegalAccessException e) {
           e.printStackTrace();
         }
       });
+      try {
+        ((TextField) parameterField).setText(param.get(null).toString());
+      } catch (IllegalAccessException e) {
+        e.printStackTrace();
+      }
     } else if (param.getType().equals(File.class)) {
 
       try {
@@ -219,7 +226,9 @@ public class KanonizoFrame implements Display, Initializable, TestCaseSelectionL
           if (f != null) {
             try {
               Util.setParameter(param, f.getAbsolutePath());
-              addErrors(fw.getAlgorithm());
+              if (runPrerequisites) {
+                addErrors(fw.getAlgorithm());
+              }
             } catch (IllegalAccessException e) {
               e.printStackTrace();
             }
@@ -228,6 +237,64 @@ public class KanonizoFrame implements Display, Initializable, TestCaseSelectionL
         });
         parameterField = control;
       } catch (IllegalAccessException e) {
+        e.printStackTrace();
+      }
+    } else if (param.getAnnotation(Parameter.class).hasOptions()) {
+      String paramKey = param.getAnnotation(Parameter.class).key();
+      Method[] methods = param.getDeclaringClass().getMethods();
+      Optional<Method> optionProviderOpt = Arrays.asList(methods).stream()
+          .filter(m -> m.getAnnotation(OptionProvider.class) != null && m.getAnnotation(
+              OptionProvider.class).paramKey().equals(paramKey)).findFirst();
+      if (!optionProviderOpt.isPresent()) {
+        logger.error("Missing OptionProvider for key" + paramKey);
+        return null;
+      }
+      Method optionProvider = optionProviderOpt.get();
+      if (optionProvider.getReturnType() != List.class) {
+        logger.error("OptionProvider must return a list");
+        return null;
+      }
+      if (!Modifier.isStatic(optionProvider.getModifiers())) {
+        logger.error("OptionProvider must be static");
+        return null;
+      }
+      try {
+        List<?> options = (List<?>) optionProvider.invoke(null, null);
+        parameterField = new ComboBox();
+        ((ComboBox) parameterField).getItems().addAll(options);
+        ((ComboBox) parameterField).getSelectionModel().selectedItemProperty()
+            .addListener((ov, old, nw) -> {
+              try {
+                param.set(null, nw);
+              } catch (IllegalAccessException e) {
+                e.printStackTrace();
+              }
+            });
+        ((ComboBox) parameterField).setConverter(new StringConverter() {
+
+          @Override
+          public String toString(Object object) {
+            return object.getClass().getSimpleName();
+          }
+
+          @Override
+          public Object fromString(String string) {
+            String comparatorPackage = "org.kanonizo.algorithms.heuristics.comparators";
+            try {
+              return Class.forName(comparatorPackage + "." + string).newInstance();
+            } catch (InstantiationException e) {
+              e.printStackTrace();
+            } catch (IllegalAccessException e) {
+              e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+              e.printStackTrace();
+            }
+            return null;
+          }
+        });
+      } catch (IllegalAccessException e) {
+        e.printStackTrace();
+      } catch (InvocationTargetException e) {
         e.printStackTrace();
       }
     }
@@ -240,12 +307,6 @@ public class KanonizoFrame implements Display, Initializable, TestCaseSelectionL
     Application.launch(KanonizoFxApplication.class, null);
   }
 
-  public void testCaseSelected(TestCase tc) {
-    if (scene != null) {
-      scene.addTestCase(tc);
-    }
-  }
-
   @Override
   public void fireTestSuiteChange(TestSuite ts) {
     if (scene != null) {
@@ -255,26 +316,16 @@ public class KanonizoFrame implements Display, Initializable, TestCaseSelectionL
 
   @Override
   public void reportProgress(double current, double max) {
-    if (scene != null) {
-      scene.reportProgress(current, max);
-    }
   }
 
   @Override
   public int ask(String question) {
-    Alert alert = new Alert(AlertType.CONFIRMATION);
-    alert.setTitle("Confirm an Action");
-    alert.setContentText(question);
-    ButtonType yes = new ButtonType("Yes");
-    ButtonType no = new ButtonType("No");
-    alert.getButtonTypes().setAll(yes, no);
-    Optional<ButtonType> result = alert.showAndWait();
-    if (result.get() == yes) {
-      return 0;
-    } else if (result.get() == no) {
-      return 1;
-    }
-    return -1;
+    return GuiUtils.ask(question);
+  }
+
+  @Override
+  public void notifyTaskStart(String name, boolean progress) {
+
   }
 
   @Override
@@ -282,7 +333,6 @@ public class KanonizoFrame implements Display, Initializable, TestCaseSelectionL
     assert sourceTree != null : "fx:id sourceTree was not injected";
 
     this.fw = Framework.getInstance();
-    fw.addSelectionListener(this);
     fw.setDisplay(this);
     Screen main = Screen.getPrimary();
     Rectangle2D bounds = main.getVisualBounds();
@@ -316,7 +366,7 @@ public class KanonizoFrame implements Display, Initializable, TestCaseSelectionL
         fw.setAlgorithm(alg);
         //remove existing children
         paramLayout.getChildren().clear();
-        addParams(alg, paramLayout);
+        addParams(alg, paramLayout, true);
         addErrors(alg);
       });
       algorithmChoices.getSelectionModel().select(fw.getAlgorithm());
@@ -332,7 +382,8 @@ public class KanonizoFrame implements Display, Initializable, TestCaseSelectionL
         public Object fromString(String string) {
           try {
             return Framework.getAvailableInstrumenters().stream().filter(
-                inst -> inst.getClass().getAnnotation(Instrumenter.class).readableName().equals(string))
+                inst -> inst.getClass().getAnnotation(Instrumenter.class).readableName()
+                    .equals(string))
                 .findFirst().get();
           } catch (Exception e) {
             return null;
@@ -340,11 +391,12 @@ public class KanonizoFrame implements Display, Initializable, TestCaseSelectionL
         }
       });
       instrumenterChoices.valueProperty().addListener((ov, t, t1) -> {
-        org.kanonizo.framework.instrumentation.Instrumenter inst = (org.kanonizo.framework.instrumentation.Instrumenter) ov.getValue();
+        org.kanonizo.framework.instrumentation.Instrumenter inst = (org.kanonizo.framework.instrumentation.Instrumenter) ov
+            .getValue();
         fw.setInstrumenter(inst);
         //remove existing children
         instParamLayout.getChildren().clear();
-        addParams(inst, instParamLayout);
+        addParams(inst, instParamLayout, false);
         addErrors(inst);
       });
       instrumenterChoices.getSelectionModel().select(fw.getInstrumenter());
@@ -418,7 +470,7 @@ public class KanonizoFrame implements Display, Initializable, TestCaseSelectionL
       }
       fc.setInitialDirectory(loadLocation);
       File toRead = fc.showOpenDialog(KanonizoFxApplication.stage);
-      if(toRead != null) {
+      if (toRead != null) {
         new Thread(() -> {
           try {
             Framework read = fw.read(toRead);

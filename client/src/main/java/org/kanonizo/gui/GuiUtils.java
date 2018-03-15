@@ -1,9 +1,13 @@
 package org.kanonizo.gui;
 
 import java.io.File;
+import java.util.Optional;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TreeCell;
@@ -127,5 +131,21 @@ public class GuiUtils {
       }
     };
 
+  }
+
+  public static int ask(String question){
+    Alert alert = new Alert(AlertType.CONFIRMATION);
+    alert.setTitle("Confirm an Action");
+    alert.setContentText(question);
+    ButtonType yes = new ButtonType("Yes");
+    ButtonType no = new ButtonType("No");
+    alert.getButtonTypes().setAll(yes, no);
+    Optional<ButtonType> result = alert.showAndWait();
+    if (result.get() == yes) {
+      return 0;
+    } else if (result.get() == no) {
+      return 1;
+    }
+    return -1;
   }
 }

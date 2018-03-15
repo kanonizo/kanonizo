@@ -15,10 +15,10 @@ public abstract class TestCasePrioritiser extends AbstractSearchAlgorithm {
   protected Instrumenter inst;
   @Override
   protected final void generateSolution() {
-    init();
     TestSuite suite = problem.clone().getTestSuite();
     List<TestCase> testCases = suite.getTestCases();
     List<TestCase> orderedTestCases = new ArrayList<>();
+    init(testCases);
     while (!testCases.isEmpty() && !shouldFinish()) {
       TestCase tc = selectTestCase(testCases);
       testCases.remove(tc);
@@ -36,7 +36,7 @@ public abstract class TestCasePrioritiser extends AbstractSearchAlgorithm {
     fw.getDisplay().fireTestSuiteChange(suite);
     setCurrentOptimal(suite);
   }
-  public void init(){
+  public void init(List<TestCase> testCases){
     inst = Framework.getInstance().getInstrumenter();
   }
   public abstract TestCase selectTestCase(List<TestCase> testCases);
