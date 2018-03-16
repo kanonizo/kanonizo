@@ -98,10 +98,10 @@
 									<pattern>org.apache.commons</pattern>
 									<shadedPattern>org.kanonizo.internal.org.apache.commons</shadedPattern>
 								</relocation>
-								<relocation>
+								<!--relocation>
 									<pattern>org.apache.logging</pattern>
 									<shadedPattern>org.kanonizo.internal.org.apache.logging</shadedPattern>
-								</relocation>
+								</relocation-->
 								<relocation>
 									<pattern>org.apache.regexp</pattern>
 									<shadedPattern>org.kanonizo.internal.org.apache.regexp</shadedPattern>
