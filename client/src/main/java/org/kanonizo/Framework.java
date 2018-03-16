@@ -35,6 +35,7 @@ import org.kanonizo.algorithms.metaheuristics.fitness.InstrumentedFitnessFunctio
 import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.annotations.Prerequisite;
 import org.kanonizo.display.Display;
+import org.kanonizo.display.NullDisplay;
 import org.kanonizo.framework.instrumentation.Instrumenter;
 import org.kanonizo.framework.objects.ClassUnderTest;
 import org.kanonizo.framework.objects.ParameterisedTestCase;
@@ -67,7 +68,7 @@ public class Framework {
   @Expose
   private Instrumenter inst = new NullInstrumenter();
   private static Framework instance;
-  private Display display;
+  private Display display = new NullDisplay();
   @Expose
   private File rootFolder;
 

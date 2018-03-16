@@ -12,7 +12,10 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.junit.Test;
 import org.junit.runner.Runner;
 import org.kanonizo.Main;
@@ -177,8 +180,10 @@ public class Util {
 
   public static Reflections getReflections() {
     if (r == null) {
+      Set<URL> packages = new HashSet<>(ClasspathHelper.forPackage("org.kanonizo"));
+      packages.addAll(ClasspathHelper.forPackage("com.scythe"));
       r = new Reflections(new ConfigurationBuilder()
-          .setUrls(ClasspathHelper.forClassLoader())
+          .setUrls(packages)
           .setScanners(new SubTypesScanner(), new TypeAnnotationsScanner(),
               new FieldAnnotationsScanner()));
     }

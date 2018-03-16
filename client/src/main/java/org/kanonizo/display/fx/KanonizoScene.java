@@ -92,7 +92,7 @@ public class KanonizoScene implements Display, Initializable, TestCaseSelectionL
           form = null;
         }
       } else {
-        Platform.runLater(() -> pb.setProgress(current / max));
+        pb.setProgress(current / max);
 
       }
     });

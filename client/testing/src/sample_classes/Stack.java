@@ -1,3 +1,4 @@
+package sample_classes;
 public class Stack {
   private int[] elems;
   private int index = -1;

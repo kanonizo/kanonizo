@@ -1,15 +1,22 @@
 package org.kanonizo.test;
 
+import com.scythe.instrumenter.instrumentation.ClassReplacementTransformer;
 import java.io.File;
+import java.util.Arrays;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.kanonizo.Framework;
+import org.kanonizo.Main;
 import org.kanonizo.algorithms.SearchAlgorithm;
+import org.kanonizo.framework.instrumentation.Instrumenter;
 import org.kanonizo.framework.objects.TestSuite;
+import org.kanonizo.instrumenters.ScytheInstrumenter;
 
 public abstract class SearchAlgorithmTest extends MockitoTest {
     protected SearchAlgorithm algorithm;
-
+    protected Instrumenter scytheInst = new ScytheInstrumenter();
     private TestSuite tsc;
+
 
     protected SearchAlgorithmTest(SearchAlgorithm algorithm) {
         this.algorithm = algorithm;
@@ -20,12 +27,17 @@ public abstract class SearchAlgorithmTest extends MockitoTest {
     }
 
     @Before
-    public void setup() throws ClassNotFoundException {
+    public void setup(){
         Framework f = Framework.getInstance();
-        f.setSourceFolder(new File("./testing/sample_classes"));
-        f.setTestFolder(new File("./testing/sample_tests"));
+        f.setInstrumenter(scytheInst);
+        f.setSourceFolder(new File("./testing/src"));
+        f.setTestFolder(new File("./testing/test"));
         f.setAlgorithm(algorithm);
-        f.run();
+        try{
+            f.run();
+        }catch(ClassNotFoundException e){
+            e.printStackTrace();
+        }
     }
 
 }

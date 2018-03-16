@@ -33,16 +33,11 @@ import org.reflections.Reflections;
 public class Main {
 
   public static final Logger logger = LogManager.getLogger(Main.class);
-  private static final String[] forbiddenPackages = new String[]{"com/dpaterson", "org/junit",
-      "org/apache/commons/cli", "junit", "org/apache/bcel", "org/apache/logging/log4j",
-      "org/objectweb/asm",
-      "javax/swing", "javax/servlet", "org/xml"};
+
 
   public static void main(String[] args) {
     Framework fw = Framework.getInstance();
     // org.evosuite.Properties.TT = true;
-    Arrays.asList(forbiddenPackages).stream()
-        .forEach(s -> ClassReplacementTransformer.addForbiddenPackage(s));
     Options options = TestSuitePrioritisation.getCommandLineOptions();
     CommandLine line = null;
     try {
@@ -158,7 +153,7 @@ public class Main {
 
   private static SearchAlgorithm getAlgorithm(String algorithmChoice)
       throws InstantiationException, IllegalAccessException {
-    Reflections r = new Reflections();
+    Reflections r = Util.getReflections();
     Set<Class<?>> algorithms = r.getTypesAnnotatedWith(Algorithm.class);
     Optional<Class<?>> algorithmClass = algorithms.stream()
         .filter(c -> c.getAnnotation(Algorithm.class).readableName().equals(algorithmChoice))

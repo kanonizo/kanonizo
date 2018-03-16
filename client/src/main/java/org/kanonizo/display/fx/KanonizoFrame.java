@@ -292,6 +292,11 @@ public class KanonizoFrame implements Display, Initializable {
             return null;
           }
         });
+        try {
+          ((ComboBox) parameterField).getSelectionModel().select(param.get(null));
+        } catch (IllegalAccessException e) {
+          e.printStackTrace();
+        }
       } catch (IllegalAccessException e) {
         e.printStackTrace();
       } catch (InvocationTargetException e) {

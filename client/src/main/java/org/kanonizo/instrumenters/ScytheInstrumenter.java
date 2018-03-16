@@ -18,6 +18,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -93,6 +94,16 @@ public class ScytheInstrumenter implements Instrumenter {
     });
   }
 
+  private static final String[] forbiddenPackages = new String[]{"com/dpaterson", "org/junit",
+      "org/apache/commons/cli", "junit", "org/apache/bcel", "org/apache/logging/log4j",
+      "org/objectweb/asm",
+      "javax/swing", "javax/servlet", "org/xml"};
+
+  public ScytheInstrumenter(){
+    Arrays.asList(forbiddenPackages).stream()
+        .forEach(s -> ClassReplacementTransformer.addForbiddenPackage(s));
+  }
+
   private static void reportException(Exception e) {
     logger.error(e);
   }
@@ -121,6 +132,8 @@ public class ScytheInstrumenter implements Instrumenter {
           Framework.getInstance().getDisplay().notifyTaskStart("Reading Coverage File", true);
           ScytheInstrumenter inst = gson
               .fromJson(new FileReader(SCYTHE_FILE), ScytheInstrumenter.class);
+          // removing loading window
+          Framework.getInstance().getDisplay().reportProgress(1,1);
           this.linesCovered = inst.linesCovered;
           this.branchesCovered = inst.branchesCovered;
           this.testSuite = inst.testSuite;
@@ -141,13 +154,13 @@ public class ScytheInstrumenter implements Instrumenter {
             testCase.run();
             // debug code to find out where/why failures are occurring. Use
             // breakpoints after execution to locate failures
-            Framework
-                .getInstance().getDisplay().reportProgress((double) testSuite.getTestCases().indexOf(testCase) + 1,
-                testSuite.getTestCases().size());
             ClassAnalyzer.collectHitCounters(true);
             linesCovered.put(testCase, collectLines(testCase));
             branchesCovered.put(testCase, collectBranches(testCase));
             ClassAnalyzer.resetCoverage();
+            Framework
+                .getInstance().getDisplay().reportProgress((double) testSuite.getTestCases().indexOf(testCase) + 1,
+                testSuite.getTestCases().size());
           } catch (Throwable e) {
             e.printStackTrace();
             // as much as I hate to catch throwables, it has to be done in this
