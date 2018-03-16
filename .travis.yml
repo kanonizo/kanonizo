@@ -2,8 +2,12 @@ language: java
 jdk:
   - oraclejdk8
 before_install:
-  - git clone --depth=1 https://github.com/thomasdeanwhite/instrumentation.git
+  - git clone --depth=1 https://github.com/thomasdeanwhite/scythe.git
   - pushd instrumentation
+  - git fetch --all
+  - git branch dev
+  - git checkout dev
+  - git pull origin dev
   - mvn clean install
   - popd
 script:
