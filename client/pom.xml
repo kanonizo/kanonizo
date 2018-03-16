@@ -68,6 +68,61 @@
 									</excludes>
 								</filter>
 							</filters>
+							<minimizeJar>false</minimizeJar>
+							<relocations>
+								<relocation>
+									<pattern>com.google.common</pattern>
+									<shadedPattern>org.kanonizo.internal.com.google.common</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>com.google.gson</pattern>
+									<shadedPattern>org.kanonizo.internal.com.google.gson</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>com.google.thirdparty</pattern>
+									<shadedPattern>org.kanonizo.internal.com.google.thirdparty</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>com.scythe</pattern>
+									<shadedPattern>org.kanonizo.internal.com.scythe</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>javassist</pattern>
+									<shadedPattern>org.kanonizo.internal.javassist</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.bcel</pattern>
+									<shadedPattern>org.kanonizo.internal.org.apache.bcel</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.commons</pattern>
+									<shadedPattern>org.kanonizo.internal.org.apache.commons</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.logging</pattern>
+									<shadedPattern>org.kanonizo.internal.org.apache.logging</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.apache.regexp</pattern>
+									<shadedPattern>org.kanonizo.internal.org.apache.regexp</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.mockito</pattern>
+									<shadedPattern>org.kanonizo.internal.org.mockito</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.objectweb</pattern>
+									<shadedPattern>org.kanonizo.internal.org.objectweb</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.objenesis</pattern>
+									<shadedPattern>org.kanonizo.internal.org.objenesis</shadedPattern>
+								</relocation>
+								<relocation>
+									<pattern>org.reflections</pattern>
+									<shadedPattern>org.kanonizo.internal.org.reflections</shadedPattern>
+								</relocation>
+							</relocations>
 							<transformers>
 								<!-- add Main-Class to manifest file -->
 								<transformer
