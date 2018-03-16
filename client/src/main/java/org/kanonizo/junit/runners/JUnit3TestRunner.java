@@ -1,20 +1,31 @@
 package org.kanonizo.junit.runners;
 
+import com.scythe.instrumenter.InstrumentationProperties;
+import com.scythe.instrumenter.instrumentation.InstrumentingClassLoader;
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Optional;
 import junit.framework.Test;
 import junit.framework.TestFailure;
 import junit.framework.TestResult;
 import junit.textui.TestRunner;
+import org.apache.bcel.classfile.ClassParser;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.kanonizo.Framework;
+import org.kanonizo.Properties;
 import org.kanonizo.framework.objects.TestCase;
+import org.kanonizo.instrumenters.ScytheInstrumenter;
 import org.kanonizo.junit.KanonizoTestFailure;
 import org.kanonizo.junit.KanonizoTestResult;
 import org.kanonizo.util.NullPrintStream;
+import org.kanonizo.util.Util;
+import sun.plugin2.liveconnect.JavaClass;
 
 public class JUnit3TestRunner extends TestRunner implements KanonizoTestRunner {
   private static Logger logger = LogManager.getLogger(JUnit3TestRunner.class);
@@ -37,7 +48,7 @@ public class JUnit3TestRunner extends TestRunner implements KanonizoTestRunner {
     Enumeration<TestFailure> errors = result.failures();
     while(errors.hasMoreElements()){
       TestFailure failure = errors.nextElement();
-      failures.add(new KanonizoTestFailure(failure.thrownException()));
+      failures.add(new KanonizoTestFailure(failure.thrownException(), failure.trace()));
     }
     return new KanonizoTestResult(tc.getTestClass(), tc.getMethod(), result.wasSuccessful(), failures, runTime);
   }
@@ -72,5 +83,45 @@ public class JUnit3TestRunner extends TestRunner implements KanonizoTestRunner {
       logger.error(JUnit3TestRunner.class.getSimpleName() + " was unable to instantiate a new instance of the test class"+testClass.getSimpleName() + "." + testMethod.getName());
     }
     return null;
+  }
+
+  public static void main(String[] args){
+    if(args.length > 0){
+      String fileName = args[0];
+      File f = new File(fileName);
+      Class<?> cl = loadClassFromFile(f);
+      String testMethod = args[1];
+      try {
+        Method m = cl.getMethod(testMethod);
+        TestCase tc = new TestCase(cl,m);
+        TestCase.USE_TIMEOUT = false;
+        tc.run();
+        System.out.println("1 Test Case run: "+tc.getFailures().size() + " failures");
+        Optional<String> failures = tc.getFailures().stream().map(fail -> fail.getTrace()).reduce((a, b) -> a+"\n"+b);
+        if(failures.isPresent()){
+          System.out.println(failures.get());
+        }
+      } catch (NoSuchMethodException e) {
+        e.printStackTrace();
+      }
+
+
+    }
+  }
+  private static Class<?> loadClassFromFile(File f){
+    Class<?> cl = null;
+    try {
+      ClassParser parser = new ClassParser(f.getAbsolutePath());
+      org.apache.bcel.classfile.JavaClass jcl = parser.parse();
+      ScytheInstrumenter inst = new ScytheInstrumenter();
+      InstrumentationProperties.WRITE_CLASS = true;
+      cl = inst.loadClass(jcl.getClassName());
+
+    } catch (ClassNotFoundException | NoClassDefFoundError e) {
+      logger.error(e);
+    } catch (IOException e) {
+      logger.error(e);
+    }
+    return cl;
   }
 }

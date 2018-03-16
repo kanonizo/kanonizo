@@ -17,6 +17,7 @@ public class RandomAlgorithm extends AbstractSearchAlgorithm{
         TestSuite suite = problem.clone().getTestSuite();
         List<TestCase> testCases = suite.getTestCases();
         Collections.shuffle(testCases);
+        suite.setTestCases(testCases);
         setCurrentOptimal(suite);
         fitnessEvaluations++;
     }

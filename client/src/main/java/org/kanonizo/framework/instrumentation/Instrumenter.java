@@ -42,4 +42,6 @@ public interface Instrumenter {
   Set<Branch> getBranchesCovered(ClassUnderTest cut);
 
   Set<Branch> getBranchesCovered(SystemUnderTest sut);
+
+  ClassLoader getClassLoader();
 }

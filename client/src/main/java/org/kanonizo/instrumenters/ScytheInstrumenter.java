@@ -59,7 +59,7 @@ public class ScytheInstrumenter implements Instrumenter {
           + "the test cases. If true, uses the values of SCYTHE_FILE and SCYTHE_OUTPUT_DIR to determine"
           + "where the file should be written", category = "Instrumentation")
   public static boolean SCYTHE_READ = false;
-  @Parameter(key = "scythe_filename", description =
+  @Parameter(key = "scythe_filen ame", description =
       "Name of the file to read if SCYTHE_READ is true or write"
           + "if SCYTHE_WRITE is true, used to contain coverage information", category = "Instrumentation")
   public static File SCYTHE_FILE = new File("scythe_coverage.json");
@@ -253,12 +253,12 @@ public class ScytheInstrumenter implements Instrumenter {
 
   @Override
   public Set<Line> getLinesCovered(TestCase testCase) {
-    return linesCovered.get(testCase);
+    return linesCovered.containsKey(testCase) ? linesCovered.get(testCase) : new HashSet<>();
   }
 
   @Override
   public Set<Branch> getBranchesCovered(TestCase testCase) {
-    return branchesCovered.get(testCase);
+    return branchesCovered.containsKey(testCase) ? branchesCovered.get(testCase) : new HashSet<>();
   }
 
   @Override
@@ -339,6 +339,11 @@ public class ScytheInstrumenter implements Instrumenter {
   public Set<Branch> getBranchesCovered(SystemUnderTest sut) {
     return sut.getClassesUnderTest().stream().map(cut -> getBranchesCovered(cut))
         .collect(new HashSetCollector<>());
+  }
+
+  @Override
+  public ClassLoader getClassLoader() {
+    return InstrumentingClassLoader.getInstance();
   }
 
   private class ScytheTypeWriter extends TypeAdapter<ScytheInstrumenter> {

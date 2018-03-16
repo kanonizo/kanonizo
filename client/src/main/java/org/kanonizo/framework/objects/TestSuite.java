@@ -260,7 +260,7 @@ public class TestSuite implements Comparable<TestSuite>, Disposable {
     clone.removedTestCases = new ArrayList<>(removedTestCases);
     clone.originalOrdering = new ArrayList<>(originalOrdering);
     clone.fitness = fitness;
-    clone.func = func.clone(parent);
+    clone.func = func == null ? null : func.clone(parent);
     return clone;
   }
 

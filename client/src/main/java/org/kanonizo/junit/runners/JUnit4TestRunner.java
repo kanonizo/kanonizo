@@ -41,7 +41,7 @@ public class JUnit4TestRunner implements KanonizoTestRunner {
     Runner testRunner = request.getRunner();
     Result testResult = runner.run(testRunner);
     List<KanonizoTestFailure> failures = testResult.getFailures().stream()
-        .map(failure -> new KanonizoTestFailure(failure.getException()))
+        .map(failure -> new KanonizoTestFailure(failure.getException(), failure.getTrace()))
         .collect(Collectors.toList());
     return new KanonizoTestResult(tc.getTestClass(), tc.getMethod(), testResult.wasSuccessful(),
         failures, testResult.getRunTime());

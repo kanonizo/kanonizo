@@ -30,7 +30,7 @@ public abstract class CsvWriter {
       if (!logFile.exists()) {
         logFile.createNewFile();
       }
-      stream = new FileOutputStream(logFile, true);
+      stream = new FileOutputStream(logFile, false);
     } catch (IOException e) {
       e.printStackTrace();
     }

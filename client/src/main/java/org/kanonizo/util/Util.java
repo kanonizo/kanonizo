@@ -202,7 +202,7 @@ public class Util {
       return true;
     }
     if (methods.stream()
-        .anyMatch(method -> Arrays.asList(method.getAnnotations()).contains(Test.class))) {
+        .anyMatch(method -> method.getAnnotation(Test.class) != null)) {
       return true;
     }
     return false;

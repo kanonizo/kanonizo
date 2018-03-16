@@ -12,11 +12,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.runner.Description;
+import org.kanonizo.Framework;
 import org.kanonizo.framework.TestCaseStore;
 import org.kanonizo.junit.KanonizoTestFailure;
 import org.kanonizo.junit.KanonizoTestResult;
@@ -83,7 +85,13 @@ public class TestCase {
     KanonizoTestRunner testCaseRunner = TestingUtils.isJUnit4Class(testClass) ? new JUnit4TestRunner() : new JUnit3TestRunner();
     KanonizoTestResult result = null;
     if (USE_TIMEOUT) {
-      ExecutorService service = Executors.newSingleThreadExecutor();
+      ExecutorService service = Executors.newSingleThreadExecutor(r -> {
+        // fixes issue caused by some chart deserialisation using thread context class loader
+        // to load classes
+        Thread t = new Thread(r);
+        t.setContextClassLoader(Framework.getInstance().getInstrumenter().getClassLoader());
+        return t;
+      });
       Future<KanonizoTestResult> res = service.submit(() -> testCaseRunner.runTest(this));
       try {
         result = res.get(TIMEOUT, UNIT);

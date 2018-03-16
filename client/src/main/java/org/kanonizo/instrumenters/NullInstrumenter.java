@@ -102,4 +102,9 @@ public class NullInstrumenter implements Instrumenter {
     return Collections.emptySet();
   }
 
+  @Override
+  public ClassLoader getClassLoader() {
+    return ClassLoader.getSystemClassLoader();
+  }
+
 }

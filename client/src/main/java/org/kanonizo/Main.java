@@ -67,6 +67,7 @@ public class Main {
         fw.run();
       } catch (Exception e) {
         logger.error(e);
+        e.printStackTrace();
       }
       // necessary due to random thread creation during test cases (don't do
       // this ever again)

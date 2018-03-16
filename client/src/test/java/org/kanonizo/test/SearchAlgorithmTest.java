@@ -37,6 +37,8 @@ public abstract class SearchAlgorithmTest extends MockitoTest {
             f.run();
         }catch(ClassNotFoundException e){
             e.printStackTrace();
+        }catch(Exception e){
+            e.printStackTrace();
         }
     }
 

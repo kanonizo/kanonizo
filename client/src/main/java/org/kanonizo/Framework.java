@@ -313,7 +313,8 @@ public class Framework {
   public void run() throws ClassNotFoundException {
     loadClasses();
 
-    algorithm.setSearchProblem(sut);
+    if(Properties.PRIORITISE)
+      algorithm.setSearchProblem(sut);
     if (algorithm.needsFitnessFunction()) {
       setupFitnessFunction();
     }
