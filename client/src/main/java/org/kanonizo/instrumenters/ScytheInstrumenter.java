@@ -59,7 +59,7 @@ public class ScytheInstrumenter implements Instrumenter {
           + "the test cases. If true, uses the values of SCYTHE_FILE and SCYTHE_OUTPUT_DIR to determine"
           + "where the file should be written", category = "Instrumentation")
   public static boolean SCYTHE_READ = false;
-  @Parameter(key = "scythe_filen ame", description =
+  @Parameter(key = "scythe_filename", description =
       "Name of the file to read if SCYTHE_READ is true or write"
           + "if SCYTHE_WRITE is true, used to contain coverage information", category = "Instrumentation")
   public static File SCYTHE_FILE = new File("scythe_coverage.json");
@@ -75,21 +75,27 @@ public class ScytheInstrumenter implements Instrumenter {
     InstrumentationProperties.INSTRUMENT_BRANCHES = false;
     ClassReplacementTransformer.addShouldInstrumentChecker(new ShouldInstrumentChecker() {
 
-      private boolean isTestClass(String className) {
+      private boolean isTestClass(Class<?> cl) {
 
-        try {
-          Class<?> cl = ClassLoader.getSystemClassLoader()
-              .loadClass(className.replaceAll("/", "."));
-          return Util.isTestClass(cl);
-        } catch (ClassNotFoundException e) {
-          e.printStackTrace();
+        if (cl.isMemberClass() && isTestClass(cl.getEnclosingClass())) {
+          return true;
         }
-        return false;
+        if (cl.isAnonymousClass() && isTestClass(cl.getEnclosingClass())) {
+          return true;
+        }
+        return Util.isTestClass(cl);
       }
 
       @Override
       public boolean shouldInstrument(String className) {
-        return !isTestClass(className);
+        try {
+          Class<?> cl = ClassLoader.getSystemClassLoader()
+              .loadClass(className.replaceAll("/", "."));
+          return !isTestClass(cl);
+        } catch (ClassNotFoundException e) {
+          e.printStackTrace();
+        }
+        return true;
       }
     });
   }
@@ -97,9 +103,9 @@ public class ScytheInstrumenter implements Instrumenter {
   private static final String[] forbiddenPackages = new String[]{"com/dpaterson", "org/junit",
       "org/apache/commons/cli", "junit", "org/apache/bcel", "org/apache/logging/log4j",
       "org/objectweb/asm",
-      "javax/swing", "javax/servlet", "org/xml"};
+      "javax/swing", "javax/servlet", "org/xml", "org/hamcrest"};
 
-  public ScytheInstrumenter(){
+  public ScytheInstrumenter() {
     Arrays.asList(forbiddenPackages).stream()
         .forEach(s -> ClassReplacementTransformer.addForbiddenPackage(s));
   }
@@ -133,7 +139,7 @@ public class ScytheInstrumenter implements Instrumenter {
           ScytheInstrumenter inst = gson
               .fromJson(new FileReader(SCYTHE_FILE), ScytheInstrumenter.class);
           // removing loading window
-          Framework.getInstance().getDisplay().reportProgress(1,1);
+          Framework.getInstance().getDisplay().reportProgress(1, 1);
           this.linesCovered = inst.linesCovered;
           this.branchesCovered = inst.branchesCovered;
           this.testSuite = inst.testSuite;
@@ -146,7 +152,6 @@ public class ScytheInstrumenter implements Instrumenter {
       }
     } else {
       try {
-        System.out.println("Running Test Cases:");
         Util.suppressOutput();
         Framework.getInstance().getDisplay().notifyTaskStart("Running Test Cases", true);
         for (TestCase testCase : testSuite.getTestCases()) {
@@ -159,8 +164,9 @@ public class ScytheInstrumenter implements Instrumenter {
             branchesCovered.put(testCase, collectBranches(testCase));
             ClassAnalyzer.resetCoverage();
             Framework
-                .getInstance().getDisplay().reportProgress((double) testSuite.getTestCases().indexOf(testCase) + 1,
-                testSuite.getTestCases().size());
+                .getInstance().getDisplay()
+                .reportProgress((double) testSuite.getTestCases().indexOf(testCase) + 1,
+                    testSuite.getTestCases().size());
           } catch (Throwable e) {
             e.printStackTrace();
             // as much as I hate to catch throwables, it has to be done in this

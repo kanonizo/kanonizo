@@ -35,11 +35,11 @@ public class Util {
     defaultSysErr = System.err;
   }
 
-  public static PrintStream getSysOut(){
+  public static PrintStream getSysOut() {
     return defaultSysOut;
   }
 
-  public static PrintStream getSysErr(){
+  public static PrintStream getSysErr() {
     return defaultSysErr;
   }
 
@@ -59,9 +59,11 @@ public class Util {
         + ".class";
   }
 
-  public static String humanise(String paramName){
+  public static String humanise(String paramName) {
     String[] parts = paramName.split("_");
-    String human = Arrays.asList(parts).stream().map(str -> str.substring(0,1) + str.substring(1).toLowerCase()).reduce((a,b) -> a + " " + b).get();
+    String human = Arrays.asList(parts).stream()
+        .map(str -> str.substring(0, 1) + str.substring(1).toLowerCase())
+        .reduce((a, b) -> a + " " + b).get();
     return human;
   }
 
@@ -109,7 +111,7 @@ public class Util {
 
   public static void removeFromClassPath(File file) throws SecurityException {
     userEntries.remove(file);
-    Main.logger.info("Removed "+file.getName() + " from class path");
+    Main.logger.info("Removed " + file.getName() + " from class path");
   }
 
   /**
@@ -168,7 +170,7 @@ public class Util {
       }
     } else if (cl.isAssignableFrom(String.class)) {
       f.set(null, value);
-    } else if (cl.isAssignableFrom(File.class)){
+    } else if (cl.isAssignableFrom(File.class)) {
       f.set(null, new File(value));
     }
     if (f.getType().isEnum()) {
@@ -197,7 +199,11 @@ public class Util {
     if (Runner.class.isAssignableFrom(cl)) {
       return false;
     }
-    List<Method> methods = Arrays.asList(cl.getMethods());
+    if (cl.getSuperclass() != null && Modifier.isAbstract(cl.getSuperclass().getModifiers())
+        && isTestClass(cl.getSuperclass())) {
+      return true;
+    }
+    List<Method> methods = Arrays.asList(cl.getDeclaredMethods());
     if (methods.stream().anyMatch(method -> method.getName().startsWith("test"))) {
       return true;
     }
@@ -205,6 +211,7 @@ public class Util {
         .anyMatch(method -> method.getAnnotation(Test.class) != null)) {
       return true;
     }
+
     return false;
   }
 

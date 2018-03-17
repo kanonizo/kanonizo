@@ -1,7 +1,6 @@
 package org.kanonizo.junit.runners;
 
 import com.scythe.instrumenter.InstrumentationProperties;
-import com.scythe.instrumenter.instrumentation.InstrumentingClassLoader;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -17,15 +16,11 @@ import junit.textui.TestRunner;
 import org.apache.bcel.classfile.ClassParser;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.kanonizo.Framework;
-import org.kanonizo.Properties;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.instrumenters.ScytheInstrumenter;
 import org.kanonizo.junit.KanonizoTestFailure;
 import org.kanonizo.junit.KanonizoTestResult;
 import org.kanonizo.util.NullPrintStream;
-import org.kanonizo.util.Util;
-import sun.plugin2.liveconnect.JavaClass;
 
 public class JUnit3TestRunner extends TestRunner implements KanonizoTestRunner {
   private static Logger logger = LogManager.getLogger(JUnit3TestRunner.class);
@@ -89,13 +84,20 @@ public class JUnit3TestRunner extends TestRunner implements KanonizoTestRunner {
     if(args.length > 0){
       String fileName = args[0];
       File f = new File(fileName);
+      if(!f.exists()){
+        System.out.println("Error: File "+f+" not found");
+      }
+      TestCase.USE_TIMEOUT = false;
+      InstrumentationProperties.WRITE_CLASS = true;
       Class<?> cl = loadClassFromFile(f);
       String testMethod = args[1];
       try {
         Method m = cl.getMethod(testMethod);
         TestCase tc = new TestCase(cl,m);
-        TestCase.USE_TIMEOUT = false;
         tc.run();
+        if(tc.hasFailures()){
+          tc.getFailures().stream().forEach(fail -> fail.getCause().printStackTrace());
+        }
         System.out.println("1 Test Case run: "+tc.getFailures().size() + " failures");
         Optional<String> failures = tc.getFailures().stream().map(fail -> fail.getTrace()).reduce((a, b) -> a+"\n"+b);
         if(failures.isPresent()){
@@ -114,7 +116,6 @@ public class JUnit3TestRunner extends TestRunner implements KanonizoTestRunner {
       ClassParser parser = new ClassParser(f.getAbsolutePath());
       org.apache.bcel.classfile.JavaClass jcl = parser.parse();
       ScytheInstrumenter inst = new ScytheInstrumenter();
-      InstrumentationProperties.WRITE_CLASS = true;
       cl = inst.loadClass(jcl.getClassName());
 
     } catch (ClassNotFoundException | NoClassDefFoundError e) {
