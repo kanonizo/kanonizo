@@ -111,10 +111,6 @@
 									<shadedPattern>org.kanonizo.internal.org.mockito</shadedPattern>
 								</relocation>
 								<relocation>
-									<pattern>org.objectweb</pattern>
-									<shadedPattern>org.kanonizo.internal.org.objectweb</shadedPattern>
-								</relocation>
-								<relocation>
 									<pattern>org.objenesis</pattern>
 									<shadedPattern>org.kanonizo.internal.org.objenesis</shadedPattern>
 								</relocation>
@@ -148,6 +144,7 @@
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>4.12</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>commons-cli</groupId>
@@ -210,6 +207,11 @@
 			<groupId>org.reflections</groupId>
 			<artifactId>reflections</artifactId>
 			<version>0.9.11</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+			<version>2.3.1</version>
 		</dependency>
 	</dependencies>
 	<properties>
