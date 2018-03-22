@@ -58,7 +58,7 @@ public class Main {
       logger.error(e);
     }
     Display d = null;
-    if (line.hasOption("nogui")) {
+    if (!line.hasOption(TestSuitePrioritisation.GUI_SHORT)) {
       d = new ConsoleDisplay();
       d.initialise();
       fw.setDisplay(d);
