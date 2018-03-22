@@ -16,6 +16,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -52,6 +53,7 @@ import org.kanonizo.util.Util;
 import org.reflections.Reflections;
 
 public class Framework {
+
   private List<TestCaseSelectionListener> listeners = new ArrayList<>();
 
   @Expose
@@ -132,7 +134,8 @@ public class Framework {
   public void setRootFolder(File rootFolder) {
     this.rootFolder = rootFolder;
     if (MavenAnalyser.isMavenProject(rootFolder)) {
-      int response = display.ask("Maven project detected - would you like to import dependencies from maven?");
+      int response = display
+          .ask("Maven project detected - would you like to import dependencies from maven?");
       if (response == Display.RESPONSE_YES) {
         MavenAnalyser.addMavenDependencies(rootFolder);
       }
@@ -155,8 +158,8 @@ public class Framework {
    * java applications that aren't built on Maven. Maven applications will automatically add their
    * dependencies through using maven as a system tool
    *
-   * @param lib - a library folder containing JAR files that are required for the test cases
-   *            to execute properly
+   * @param lib - a library folder containing JAR files that are required for the test cases to
+   * execute properly
    */
   public void addLibrary(File lib) {
     if (lib.isDirectory()) {
@@ -188,7 +191,39 @@ public class Framework {
     } else if (folder.isFile()) {
       classes.add(folder);
     }
+    /* the default behaviour of listFiles will return files as ordered according to File#compareTo,
+    * which in turn delegates to String#compareTo. This returns internal classes before the class
+    * that defines them, because (int) '.' < (int) '$' - to solve this we sort the files using our
+    * own comparator */
+    classes.sort((o1, o2) -> compareFileNames(o1.getPath(), o2.getPath()));
     return classes;
+  }
+
+  /**
+   * method is loosely based on String#compareto, but with the addition of stripping the filenames
+   * to ensure classes with $ in the name (i.e. internal classes) are placed *after* te classes that
+   * define them
+   */
+  private static int compareFileNames(String fileName1, String fileName2) {
+    // strip the file extension to ensure we are only comparing the actual file name characters
+    int length1 = fileName1.length() - ".class".length();
+    int length2 = fileName2.length() - ".class".length();
+    int minLength = Math.min(length1, length2);
+    char[] chars1 = new char[length1];
+    char[] chars2 = new char[length2];
+    // grab chars from filename
+    fileName1.getChars(0, length1, chars1, 0);
+    fileName2.getChars(0, length2, chars2, 0);
+    for (int i = 0; i < minLength; i++) {
+      char one = chars1[i];
+      char two = chars2[i];
+      // alphabetically orders classes
+      if (one != two) {
+        return one - two;
+      }
+    }
+    // the *shorter* fileName should be placed first
+    return length1 - length2;
   }
 
 
@@ -313,8 +348,9 @@ public class Framework {
   public void run() throws ClassNotFoundException {
     loadClasses();
 
-    if(Properties.PRIORITISE)
+    if (Properties.PRIORITISE) {
       algorithm.setSearchProblem(sut);
+    }
     if (algorithm.needsFitnessFunction()) {
       setupFitnessFunction();
     }
@@ -432,17 +468,18 @@ public class Framework {
     return testFolder;
   }
 
-  public void addSelectionListener(TestCaseSelectionListener list){
+  public void addSelectionListener(TestCaseSelectionListener list) {
     listeners.add(list);
   }
 
-  public void notifyTestCaseSelection(TestCase tc){
-    for(TestCaseSelectionListener list : listeners){
+  public void notifyTestCaseSelection(TestCase tc) {
+    for (TestCaseSelectionListener list : listeners) {
       list.testCaseSelected(tc);
     }
   }
 
   private class FileTypeAdapter extends TypeAdapter<File> {
+
     @Override
     public void write(JsonWriter out, File file) throws IOException {
       out.beginObject();
