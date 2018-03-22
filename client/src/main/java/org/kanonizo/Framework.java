@@ -248,7 +248,7 @@ public class Framework {
     try {
       ClassParser parser = new ClassParser(file.getAbsolutePath());
       JavaClass jcl = parser.parse();
-      cl = getInstrumenter().loadClass(jcl.getClassName());
+      cl = Class.forName(jcl.getClassName());
 
     } catch (ClassNotFoundException | NoClassDefFoundError e) {
       logger.error(e);

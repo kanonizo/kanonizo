@@ -100,7 +100,7 @@ public class ScytheInstrumenter implements Instrumenter {
     });
   }
 
-  private static final String[] forbiddenPackages = new String[]{"com/dpaterson", "org/junit",
+  private static final String[] forbiddenPackages = new String[]{"org/kanonizo", "org/junit",
       "org/apache/commons/cli", "junit", "org/apache/bcel", "org/apache/logging/log4j",
       "org/objectweb/asm",
       "javax/swing", "javax/servlet", "org/xml", "org/hamcrest"};

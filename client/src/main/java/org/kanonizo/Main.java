@@ -134,7 +134,7 @@ public class Main {
   }
 
   private static void setInstrumenter(Framework fw, String instrumenter) {
-    Reflections r = new Reflections();
+    Reflections r = Util.getReflections();
     Set<Class<?>> instrumenters = r
         .getTypesAnnotatedWith(org.kanonizo.annotations.Instrumenter.class);
     for (Class<?> inst : instrumenters) {
