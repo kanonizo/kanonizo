@@ -73,31 +73,7 @@ public class ScytheInstrumenter implements Instrumenter {
     logger = LogManager.getLogger(ScytheInstrumenter.class);
 
     InstrumentationProperties.INSTRUMENT_BRANCHES = false;
-    ClassReplacementTransformer.addShouldInstrumentChecker(new ShouldInstrumentChecker() {
 
-      private boolean isTestClass(Class<?> cl) {
-
-        if (cl.isMemberClass() && isTestClass(cl.getEnclosingClass())) {
-          return true;
-        }
-        if (cl.isAnonymousClass() && isTestClass(cl.getEnclosingClass())) {
-          return true;
-        }
-        return Util.isTestClass(cl);
-      }
-
-      @Override
-      public boolean shouldInstrument(String className) {
-        try {
-          Class<?> cl = ClassLoader.getSystemClassLoader()
-              .loadClass(className.replaceAll("/", "."));
-          return !isTestClass(cl);
-        } catch (ClassNotFoundException e) {
-          e.printStackTrace();
-        }
-        return true;
-      }
-    });
   }
 
   private static final String[] forbiddenPackages = new String[]{"org/kanonizo", "org/junit",

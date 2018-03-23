@@ -85,13 +85,7 @@ public class TestCase {
     KanonizoTestRunner testCaseRunner = TestingUtils.isJUnit4Class(testClass) ? new JUnit4TestRunner() : new JUnit3TestRunner();
     KanonizoTestResult result = null;
     if (USE_TIMEOUT) {
-      ExecutorService service = Executors.newSingleThreadExecutor(r -> {
-        // fixes issue caused by some chart deserialisation using thread context class loader
-        // to load classes
-        Thread t = new Thread(r);
-        t.setContextClassLoader(Framework.getInstance().getInstrumenter().getClassLoader());
-        return t;
-      });
+      ExecutorService service = Executors.newSingleThreadExecutor();
       Future<KanonizoTestResult> res = service.submit(() -> testCaseRunner.runTest(this));
       try {
         result = res.get(TIMEOUT, UNIT);

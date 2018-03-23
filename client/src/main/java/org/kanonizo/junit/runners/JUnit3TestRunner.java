@@ -80,49 +80,4 @@ public class JUnit3TestRunner extends TestRunner implements KanonizoTestRunner {
     return null;
   }
 
-  public static void main(String[] args){
-    if(args.length > 0){
-      String fileName = args[0];
-      File f = new File(fileName);
-      if(!f.exists()){
-        System.out.println("Error: File "+f+" not found");
-      }
-      TestCase.USE_TIMEOUT = false;
-      InstrumentationProperties.WRITE_CLASS = true;
-      Class<?> cl = loadClassFromFile(f);
-      String testMethod = args[1];
-      try {
-        Method m = cl.getMethod(testMethod);
-        TestCase tc = new TestCase(cl,m);
-        tc.run();
-        if(tc.hasFailures()){
-          tc.getFailures().stream().forEach(fail -> fail.getCause().printStackTrace());
-        }
-        System.out.println("1 Test Case run: "+tc.getFailures().size() + " failures");
-        Optional<String> failures = tc.getFailures().stream().map(fail -> fail.getTrace()).reduce((a, b) -> a+"\n"+b);
-        if(failures.isPresent()){
-          System.out.println(failures.get());
-        }
-      } catch (NoSuchMethodException e) {
-        e.printStackTrace();
-      }
-
-
-    }
-  }
-  private static Class<?> loadClassFromFile(File f){
-    Class<?> cl = null;
-    try {
-      ClassParser parser = new ClassParser(f.getAbsolutePath());
-      org.apache.bcel.classfile.JavaClass jcl = parser.parse();
-      ScytheInstrumenter inst = new ScytheInstrumenter();
-      cl = inst.loadClass(jcl.getClassName());
-
-    } catch (ClassNotFoundException | NoClassDefFoundError e) {
-      logger.error(e);
-    } catch (IOException e) {
-      logger.error(e);
-    }
-    return cl;
-  }
 }
