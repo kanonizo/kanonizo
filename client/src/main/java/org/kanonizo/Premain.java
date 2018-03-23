@@ -17,6 +17,8 @@ public class Premain {
       "org/apache/commons/cli", "junit", "org/apache/bcel", "org/apache/logging/log4j",
       "org/objectweb/asm", "javax/", "java", "org/xml", "org/hamcrest", "com/intellij", "org/groovy"};
 
+
+  public static boolean instrument;
   /**
    * Premain that will be triggered when application runs with this
    * attached as a Java agent.
@@ -26,33 +28,10 @@ public class Premain {
    */
   public static void premain(String arg, Instrumentation instr) {
     ClassReplacementTransformer.addShouldInstrumentChecker(new ShouldInstrumentChecker() {
-      private ClassReplacementTransformer crt = new ClassReplacementTransformer();
-      private MockClassLoader loader = new MockClassLoader(
-          ((URLClassLoader) ClassLoader.getSystemClassLoader()).getURLs(),
-          crt);
-
-      private boolean isTestClass(Class<?> cl) {
-
-        if (cl.isMemberClass() && isTestClass(cl.getEnclosingClass())) {
-          return true;
-        }
-        if (cl.isAnonymousClass() && isTestClass(cl.getEnclosingClass())) {
-          return true;
-        }
-        return Util.isTestClass(cl);
-      }
 
       @Override
       public boolean shouldInstrument(String className) {
-        try {
-          Class<?> cl = loader.loadOriginalClass(ClassNameUtils.replaceSlashes(className));
-          return !isTestClass(cl);
-        } catch (ClassNotFoundException e) {
-          e.printStackTrace();
-        } catch (IOException e) {
-          e.printStackTrace();
-        }
-        return true;
+        return instrument;
       }
     });
 
@@ -62,6 +41,7 @@ public class Premain {
 
     InstrumentingClassLoader loader = InstrumentingClassLoader.getInstance();
     InstrumentationProperties.INSTRUMENT_BRANCHES = false;
+    InstrumentationProperties.WRITE_CLASS_IF_MODIFIED = true;
     instr.addTransformer((l, n, c, p, buf) -> {
       try {
         return loader.modifyBytes(n, buf);

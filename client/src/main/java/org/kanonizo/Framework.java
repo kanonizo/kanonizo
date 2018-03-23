@@ -230,11 +230,13 @@ public class Framework {
   public void loadClasses() throws ClassNotFoundException {
     sut = new SystemUnderTest();
     List<File> sourceFiles = findClasses(sourceFolder);
+    Premain.instrument = true;
     for (File file : sourceFiles) {
       Class<?> cl = loadClassFromFile(file);
       sut.addClass(new ClassUnderTest(cl));
       logger.info("Added class " + cl.getName());
     }
+    Premain.instrument = false;
     List<File> testFiles = findClasses(testFolder);
     for (File file : testFiles) {
       Class<?> cl = loadClassFromFile(file);
