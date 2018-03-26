@@ -1,6 +1,7 @@
 package org.kanonizo.junit;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -58,8 +59,10 @@ public class TestingUtils {
           .filter(method -> isJUnit4Test(method) && method.getAnnotation(Ignore.class) == null)
           .collect(Collectors.toList());
     } else {
-      testMethods = testMethods.stream().filter(method -> method.getName().startsWith("test"))
-          .collect(Collectors.toList());
+      testMethods = testMethods.stream().filter(method -> method.getName().startsWith("test") &&
+          Modifier.isPublic(method.getModifiers()) &&
+          method.getParameterCount() == 0
+      ).collect(Collectors.toList());
     }
     return testMethods;
   }

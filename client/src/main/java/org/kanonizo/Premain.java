@@ -4,12 +4,8 @@ import com.scythe.instrumenter.InstrumentationProperties;
 import com.scythe.instrumenter.instrumentation.ClassReplacementTransformer;
 import com.scythe.instrumenter.instrumentation.ClassReplacementTransformer.ShouldInstrumentChecker;
 import com.scythe.instrumenter.instrumentation.InstrumentingClassLoader;
-import com.scythe.instrumenter.instrumentation.MockClassLoader;
-import com.scythe.util.ClassNameUtils;
 import java.io.IOException;
 import java.lang.instrument.Instrumentation;
-import java.net.URLClassLoader;
-import org.kanonizo.util.Util;
 
 public class Premain {
 
@@ -27,13 +23,7 @@ public class Premain {
    * @param instr Instrumentation instance to attach a ClassFileTransformer
    */
   public static void premain(String arg, Instrumentation instr) {
-    ClassReplacementTransformer.addShouldInstrumentChecker(new ShouldInstrumentChecker() {
-
-      @Override
-      public boolean shouldInstrument(String className) {
-        return instrument;
-      }
-    });
+    ClassReplacementTransformer.addShouldInstrumentChecker((name) -> instrument);
 
     for (String s : forbiddenPackages) {
       ClassReplacementTransformer.addForbiddenPackage(s);

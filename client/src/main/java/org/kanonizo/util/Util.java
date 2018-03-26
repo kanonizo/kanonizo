@@ -3,6 +3,7 @@ package org.kanonizo.util;
 import java.io.File;
 import java.io.PrintStream;
 import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -12,10 +13,10 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import junit.framework.TestCase;
 import org.junit.Test;
 import org.junit.runner.Runner;
 import org.kanonizo.Main;
@@ -79,7 +80,7 @@ public class Util {
    *
    * @param file - either a jar file or a directory to be added to the classpath
    * @throws SecurityException - if protected java classes are trying to be added back into the
-   * classpath
+   *                           classpath
    */
   public static void addToClassPath(File file) throws SecurityException {
     userEntries.add(file);
@@ -121,7 +122,7 @@ public class Util {
    *
    * @param property - usually one of the command line arguments defined that represent files.
    * @throws IllegalArgumentException - if the file does not exist in the current directory or
-   * globally on the file system
+   *                                  globally on the file system
    */
   public static File getFile(String property) {
     if (property == null || property.isEmpty()) {
@@ -203,16 +204,31 @@ public class Util {
         && isTestClass(cl.getSuperclass())) {
       return true;
     }
-    List<Method> methods = Arrays.asList(cl.getDeclaredMethods());
-    if (methods.stream().anyMatch(method -> method.getName().startsWith("test"))) {
+    // junit 3 test classes must inherit from TestCase
+    if (TestCase.class.isAssignableFrom(cl) && Modifier.isPublic(cl.getModifiers()) && hasConstructor(cl)) {
       return true;
     }
+    List<Method> methods = Arrays.asList(cl.getDeclaredMethods());
     if (methods.stream()
         .anyMatch(method -> method.getAnnotation(Test.class) != null)) {
       return true;
     }
 
     return false;
+  }
+
+  private static boolean hasConstructor(Class<?> cl) {
+    return getConstructor(cl, new Class[0]) != null || getConstructor(cl, new Class[]{String.class}) != null;
+  }
+
+  public static <T> Constructor<T> getConstructor(Class<T> cl, Class[] classes) {
+    try {
+      // constructor that takes a string for test name
+      Constructor<T> con = cl.getConstructor(classes);
+      return con;
+    } catch (NoSuchMethodException e) {
+      return null;
+    }
   }
 
   public static String getSignature(Method m) {
