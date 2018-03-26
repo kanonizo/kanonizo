@@ -36,10 +36,11 @@ public class JUnit3TestRunner extends TestRunner implements KanonizoTestRunner {
     TestResult result = doRun(test, false);
     long runTime = System.currentTimeMillis() - startTime;
     List<KanonizoTestFailure> failures = new ArrayList<>();
-    Enumeration<TestFailure> errors = result.failures();
-    while (errors.hasMoreElements()) {
-      TestFailure failure = errors.nextElement();
-      failures.add(new KanonizoTestFailure(failure.thrownException(), failure.trace()));
+    Enumeration<TestFailure> testFailures = result.failures();
+    Enumeration<TestFailure> errors = result.errors();
+    List<TestFailure> allErrors = Util.combine(testFailures, errors);
+    for(TestFailure f : allErrors){
+      failures.add(new KanonizoTestFailure(f.thrownException(), f.trace()));
     }
     return new KanonizoTestResult(tc.getTestClass(), tc.getMethod(), result.wasSuccessful(), failures, runTime);
   }

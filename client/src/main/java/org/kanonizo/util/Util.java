@@ -13,7 +13,10 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Enumeration;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import junit.framework.TestCase;
@@ -265,5 +268,30 @@ public class Util {
       return true;
     }
     return Math.abs(a - b) < EPSILON; //EPSILON = 0.0000001d
+  }
+
+  public static <T> List<T> combine(Collection<T> one, Collection<T> two){
+    ArrayList<T> ret = new ArrayList<>();
+    Iterator<T> it1 = one.iterator();
+    while(it1.hasNext()){
+      ret.add(it1.next());
+    }
+    Iterator<T> it2 = two.iterator();
+    while(it2.hasNext()){
+      ret.add(it2.next());
+    }
+    return ret;
+  }
+
+  public static <T> List<T> combine(Enumeration<T> one, Enumeration<T> two){
+    ArrayList<T> ret = new ArrayList<>();
+    while(one.hasMoreElements()){
+      ret.add(one.nextElement());
+    }
+
+    while(two.hasMoreElements()){
+      ret.add(two.nextElement());
+    }
+    return ret;
   }
 }
