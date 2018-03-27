@@ -21,4 +21,8 @@ public class TotalFEPAlgorithm extends AbstractSearchAlgorithm implements Mutati
     return new FEPTotalFitnessFunction(problem);
   }
 
+  @Override
+  public String readableName() {
+    return "totalfep";
+  }
 }

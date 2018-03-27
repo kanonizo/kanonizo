@@ -9,4 +9,8 @@ public class EIrreplaceabilityAlgorithm extends AbstractSearchAlgorithm {
 		// TODO Auto-generated method stub
 	}
 
+	@Override
+	public String readableName() {
+		return "eirreplaceable";
+	}
 }

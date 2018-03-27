@@ -7,7 +7,7 @@ import org.kanonizo.algorithms.heuristics.comparators.GreedyComparator;
 import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.framework.objects.TestCase;
 
-@Algorithm(readableName = "greedy")
+@Algorithm
 public class GreedyAlgorithm extends TestCasePrioritiser {
   private GreedyComparator comp;
   @Override
@@ -22,4 +22,8 @@ public class GreedyAlgorithm extends TestCasePrioritiser {
   }
 
 
+  @Override
+  public String readableName() {
+    return "greedy";
+  }
 }

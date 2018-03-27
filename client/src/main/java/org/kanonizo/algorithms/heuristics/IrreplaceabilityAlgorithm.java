@@ -6,4 +6,8 @@ public class IrreplaceabilityAlgorithm extends AbstractSearchAlgorithm {
 	@Override
 	public void generateSolution() {
 	}
+
+	public String readableName(){
+		return "irreplaceable";
+	}
 }

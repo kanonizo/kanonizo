@@ -59,4 +59,8 @@ public class KOptimalAlgorithm extends TestCasePrioritiser {
         return temp.size() - previousLines;
     }
 
+    @Override
+    public String readableName() {
+        return "koptimal";
+    }
 }
