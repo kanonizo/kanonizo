@@ -10,20 +10,26 @@ import org.kanonizo.framework.objects.TestSuite;
 /**
  * Created by davidpaterson on 16/12/2016.
  */
-@Algorithm(readableName = "random")
-public class RandomAlgorithm extends AbstractSearchAlgorithm{
-    @Override
-    protected void generateSolution() {
-        TestSuite suite = problem.clone().getTestSuite();
-        List<TestCase> testCases = suite.getTestCases();
-        Collections.shuffle(testCases);
-        suite.setTestCases(testCases);
-        setCurrentOptimal(suite);
-        fitnessEvaluations++;
-    }
+@Algorithm
+public class RandomAlgorithm extends AbstractSearchAlgorithm {
 
-    @Override
-    public boolean needsFitnessFunction() {
-        return false;
-    }
+  @Override
+  protected void generateSolution() {
+    TestSuite suite = problem.clone().getTestSuite();
+    List<TestCase> testCases = suite.getTestCases();
+    Collections.shuffle(testCases);
+    suite.setTestCases(testCases);
+    setCurrentOptimal(suite);
+    fitnessEvaluations++;
+  }
+
+  @Override
+  public boolean needsFitnessFunction() {
+    return false;
+  }
+
+  @Override
+  public String readableName() {
+    return "random";
+  }
 }

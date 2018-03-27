@@ -83,7 +83,7 @@ public class Util {
    *
    * @param file - either a jar file or a directory to be added to the classpath
    * @throws SecurityException - if protected java classes are trying to be added back into the
-   *                           classpath
+   * classpath
    */
   public static void addToClassPath(File file) throws SecurityException {
     userEntries.add(file);
@@ -114,8 +114,10 @@ public class Util {
   }
 
   public static void removeFromClassPath(File file) throws SecurityException {
-    userEntries.remove(file);
-    Main.logger.info("Removed " + file.getName() + " from class path");
+    if (file != null) {
+      userEntries.remove(file);
+      Main.logger.info("Removed " + file.getName() + " from class path");
+    }
   }
 
   /**
@@ -125,7 +127,7 @@ public class Util {
    *
    * @param property - usually one of the command line arguments defined that represent files.
    * @throws IllegalArgumentException - if the file does not exist in the current directory or
-   *                                  globally on the file system
+   * globally on the file system
    */
   public static File getFile(String property) {
     if (property == null || property.isEmpty()) {
@@ -208,7 +210,8 @@ public class Util {
       return true;
     }
     // junit 3 test classes must inherit from TestCase
-    if (TestCase.class.isAssignableFrom(cl) && Modifier.isPublic(cl.getModifiers()) && hasConstructor(cl)) {
+    if (TestCase.class.isAssignableFrom(cl) && Modifier.isPublic(cl.getModifiers())
+        && hasConstructor(cl)) {
       return true;
     }
     List<Method> methods = Arrays.asList(cl.getDeclaredMethods());
@@ -221,7 +224,8 @@ public class Util {
   }
 
   private static boolean hasConstructor(Class<?> cl) {
-    return getConstructor(cl, new Class[0]) != null || getConstructor(cl, new Class[]{String.class}) != null;
+    return getConstructor(cl, new Class[0]) != null
+        || getConstructor(cl, new Class[]{String.class}) != null;
   }
 
   public static <T> Constructor<T> getConstructor(Class<T> cl, Class[] classes) {
@@ -270,26 +274,26 @@ public class Util {
     return Math.abs(a - b) < EPSILON; //EPSILON = 0.0000001d
   }
 
-  public static <T> List<T> combine(Collection<T> one, Collection<T> two){
+  public static <T> List<T> combine(Collection<T> one, Collection<T> two) {
     ArrayList<T> ret = new ArrayList<>();
     Iterator<T> it1 = one.iterator();
-    while(it1.hasNext()){
+    while (it1.hasNext()) {
       ret.add(it1.next());
     }
     Iterator<T> it2 = two.iterator();
-    while(it2.hasNext()){
+    while (it2.hasNext()) {
       ret.add(it2.next());
     }
     return ret;
   }
 
-  public static <T> List<T> combine(Enumeration<T> one, Enumeration<T> two){
+  public static <T> List<T> combine(Enumeration<T> one, Enumeration<T> two) {
     ArrayList<T> ret = new ArrayList<>();
-    while(one.hasMoreElements()){
+    while (one.hasMoreElements()) {
       ret.add(one.nextElement());
     }
 
-    while(two.hasMoreElements()){
+    while (two.hasMoreElements()) {
       ret.add(two.nextElement());
     }
     return ret;
