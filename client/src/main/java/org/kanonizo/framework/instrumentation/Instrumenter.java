@@ -1,6 +1,7 @@
 package org.kanonizo.framework.instrumentation;
 
 import java.util.Set;
+import org.kanonizo.framework.Readable;
 import org.kanonizo.framework.objects.Branch;
 import org.kanonizo.framework.objects.ClassUnderTest;
 import org.kanonizo.framework.objects.Line;
@@ -8,7 +9,7 @@ import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
 
-public interface Instrumenter {
+public interface Instrumenter extends Readable {
   Class<?> loadClass(String className) throws ClassNotFoundException;
 
   void setTestSuite(TestSuite ts);
