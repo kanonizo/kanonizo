@@ -2,11 +2,12 @@ package org.kanonizo.algorithms;
 
 import java.util.List;
 import org.kanonizo.algorithms.stoppingconditions.StoppingCondition;
+import org.kanonizo.framework.Readable;
 import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
 
-public interface SearchAlgorithm {
+public interface SearchAlgorithm extends Readable{
   void setSearchProblem(SystemUnderTest problem);
 
   TestSuite getCurrentOptimal();

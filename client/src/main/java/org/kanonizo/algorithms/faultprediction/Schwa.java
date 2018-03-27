@@ -19,6 +19,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kanonizo.Framework;
 import org.kanonizo.algorithms.TestCasePrioritiser;
+import org.kanonizo.algorithms.heuristics.comparators.AdditionalComparator;
 import org.kanonizo.algorithms.heuristics.comparators.GreedyComparator;
 import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.annotations.OptionProvider;
@@ -29,7 +30,7 @@ import org.kanonizo.framework.objects.Line;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.util.Util;
 
-@Algorithm(readableName = "schwa")
+@Algorithm
 public class Schwa extends TestCasePrioritiser {
 
   private static Logger logger = LogManager.getLogger(Schwa.class);
@@ -148,6 +149,7 @@ public class Schwa extends TestCasePrioritiser {
   public static List<Comparator> getOptions() {
     ArrayList<Comparator> options = new ArrayList<>();
     options.add(new GreedyComparator());
+    options.add(new AdditionalComparator());
     return options;
   }
 
@@ -201,5 +203,10 @@ public class Schwa extends TestCasePrioritiser {
       return returnCode;
     }
     return returnCode;
+  }
+
+  @Override
+  public String readableName() {
+    return "schwa";
   }
 }

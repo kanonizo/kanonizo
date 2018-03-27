@@ -29,7 +29,7 @@ import org.kanonizo.framework.objects.TestSuite;
 import org.kanonizo.reporting.FitnessWriter;
 import org.kanonizo.util.RandomInstance;
 
-@Algorithm(readableName = "geneticalgorithm")
+@Algorithm
 public class GeneticAlgorithm extends AbstractSearchAlgorithm {
   @Parameter(key = "track_generation_fitness", description = "In the FitnessWriter it is possible to track the current fitness evaluation or the entire generation max fitness. Seeing the entire generation max fitness allows the user to see the progression of the population over time (for example in the GA), while seeing the individual fitness allows to see the spread of fitness scores across the population/evolutions. Set to true to track the whole generation fitness, set to false to see individual evaluation fitness", category = "TCP")
   public static boolean TRACK_GENERATION_FITNESS = true;
@@ -201,5 +201,10 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
     List<TestSuite> candidates = Arrays.asList(elements);
     Collections.sort(candidates);
     return candidates.subList(0, n);
+  }
+
+  @Override
+  public String readableName() {
+    return "geneticalgorithm";
   }
 }

@@ -17,4 +17,9 @@ public class HillClimbAlgorithm extends AbstractSearchAlgorithm {
 
 		// select fittest neighbour
 	}
+
+	@Override
+	public String readableName() {
+		return "hillclimb";
+	}
 }
