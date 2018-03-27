@@ -9,7 +9,6 @@ import com.scythe.instrumenter.InstrumentationProperties;
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
 import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import com.scythe.instrumenter.instrumentation.ClassReplacementTransformer;
-import com.scythe.instrumenter.instrumentation.ClassReplacementTransformer.ShouldInstrumentChecker;
 import com.scythe.instrumenter.instrumentation.InstrumentingClassLoader;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -47,7 +46,7 @@ import org.kanonizo.util.HashSetCollector;
 import org.kanonizo.util.Util;
 
 //
-@org.kanonizo.annotations.Instrumenter(readableName = "Scythe")
+@org.kanonizo.annotations.Instrumenter
 public class ScytheInstrumenter implements Instrumenter {
 
   @Parameter(key = "scythe_write", description = "Whether to write coverage to a file. If true, "
@@ -326,6 +325,11 @@ public class ScytheInstrumenter implements Instrumenter {
   @Override
   public ClassLoader getClassLoader() {
     return InstrumentingClassLoader.getInstance();
+  }
+
+  @Override
+  public String readableName() {
+    return "Scythe";
   }
 
   private class ScytheTypeWriter extends TypeAdapter<ScytheInstrumenter> {

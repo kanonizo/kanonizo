@@ -15,7 +15,7 @@ import org.kanonizo.framework.objects.TestSuite;
  * Class to not instrument classes, not interested in the output of test cases, defers class loading
  * to the system class loader
  */
-@org.kanonizo.annotations.Instrumenter(readableName = "null")
+@org.kanonizo.annotations.Instrumenter
 public class NullInstrumenter implements Instrumenter {
 
   @Override
@@ -107,4 +107,8 @@ public class NullInstrumenter implements Instrumenter {
     return ClassLoader.getSystemClassLoader();
   }
 
+  @Override
+  public String readableName() {
+    return "null";
+  }
 }
