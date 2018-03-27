@@ -1,14 +1,12 @@
 package org.kanonizo;
 
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
-import com.scythe.instrumenter.instrumentation.ClassReplacementTransformer;
 import com.scythe.instrumenter.instrumentation.InstrumentingClassLoader;
 import com.scythe.instrumenter.mutation.MutationProperties;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -27,6 +25,7 @@ import org.kanonizo.display.ConsoleDisplay;
 import org.kanonizo.display.Display;
 import org.kanonizo.display.fx.KanonizoFrame;
 import org.kanonizo.exception.SystemConfigurationException;
+import org.kanonizo.framework.instrumentation.Instrumenter;
 import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
@@ -65,7 +64,7 @@ public class Main {
       d = new ConsoleDisplay();
       d.initialise();
       fw.setDisplay(d);
-      fw.addSelectionListener((ConsoleDisplay)d);
+      fw.addSelectionListener((ConsoleDisplay) d);
       try {
         fw.run();
       } catch (Exception e) {
@@ -138,19 +137,21 @@ public class Main {
 
   private static void setInstrumenter(Framework fw, String instrumenter) {
     Reflections r = Util.getReflections();
-    Set<Class<?>> instrumenters = r
-        .getTypesAnnotatedWith(org.kanonizo.annotations.Instrumenter.class);
-    for (Class<?> inst : instrumenters) {
+    Set<?> instrumenters = r
+        .getTypesAnnotatedWith(org.kanonizo.annotations.Instrumenter.class).stream().map(cl -> {
+          try {
+            return cl.newInstance();
+          } catch (IllegalAccessException | InstantiationException e) {
+            logger.error(e);
+          }
+          return null;
+        }).collect(Collectors.toSet());
+    for (Object inst : instrumenters) {
       if (instrumenter
-          .equals(inst.getAnnotation(org.kanonizo.annotations.Instrumenter.class).readableName())) {
-        try {
-          fw.setInstrumenter(
-              (org.kanonizo.framework.instrumentation.Instrumenter) inst.newInstance());
-        } catch (InstantiationException e) {
-          e.printStackTrace();
-        } catch (IllegalAccessException e) {
-          e.printStackTrace();
-        }
+          .equals(((Instrumenter) inst).readableName())) {
+        fw.setInstrumenter(
+            (org.kanonizo.framework.instrumentation.Instrumenter) inst);
+
       }
     }
   }
@@ -159,11 +160,19 @@ public class Main {
       throws InstantiationException, IllegalAccessException {
     Reflections r = Util.getReflections();
     Set<Class<?>> algorithms = r.getTypesAnnotatedWith(Algorithm.class);
-    Optional<Class<?>> algorithmClass = algorithms.stream()
-        .filter(c -> c.getAnnotation(Algorithm.class).readableName().equals(algorithmChoice))
+    Optional<?> algorithmClass = algorithms.stream()
+        .map(cl -> {
+          try {
+            return cl.newInstance();
+          } catch (IllegalAccessException | InstantiationException e) {
+            logger.error(e);
+          }
+          return null;
+        })
+        .filter(obj -> ((SearchAlgorithm) obj).readableName().equals(algorithmChoice))
         .findFirst();
     if (algorithmClass.isPresent()) {
-      SearchAlgorithm algorithm = (SearchAlgorithm) algorithmClass.get().newInstance();
+      SearchAlgorithm algorithm = (SearchAlgorithm) algorithmClass.get();
       List<Method> requirements = Framework.getPrerequisites(algorithm);
       boolean anyFail = false;
       for (Method requirement : requirements) {
@@ -174,7 +183,7 @@ public class Main {
             String error = requirement.getAnnotation(Prerequisite.class).failureMessage();
             logger.error("System is improperly configured: " + error);
           }
-        }catch(InvocationTargetException e){
+        } catch (InvocationTargetException e) {
           logger.error(e);
         }
       }
@@ -184,7 +193,7 @@ public class Main {
       return algorithm;
     }
     List<String> algorithmNames = Framework.getAvailableAlgorithms().stream()
-        .map(alg -> alg.getClass().getAnnotation(Algorithm.class).readableName())
+        .map(alg -> alg.readableName())
         .collect(Collectors.toList());
     throw new RuntimeException(
         "Algorithm could not be created. The list of available algorithms is given as: "

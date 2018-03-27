@@ -6,11 +6,15 @@ import com.google.gson.TypeAdapter;
 import com.google.gson.annotations.Expose;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -53,7 +57,7 @@ import org.kanonizo.reporting.TestCaseOrderingWriter;
 import org.kanonizo.util.Util;
 import org.reflections.Reflections;
 
-public class Framework {
+public class Framework implements Serializable {
 
   private List<TestCaseSelectionListener> listeners = new ArrayList<>();
 
@@ -74,10 +78,31 @@ public class Framework {
   private Display display = new NullDisplay();
   @Expose
   private File rootFolder;
+  private PropertyChangeSupport changeSupport = new PropertyChangeSupport(this);
 
+  public static final String SOURCE_FOLDER_PROPERTY_NAME = "sourceFolder";
+  public static final String TEST_FOLDER_PROPERTY_NAME = "testFolder";
+  public static final String ROOT_FOLDER_PROPERTY_NAME = "rootFolder";
+  public static final String INSTRUMENTER_PROPERTY_NAME = "instrumenter";
+  public static final String ALGORITHM_PROPERTY_NAME = "algorithm";
+  public static final String LIBS_PROPERTY_NAME = "libraries";
 
   private Framework() {
-
+    addPropertyChangeListener(ROOT_FOLDER_PROPERTY_NAME, (e) -> {
+      if (MavenAnalyser.isMavenProject((File) e.getNewValue())) {
+        int response = display
+            .ask("Maven project detected - would you like to import dependencies from maven?");
+        if (response == Display.RESPONSE_YES) {
+          MavenAnalyser.addMavenDependencies((File) e.getNewValue());
+        }
+      }
+    });
+    addPropertyChangeListener((e) -> {
+      if(e.getPropertyName().equals(SOURCE_FOLDER_PROPERTY_NAME) || e.getPropertyName().equals(TEST_FOLDER_PROPERTY_NAME)){
+        Util.removeFromClassPath((File) e.getOldValue());
+        Util.addToClassPath((File) e.getNewValue());
+      }
+    });
   }
 
   public static Framework getInstance() {
@@ -93,6 +118,7 @@ public class Framework {
   }
 
   public void setAlgorithm(SearchAlgorithm algorithm) {
+    changeSupport.firePropertyChange(ALGORITHM_PROPERTY_NAME, this.algorithm, algorithm);
     this.algorithm = algorithm;
   }
 
@@ -105,6 +131,7 @@ public class Framework {
   }
 
   public void setInstrumenter(Instrumenter inst) {
+    changeSupport.firePropertyChange(INSTRUMENTER_PROPERTY_NAME, this.inst, inst);
     this.inst = inst;
   }
 
@@ -113,34 +140,18 @@ public class Framework {
   }
 
   public void setSourceFolder(File sourceFolder) {
-    if (sourceFolder != null && !sourceFolder.equals(this.sourceFolder)) {
-      if (this.sourceFolder != null) {
-        Util.removeFromClassPath(this.sourceFolder);
-      }
-      Util.addToClassPath(sourceFolder);
-      this.sourceFolder = sourceFolder;
-    }
+    changeSupport.firePropertyChange(SOURCE_FOLDER_PROPERTY_NAME, this.sourceFolder, sourceFolder);
+    this.sourceFolder = sourceFolder;
   }
 
   public void setTestFolder(File testFolder) {
-    if (testFolder != null && !testFolder.equals(this.testFolder)) {
-      if (this.testFolder != null) {
-        Util.removeFromClassPath(this.testFolder);
-      }
-      Util.addToClassPath(testFolder);
-      this.testFolder = testFolder;
-    }
+    changeSupport.firePropertyChange(TEST_FOLDER_PROPERTY_NAME, this.testFolder, testFolder);
+    this.testFolder = testFolder;
   }
 
   public void setRootFolder(File rootFolder) {
+    changeSupport.firePropertyChange(ROOT_FOLDER_PROPERTY_NAME, this.rootFolder, rootFolder);
     this.rootFolder = rootFolder;
-    if (MavenAnalyser.isMavenProject(rootFolder)) {
-      int response = display
-          .ask("Maven project detected - would you like to import dependencies from maven?");
-      if (response == Display.RESPONSE_YES) {
-        MavenAnalyser.addMavenDependencies(rootFolder);
-      }
-    }
   }
 
   public File getRootFolder() {
@@ -166,11 +177,13 @@ public class Framework {
     if (lib.isDirectory()) {
       Arrays.asList(lib.listFiles(file -> file.getName().endsWith(".jar")))
           .forEach(jar -> {
+            changeSupport.firePropertyChange(LIBS_PROPERTY_NAME, libraries, jar);
             libraries.add(jar);
             Util.addToClassPath(jar);
           });
     } else if (lib.getName().endsWith(".jar")) {
       Util.addToClassPath(lib);
+      changeSupport.firePropertyChange(LIBS_PROPERTY_NAME, libraries, lib);
       libraries.add(lib);
     }
 
@@ -286,7 +299,7 @@ public class Framework {
     try {
       ClassParser parser = new ClassParser(file.getAbsolutePath());
       JavaClass jcl = parser.parse();
-      cl = Class.forName(jcl.getClassName());
+      cl = Class.forName(jcl.getClassName(), true, Thread.currentThread().getContextClassLoader());
 
     } catch (ClassNotFoundException | NoClassDefFoundError e) {
       logger.error(e);
@@ -471,6 +484,22 @@ public class Framework {
     for (TestCaseSelectionListener list : listeners) {
       list.testCaseSelected(tc);
     }
+  }
+
+  public void addPropertyChangeListener(PropertyChangeListener pcl) {
+    changeSupport.addPropertyChangeListener(pcl);
+  }
+
+  public void addPropertyChangeListener(String propertyName, PropertyChangeListener pcl) {
+    changeSupport.addPropertyChangeListener(propertyName, pcl);
+  }
+
+  public void removePropertyChangeListener(PropertyChangeListener pcl) {
+    changeSupport.removePropertyChangeListener(pcl);
+  }
+
+  public void removePropertyChangeListener(String propertyName, PropertyChangeListener pcl) {
+    changeSupport.removePropertyChangeListener(propertyName, pcl);
   }
 
   private class FileTypeAdapter extends TypeAdapter<File> {
