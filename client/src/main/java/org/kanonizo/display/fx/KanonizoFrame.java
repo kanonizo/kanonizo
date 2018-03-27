@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -40,7 +41,10 @@ import javafx.scene.control.Tooltip;
 import javafx.scene.control.TreeView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
@@ -53,6 +57,7 @@ import org.kanonizo.algorithms.SearchAlgorithm;
 import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.annotations.Instrumenter;
 import org.kanonizo.annotations.OptionProvider;
+import org.kanonizo.annotations.Prerequisite;
 import org.kanonizo.display.Display;
 import org.kanonizo.framework.objects.TestSuite;
 import org.kanonizo.gui.AlertUtils;
@@ -86,6 +91,10 @@ public class KanonizoFrame implements Display, Initializable {
   private GridPane instParamLayout;
   @FXML
   private Button goButton;
+  @FXML
+  private StackPane mainLayout;
+  @FXML
+  private BorderPane borderPane;
 
   private KanonizoScene scene;
   private Framework fw;
@@ -420,20 +429,47 @@ public class KanonizoFrame implements Display, Initializable {
       bottom.getChildren().removeAll(activeErrors);
       activeErrors.clear();
       ProgressIndicator p = new ProgressIndicator();
-
-      List<String> errors = Framework.runPrerequisites((SearchAlgorithm) alg);
-      if(errors.size() > 0){
-        goButton.setDisable(true);
-      } else {
-        goButton.setDisable(false);
-      }
-      int row = 2;
-      for (String error : errors) {
-        Label er = new Label(error);
-        activeErrors.add(er);
-        er.getStyleClass().add("error");
-        bottom.add(er, 0, row++, 2, 1);
-      }
+      p.setProgress(-1);
+      List<Method> prerequisites = Framework.getPrerequisites((SearchAlgorithm) alg);
+      Task<Void> task = new Task<Void>() {
+        @Override
+        protected Void call() throws Exception {
+          boolean anyFail = false;
+          int row = 2;
+          for (int i = 0; i < prerequisites.size(); i++) {
+            Method requirement = prerequisites.get(i);
+            try {
+              boolean passed = (boolean) requirement.invoke(null, null);
+              if (!passed) {
+                anyFail = true;
+                String error = requirement.getAnnotation(Prerequisite.class).failureMessage();
+                Label er = new Label(error);
+                activeErrors.add(er);
+                er.getStyleClass().add("error");
+                int errorRow = row++;
+                Platform.runLater(() -> bottom.add(er, 0, errorRow, 2, 1));
+              }
+            } catch (InvocationTargetException e) {
+              logger.error(e);
+            }
+          }
+          if (anyFail && !goButton.isDisabled()) {
+            goButton.setDisable(true);
+          } else if (!anyFail) {
+            goButton.setDisable(false);
+          }
+          return null;
+        }
+      };
+      VBox box = new VBox(p);
+      box.setAlignment(Pos.CENTER);
+      task.setOnSucceeded(e -> {
+        mainLayout.getChildren().remove(box);
+        borderPane.setDisable(false);
+      });
+      mainLayout.getChildren().add(box);
+      borderPane.setDisable(true);
+      new Thread(task).start();
     }
   }
 

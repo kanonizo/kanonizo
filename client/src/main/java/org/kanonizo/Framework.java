@@ -17,6 +17,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -397,38 +398,30 @@ public class Framework {
     return algorithmsInst;
   }
 
-  public static List<String> runPrerequisites(SearchAlgorithm algorithm) {
-    List<String> errors = new ArrayList<>();
+  public static List<Method> getPrerequisites(SearchAlgorithm algorithm) {
     List<Method> requirements = Arrays.asList(algorithm.getClass().getMethods()).stream()
         .filter(m -> m.isAnnotationPresent(Prerequisite.class)).collect(Collectors.toList());
-    for (Method requirement : requirements) {
+    Iterator<Method> it = requirements.iterator();
+    while (it.hasNext()) {
+      Method requirement = it.next();
       if (Modifier.isStatic(requirement.getModifiers())) {
         if (requirement.getReturnType().equals(Boolean.class) || requirement.getReturnType()
             .equals(boolean.class)) {
           if (!requirement.isAccessible()) {
             requirement.setAccessible(true);
           }
-          try {
-            boolean meetsRequirement = (boolean) requirement.invoke(null, null);
-            if (!meetsRequirement) {
-              errors.add(requirement.getAnnotation(Prerequisite.class).failureMessage());
-            }
-          } catch (InvocationTargetException e) {
-            errors.add("InvocationTargetException while trying to run " + requirement.getName());
-          } catch (IllegalAccessException e) {
-            errors.add("IllegalAccessException while trying to run " + requirement.getName()
-                + ". Is the method public?");
-          }
         } else {
           logger.info("Ignoring requirement " + requirement.getName()
               + " because the return type is not boolean");
+          it.remove();
         }
 
       } else {
         logger.info("Ignoring requirement " + requirement.getName() + " because it is not static");
+        it.remove();
       }
     }
-    return errors;
+    return requirements;
   }
 
   public void write(File out) throws IOException {

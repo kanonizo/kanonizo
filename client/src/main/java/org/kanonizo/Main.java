@@ -6,6 +6,8 @@ import com.scythe.instrumenter.instrumentation.InstrumentingClassLoader;
 import com.scythe.instrumenter.mutation.MutationProperties;
 import java.io.File;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +22,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kanonizo.algorithms.SearchAlgorithm;
 import org.kanonizo.annotations.Algorithm;
+import org.kanonizo.annotations.Prerequisite;
 import org.kanonizo.display.ConsoleDisplay;
 import org.kanonizo.display.Display;
 import org.kanonizo.display.fx.KanonizoFrame;
@@ -161,11 +164,21 @@ public class Main {
         .findFirst();
     if (algorithmClass.isPresent()) {
       SearchAlgorithm algorithm = (SearchAlgorithm) algorithmClass.get().newInstance();
-      List<String> errors = Framework.runPrerequisites(algorithm);
-      for (String error : errors) {
-        logger.error("System is improperly configured: " + error);
+      List<Method> requirements = Framework.getPrerequisites(algorithm);
+      boolean anyFail = false;
+      for (Method requirement : requirements) {
+        try {
+          boolean passed = (boolean) requirement.invoke(null, null);
+          if (!passed) {
+            anyFail = true;
+            String error = requirement.getAnnotation(Prerequisite.class).failureMessage();
+            logger.error("System is improperly configured: " + error);
+          }
+        }catch(InvocationTargetException e){
+          logger.error(e);
+        }
       }
-      if (errors.size() > 0) {
+      if (anyFail) {
         throw new SystemConfigurationException("");
       }
       return algorithm;
