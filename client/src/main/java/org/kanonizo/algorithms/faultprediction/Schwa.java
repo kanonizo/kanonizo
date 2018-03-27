@@ -175,7 +175,11 @@ public class Schwa extends TestCasePrioritiser {
 
   @Prerequisite(failureMessage = "In order to use Schwa, project root must be set. The project root must be a git repository")
   public static boolean checkProjectRoot(){
-    return Framework.getInstance().getRootFolder() != null;
+    return Framework.getInstance().getRootFolder() != null && isGitRepository(Framework.getInstance().getRootFolder());
+  }
+
+  private static boolean isGitRepository(File root){
+    return root.listFiles((n) -> n != null && n.getName().equals(".git")).length > 0;
   }
 
   private static int runProcess(String... process) {
