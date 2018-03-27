@@ -72,7 +72,7 @@
                     </padding>
 
                 </GridPane>
-                <Button minWidth="50.0" onAction="#go" prefWidth="50.0" styleClass="button-green" GridPane.columnIndex="3" GridPane.rowIndex="0" GridPane.rowSpan="2">Go
+                <Button minWidth="50.0" fx:id="goButton" onAction="#go" prefWidth="50.0" styleClass="button-green" GridPane.columnIndex="3" GridPane.rowIndex="0" GridPane.rowSpan="2">Go
                 </Button>
                 <Label maxWidth="150.0" minWidth="150.0" prefWidth="150.0" text="Instrumenter:" GridPane.columnIndex="0" GridPane.rowIndex="1" />
                 <ComboBox fx:id="instrumenterChoices" maxWidth="150.0" minWidth="150.0" prefWidth="150.0" GridPane.columnIndex="1" GridPane.rowIndex="1" />

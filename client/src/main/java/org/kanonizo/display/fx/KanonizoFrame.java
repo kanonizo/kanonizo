@@ -34,6 +34,7 @@ import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.TreeView;
@@ -83,6 +84,8 @@ public class KanonizoFrame implements Display, Initializable {
   private ComboBox instrumenterChoices;
   @FXML
   private GridPane instParamLayout;
+  @FXML
+  private Button goButton;
 
   private KanonizoScene scene;
   private Framework fw;
@@ -416,7 +419,14 @@ public class KanonizoFrame implements Display, Initializable {
     if (alg instanceof SearchAlgorithm) {
       bottom.getChildren().removeAll(activeErrors);
       activeErrors.clear();
+      ProgressIndicator p = new ProgressIndicator();
+
       List<String> errors = Framework.runPrerequisites((SearchAlgorithm) alg);
+      if(errors.size() > 0){
+        goButton.setDisable(true);
+      } else {
+        goButton.setDisable(false);
+      }
       int row = 2;
       for (String error : errors) {
         Label er = new Label(error);
