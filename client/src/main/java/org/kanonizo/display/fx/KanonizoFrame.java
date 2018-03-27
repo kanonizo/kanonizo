@@ -54,11 +54,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kanonizo.Framework;
 import org.kanonizo.algorithms.SearchAlgorithm;
-import org.kanonizo.annotations.Algorithm;
-import org.kanonizo.annotations.Instrumenter;
 import org.kanonizo.annotations.OptionProvider;
 import org.kanonizo.annotations.Prerequisite;
 import org.kanonizo.display.Display;
+import org.kanonizo.display.fx.converters.ReadableConverter;
 import org.kanonizo.framework.objects.TestSuite;
 import org.kanonizo.gui.AlertUtils;
 import org.kanonizo.gui.GuiUtils;
@@ -114,9 +113,6 @@ public class KanonizoFrame implements Display, Initializable {
     File newRoot = dc.showDialog(KanonizoFxApplication.stage);
     if (newRoot != null) {
       fw.setRootFolder(newRoot);
-      rootFolderTextField.setText(newRoot.getAbsolutePath());
-      sourceTree.setRoot(GuiUtils.createDynamicFileTree(newRoot));
-      testTree.setRoot(GuiUtils.createDynamicFileTree(newRoot));
     }
   }
 
@@ -152,7 +148,6 @@ public class KanonizoFrame implements Display, Initializable {
       if (jar != null) {
         for (File j : jar) {
           fw.addLibrary(j);
-          libs.getItems().add(j);
         }
       }
     });
@@ -350,6 +345,37 @@ public class KanonizoFrame implements Display, Initializable {
     assert sourceTree != null : "fx:id sourceTree was not injected";
 
     this.fw = Framework.getInstance();
+    fw.addPropertyChangeListener(Framework.ROOT_FOLDER_PROPERTY_NAME,
+        (e) -> {
+          File newRoot = (File) e.getNewValue();
+          rootFolderTextField.setText(newRoot.getAbsolutePath());
+          sourceTree.setRoot(GuiUtils.createDynamicFileTree(newRoot));
+          testTree.setRoot(GuiUtils.createDynamicFileTree(newRoot));
+        }
+    );
+    fw.addPropertyChangeListener(Framework.ALGORITHM_PROPERTY_NAME,
+        (e) -> {
+          SearchAlgorithm alg = (SearchAlgorithm) e.getNewValue();
+          //remove existing children
+          paramLayout.getChildren().clear();
+          addParams(alg, paramLayout, true);
+          addErrors(alg);
+        }
+    );
+    fw.addPropertyChangeListener(Framework.INSTRUMENTER_PROPERTY_NAME,
+        (e) -> {
+          org.kanonizo.framework.instrumentation.Instrumenter inst = (org.kanonizo.framework.instrumentation.Instrumenter) e
+              .getNewValue();
+          instParamLayout.getChildren().clear();
+          addParams(inst, instParamLayout, false);
+          addErrors(inst);
+        }
+    );
+    fw.addPropertyChangeListener(Framework.LIBS_PROPERTY_NAME,
+        (e) -> {
+          libs.getItems().add((File) e.getNewValue());
+        }
+    );
     fw.setDisplay(this);
     Screen main = Screen.getPrimary();
     Rectangle2D bounds = main.getVisualBounds();
@@ -360,61 +386,19 @@ public class KanonizoFrame implements Display, Initializable {
     selectRoot.setOnAction(ev -> selectRoot());
     try {
       algorithmChoices.getItems().addAll(Framework.getAvailableAlgorithms());
-      algorithmChoices.setConverter(new StringConverter() {
-        @Override
-        public String toString(Object object) {
-          return object.getClass().getAnnotation(Algorithm.class).readableName();
-        }
-
-        @Override
-        public Object fromString(String string) {
-          try {
-            return Framework.getAvailableAlgorithms().stream().filter(
-                alg -> alg.getClass().getAnnotation(Algorithm.class).readableName().equals(string))
-                .findFirst().get();
-          } catch (Exception e) {
-            return null;
-          }
-        }
-      });
+      algorithmChoices.setConverter(new ReadableConverter());
 
       algorithmChoices.valueProperty().addListener((ov, t, t1) -> {
         SearchAlgorithm alg = (SearchAlgorithm) ov.getValue();
         fw.setAlgorithm(alg);
-        //remove existing children
-        paramLayout.getChildren().clear();
-        addParams(alg, paramLayout, true);
-        addErrors(alg);
       });
       algorithmChoices.getSelectionModel().select(fw.getAlgorithm());
       instrumenterChoices.getItems().addAll(Framework.getAvailableInstrumenters());
-      instrumenterChoices.setConverter(new StringConverter() {
-
-        @Override
-        public String toString(Object object) {
-          return object.getClass().getAnnotation(Instrumenter.class).readableName();
-        }
-
-        @Override
-        public Object fromString(String string) {
-          try {
-            return Framework.getAvailableInstrumenters().stream().filter(
-                inst -> inst.getClass().getAnnotation(Instrumenter.class).readableName()
-                    .equals(string))
-                .findFirst().get();
-          } catch (Exception e) {
-            return null;
-          }
-        }
-      });
+      instrumenterChoices.setConverter(new ReadableConverter());
       instrumenterChoices.valueProperty().addListener((ov, t, t1) -> {
         org.kanonizo.framework.instrumentation.Instrumenter inst = (org.kanonizo.framework.instrumentation.Instrumenter) ov
             .getValue();
         fw.setInstrumenter(inst);
-        //remove existing children
-        instParamLayout.getChildren().clear();
-        addParams(inst, instParamLayout, false);
-        addErrors(inst);
       });
       instrumenterChoices.getSelectionModel().select(fw.getInstrumenter());
     } catch (Exception e) {
@@ -429,22 +413,24 @@ public class KanonizoFrame implements Display, Initializable {
       bottom.getChildren().removeAll(activeErrors);
       activeErrors.clear();
       ProgressIndicator p = new ProgressIndicator();
-      p.setProgress(-1);
       List<Method> prerequisites = Framework.getPrerequisites((SearchAlgorithm) alg);
       Task<Void> task = new Task<Void>() {
         @Override
         protected Void call() throws Exception {
           boolean anyFail = false;
           int row = 2;
+          // run all prerequisites, not terminating on first failure
           for (int i = 0; i < prerequisites.size(); i++) {
             Method requirement = prerequisites.get(i);
             try {
               boolean passed = (boolean) requirement.invoke(null, null);
               if (!passed) {
                 anyFail = true;
+                // find readable error message
                 String error = requirement.getAnnotation(Prerequisite.class).failureMessage();
                 Label er = new Label(error);
                 activeErrors.add(er);
+                // css styling to make errors red
                 er.getStyleClass().add("error");
                 int errorRow = row++;
                 Platform.runLater(() -> bottom.add(er, 0, errorRow, 2, 1));
@@ -453,6 +439,7 @@ public class KanonizoFrame implements Display, Initializable {
               logger.error(e);
             }
           }
+          // if any pre-requisite failed, we can't run the algorithm
           if (anyFail && !goButton.isDisabled()) {
             goButton.setDisable(true);
           } else if (!anyFail) {
@@ -461,6 +448,7 @@ public class KanonizoFrame implements Display, Initializable {
           return null;
         }
       };
+      // show progress indicator over original layout
       VBox box = new VBox(p);
       box.setAlignment(Pos.CENTER);
       task.setOnSucceeded(e -> {
