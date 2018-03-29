@@ -6,6 +6,7 @@ import com.google.gson.TypeAdapter;
 import com.google.gson.annotations.Expose;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+import com.scythe.instrumenter.InstrumentationProperties.Parameter;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
@@ -58,6 +59,8 @@ import org.kanonizo.util.Util;
 import org.reflections.Reflections;
 
 public class Framework implements Serializable {
+  @Parameter(key = "forbidden_classnames", description="Some projects have classes that deliberately should not load (e.g. Apache Commons Lang has some enum classes that are designed to fail to load). Use this parameter to prevent these classes from loading",category = "Framework")
+  public static String FORBIDDEN_CLASSNAMES = "";
 
   private List<TestCaseSelectionListener> listeners = new ArrayList<>();
 
@@ -303,7 +306,13 @@ public class Framework implements Serializable {
     try {
       ClassParser parser = new ClassParser(file.getAbsolutePath());
       JavaClass jcl = parser.parse();
-      cl = Class.forName(jcl.getClassName(), true, Thread.currentThread().getContextClassLoader());
+      List<String> forbiddenClasses = Arrays.asList(FORBIDDEN_CLASSNAMES.split(","));
+      if(forbiddenClasses.stream().anyMatch(f -> jcl.getClassName().substring(jcl.getPackageName().length() + 1).startsWith(f))){
+        logger.info("Ignoring class "+jcl.getClassName()+ " because it is forbidden");
+        return null;
+      } else {
+        cl = Class.forName(jcl.getClassName(), true, Thread.currentThread().getContextClassLoader());
+      }
 
     } catch (ClassNotFoundException | NoClassDefFoundError e) {
       logger.error(e);
