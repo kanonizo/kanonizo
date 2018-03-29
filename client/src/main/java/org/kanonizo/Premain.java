@@ -34,10 +34,14 @@ public class Premain {
     InstrumentationProperties.WRITE_CLASS_IF_MODIFIED = true;
     instr.addTransformer((l, n, c, p, buf) -> {
       try {
-        return loader.modifyBytes(n, buf);
+        if(n != null) {
+          return loader.modifyBytes(n, buf);
+        }
       } catch (ClassNotFoundException e) {
         e.printStackTrace();
       } catch (IOException e) {
+        e.printStackTrace();
+      } catch(Throwable e){
         e.printStackTrace();
       }
       return buf;

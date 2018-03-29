@@ -98,7 +98,8 @@ public class Framework implements Serializable {
       }
     });
     addPropertyChangeListener((e) -> {
-      if(e.getPropertyName().equals(SOURCE_FOLDER_PROPERTY_NAME) || e.getPropertyName().equals(TEST_FOLDER_PROPERTY_NAME)){
+      if (e.getPropertyName().equals(SOURCE_FOLDER_PROPERTY_NAME) || e.getPropertyName()
+          .equals(TEST_FOLDER_PROPERTY_NAME)) {
         Util.removeFromClassPath((File) e.getOldValue());
         Util.addToClassPath((File) e.getNewValue());
       }
@@ -254,38 +255,41 @@ public class Framework implements Serializable {
     List<File> testFiles = findClasses(testFolder);
     for (File file : testFiles) {
       Class<?> cl = loadClassFromFile(file);
-      if (Util.isTestClass(cl)) {
-        List<Method> testMethods = TestingUtils.getTestMethods(cl);
-        logger.info("Adding " + testMethods.size() + " test methods from " + cl.getName());
-        for (Method m : testMethods) {
-          if (TestingUtils.isParameterizedTest(cl, m)) {
-            Optional<Method> parameterMethod = Arrays.asList(cl.getMethods()).stream()
-                .filter(method -> method.getAnnotation(Parameters.class) != null).findFirst();
-            if (parameterMethod.isPresent()) {
-              try {
-                Iterable<Object[]> parameters = (Iterable<Object[]>) parameterMethod.get()
-                    .invoke(null, new Object[]{});
-                for (Object[] inst : parameters) {
-                  ParameterisedTestCase ptc = new ParameterisedTestCase(cl, m, inst);
-                  sut.addTestCase(ptc);
+      if (cl != null) {
+        if (Util.isTestClass(cl)) {
+          List<Method> testMethods = TestingUtils.getTestMethods(cl);
+          logger.info("Adding " + testMethods.size() + " test methods from " + cl.getName());
+          for (Method m : testMethods) {
+            if (TestingUtils.isParameterizedTest(cl, m)) {
+              Optional<Method> parameterMethod = Arrays.asList(cl.getMethods()).stream()
+                  .filter(method -> method.getAnnotation(Parameters.class) != null).findFirst();
+              if (parameterMethod.isPresent()) {
+                try {
+                  Iterable<Object[]> parameters = (Iterable<Object[]>) parameterMethod.get()
+                      .invoke(null, new Object[]{});
+                  for (Object[] inst : parameters) {
+                    ParameterisedTestCase ptc = new ParameterisedTestCase(cl, m, inst);
+                    sut.addTestCase(ptc);
+                  }
+                } catch (IllegalAccessException e) {
+                  logger.error(e);
+                } catch (InvocationTargetException e) {
+                  logger.error(e);
                 }
-              } catch (IllegalAccessException e) {
-                logger.error(e);
-              } catch (InvocationTargetException e) {
-                logger.error(e);
+              } else {
+                logger
+                    .error("Trying to create parameterized test case that has no parameter method");
               }
             } else {
-              logger.error("Trying to create parameterized test case that has no parameter method");
+              TestCase t = new TestCase(cl, m);
+              sut.addTestCase(t);
             }
-          } else {
-            TestCase t = new TestCase(cl, m);
-            sut.addTestCase(t);
-          }
 
+          }
+        } else {
+          sut.addExtraClass(cl);
+          logger.info("Adding supporting test class " + cl.getName());
         }
-      } else {
-        sut.addExtraClass(cl);
-        logger.info("Adding supporting test class " + cl.getName());
       }
     }
 
@@ -304,6 +308,8 @@ public class Framework implements Serializable {
     } catch (ClassNotFoundException | NoClassDefFoundError e) {
       logger.error(e);
     } catch (IOException e) {
+      logger.error(e);
+    } catch (ExceptionInInitializerError e) {
       logger.error(e);
     }
     return cl;
