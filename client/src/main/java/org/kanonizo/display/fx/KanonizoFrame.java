@@ -1,6 +1,7 @@
 package org.kanonizo.display.fx;
 
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
+import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.Set;
+import java.util.concurrent.locks.Condition;
 import java.util.stream.Collectors;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -50,10 +52,14 @@ import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Screen;
 import javafx.util.StringConverter;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kanonizo.Framework;
 import org.kanonizo.algorithms.SearchAlgorithm;
+import org.kanonizo.annotations.ConditionalParameter;
 import org.kanonizo.annotations.OptionProvider;
 import org.kanonizo.annotations.Prerequisite;
 import org.kanonizo.display.Display;
@@ -182,6 +188,26 @@ public class KanonizoFrame implements Display, Initializable {
       paramField.setTooltip(new Tooltip(param.getAnnotation(Parameter.class).description()));
       paramLayout.add(paramLabel, ++col, row, 1, 1);
       paramLayout.add(paramField, ++col, row, 1, 1);
+      if (param.isAnnotationPresent(ConditionalParameter.class)) {
+        String condition = param.getAnnotation(ConditionalParameter.class).condition();
+        String[] listensTo = param.getAnnotation(ConditionalParameter.class).listensTo().split(",");
+        for (String listen : listensTo) {
+          Util.addPropertyChangeListener(listen, (e) -> {
+            ScriptEngineManager manager = new ScriptEngineManager();
+            ScriptEngine engine = manager.getEngineByName("nashorn");
+            try {
+              Class<?> container = param.getDeclaringClass();
+              engine.put("CallerClass", container);
+              engine.eval("var " + container.getSimpleName() + " = CallerClass.static");
+              boolean cond = (boolean) engine.eval(condition);
+              paramField.setDisable(!cond);
+              paramLabel.setDisable(!cond);
+            } catch (ScriptException ex) {
+              logger.error(ex);
+            }
+          });
+        }
+      }
     }
   }
 
@@ -226,21 +252,22 @@ public class KanonizoFrame implements Display, Initializable {
     } else if (param.getType().equals(File.class)) {
 
       try {
-        Button control = new Button(((File) param.get(null)).getName());
+        Button control = new Button();
+        File paramFile = (File) param.get(null);
+        control.setText(paramFile == null ? "Select File" : paramFile.getName());
         control.setOnAction(ev -> {
           FileChooser fc = new FileChooser();
           File f = fc.showOpenDialog(KanonizoFxApplication.stage);
-          if (f != null) {
-            try {
-              Util.setParameter(param, f.getAbsolutePath());
-              if (runPrerequisites) {
-                addErrors(fw.getAlgorithm());
-              }
-            } catch (IllegalAccessException e) {
-              e.printStackTrace();
+          try {
+            Util.setParameter(param, f == null ? null : f.getAbsolutePath());
+            if (runPrerequisites) {
+              addErrors(fw.getAlgorithm());
             }
-            control.setText(f.getName());
+          } catch (IllegalAccessException e) {
+            e.printStackTrace();
           }
+          control.setText(f == null ? "Select File" : f.getName());
+
         });
         parameterField = control;
       } catch (IllegalAccessException e) {

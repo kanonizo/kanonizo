@@ -1,5 +1,7 @@
 package org.kanonizo.util;
 
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.io.File;
 import java.io.PrintStream;
 import java.lang.reflect.Array;
@@ -147,10 +149,11 @@ public class Util {
     }
     return f;
   }
-
+  private static PropertyChangeSupport changeSupport = new PropertyChangeSupport(Util.class);
   @SuppressWarnings({"unchecked", "rawtypes"})
   public static void setParameter(Field f, String value)
       throws IllegalArgumentException, IllegalAccessException {
+    Object old = f.get(null);
     Class<?> cl = f.getType();
     if (cl.isAssignableFrom(Number.class) || cl.isPrimitive()) {
       if (cl.equals(Long.class) || cl.equals(long.class)) {
@@ -177,13 +180,29 @@ public class Util {
     } else if (cl.isAssignableFrom(String.class)) {
       f.set(null, value);
     } else if (cl.isAssignableFrom(File.class)) {
-      f.set(null, new File(value));
+      f.set(null, value == null ? null : new File(value));
     }
     if (f.getType().isEnum()) {
       f.set(null, Enum.valueOf((Class<Enum>) f.getType(), value.toUpperCase()));
     }
+    changeSupport.firePropertyChange(f.getName(), old, value);
   }
 
+  public static void addPropertyChangeListener(String propertyName, PropertyChangeListener pcl){
+    changeSupport.addPropertyChangeListener(propertyName, pcl);
+  }
+
+  public static void addPropertyChangeListener(PropertyChangeListener pcl){
+    changeSupport.addPropertyChangeListener(pcl);
+  }
+
+  public static void removePropertyChangeListener(String propertyName, PropertyChangeListener pcl){
+    changeSupport.removePropertyChangeListener(propertyName, pcl);
+  }
+
+  public static void removePropertyChangeListener(PropertyChangeListener pcl){
+    changeSupport.removePropertyChangeListener(pcl);
+  }
   private static Reflections r;
 
   public static Reflections getReflections() {
