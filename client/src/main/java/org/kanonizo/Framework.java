@@ -59,7 +59,8 @@ import org.kanonizo.util.Util;
 import org.reflections.Reflections;
 
 public class Framework implements Serializable {
-  @Parameter(key = "forbidden_classnames", description="Some projects have classes that deliberately should not load (e.g. Apache Commons Lang has some enum classes that are designed to fail to load). Use this parameter to prevent these classes from loading",category = "Framework")
+
+  @Parameter(key = "forbidden_classnames", description = "Some projects have classes that deliberately should not load (e.g. Apache Commons Lang has some enum classes that are designed to fail to load). Use this parameter to prevent these classes from loading", category = "Framework")
   public static String FORBIDDEN_CLASSNAMES = "";
 
   private List<TestCaseSelectionListener> listeners = new ArrayList<>();
@@ -210,9 +211,9 @@ public class Framework implements Serializable {
       classes.add(folder);
     }
     /* the default behaviour of listFiles will return files as ordered according to File#compareTo,
-    * which in turn delegates to String#compareTo. This returns internal classes before the class
-    * that defines them, because (int) '.' < (int) '$' - to solve this we sort the files using our
-    * own comparator */
+     * which in turn delegates to String#compareTo. This returns internal classes before the class
+     * that defines them, because (int) '.' < (int) '$' - to solve this we sort the files using our
+     * own comparator */
     classes.sort((o1, o2) -> compareFileNames(o1.getPath(), o2.getPath()));
     return classes;
   }
@@ -307,11 +308,14 @@ public class Framework implements Serializable {
       ClassParser parser = new ClassParser(file.getAbsolutePath());
       JavaClass jcl = parser.parse();
       List<String> forbiddenClasses = Arrays.asList(FORBIDDEN_CLASSNAMES.split(","));
-      if(forbiddenClasses.stream().anyMatch(f -> jcl.getClassName().substring(jcl.getPackageName().length() + 1).startsWith(f))){
-        logger.info("Ignoring class "+jcl.getClassName()+ " because it is forbidden");
+      forbiddenClasses = forbiddenClasses.stream().filter(name -> !name.isEmpty()).collect(Collectors.toList());
+      if (forbiddenClasses.size() > 0 && forbiddenClasses.stream().anyMatch(
+          f -> jcl.getClassName().substring(jcl.getPackageName().length() + 1).startsWith(f))) {
+        logger.info("Ignoring class " + jcl.getClassName() + " because it is forbidden");
         return null;
       } else {
-        cl = Class.forName(jcl.getClassName(), true, Thread.currentThread().getContextClassLoader());
+        cl = Class
+            .forName(jcl.getClassName(), true, Thread.currentThread().getContextClassLoader());
       }
 
     } catch (ClassNotFoundException | NoClassDefFoundError e) {
