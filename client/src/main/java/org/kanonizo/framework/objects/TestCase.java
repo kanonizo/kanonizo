@@ -5,6 +5,7 @@ import com.scythe.instrumenter.InstrumentationProperties.Parameter;
 import com.scythe.instrumenter.analysis.task.AbstractTask;
 import com.scythe.instrumenter.analysis.task.Task;
 import com.scythe.instrumenter.analysis.task.TaskTimer;
+import java.io.File;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
@@ -12,7 +13,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.logging.log4j.LogManager;
@@ -33,6 +33,9 @@ public class TestCase {
 
   @Parameter(key = "use_timeout", description = "Whether or not to use the test case timeout defined by Properties.TIMEOUT. Since for deterministic test cases we should not be expecting any infinite loops, it becomes less likely that timeouts will be hit", category = "TCP")
   public static boolean USE_TIMEOUT = true;
+
+  @Parameter(key = "execute_in_root_folder", description = "Test cases by default execute in the directory from which kanonizo is executed from. Using this flag forces them to execute in the project root. Ensure project root is not null for correct results", category = "Test Case")
+  public static boolean EXECUTE_IN_ROOT_FOLDER = false;
 
   private static final TimeUnit UNIT = TimeUnit.MILLISECONDS;
   private final Logger logger = LogManager.getLogger(TestCase.class);
@@ -81,6 +84,10 @@ public class TestCase {
     Task timerTask = new TestCaseExecutionTimer(testClass.getName(), testMethod.getName());
     if (InstrumentationProperties.LOG) {
       TaskTimer.taskStart(timerTask);
+    }
+    File rootFolder;
+    if(EXECUTE_IN_ROOT_FOLDER && (rootFolder = Framework.getInstance().getRootFolder()) != null){
+      System.setProperty("user.dir", rootFolder.getAbsolutePath());
     }
     KanonizoTestRunner testCaseRunner = TestingUtils.isJUnit4Class(testClass) ? new JUnit4TestRunner() : new JUnit3TestRunner();
     KanonizoTestResult result = null;

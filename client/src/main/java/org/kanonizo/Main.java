@@ -120,10 +120,13 @@ public class Main {
     // relative path
     file = Util.getFile(folder);
     fw.setSourceFolder(file);
-    File root = file.getParentFile().getParentFile();
-    if (MavenAnalyser.isMavenProject(root) && fw.getLibraries().isEmpty()) {
-      MavenAnalyser.addMavenDependencies(root);
+    if(line.hasOption(TestSuitePrioritisation.ROOT_FOLDER_SHORT)){
+      fw.setRootFolder(Util.getFile(line.getOptionValue(TestSuitePrioritisation.ROOT_FOLDER_SHORT)));
     }
+    File root = fw.getRootFolder() != null ? fw.getRootFolder() : file.getParentFile().getParentFile();
+//    if (MavenAnalyser.isMavenProject(root) && fw.getLibraries().isEmpty()) {
+//      MavenAnalyser.addMavenDependencies(root);
+//    }
     // test folder
     folder = line.getOptionValue("t");
     // relative path

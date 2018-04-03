@@ -2,6 +2,7 @@ package org.kanonizo;
 
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
 import java.lang.reflect.Field;
+import java.util.Optional;
 import java.util.Set;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -24,6 +25,8 @@ public class TestSuitePrioritisation {
   private static final String LIB_FOLDER_LONG = "libFolder";
   public static final String GUI_SHORT = "g";
   public static final String GUI_LONG = "gui";
+  public static final String ROOT_FOLDER_SHORT = "r";
+  public static final String ROOT_FOLDER_LONG = "root";
 
   private static Logger logger = LogManager.getLogger(TestSuitePrioritisation.class);
 
@@ -54,8 +57,10 @@ public class TestSuitePrioritisation {
             "Library of all jar files required in order to run the source or the tests. This is an optional parameter, in the case of this project being controlled by maven dependencies will be automatically resolved assuming a project structure of {project_root}/target/classes and {project_root}/target/tests")
         .hasArgs().longOpt(LIB_FOLDER_LONG).build();
     options.addOption(libFolder);
-    Option noGui = Option.builder(GUI_SHORT).longOpt(GUI_LONG).desc("Option to disable to gui. To use this option, the user must specify the source, lib and test folders on the command line.").build();
+    Option noGui = Option.builder(GUI_SHORT).desc("Option to enable to gui").longOpt(GUI_LONG).build();
     options.addOption(noGui);
+    Option root = Option.builder(ROOT_FOLDER_SHORT).desc("Root folder of the target project").longOpt(ROOT_FOLDER_LONG).hasArg().build();
+    options.addOption(root);
     return options;
   }
 
@@ -67,9 +72,13 @@ public class TestSuitePrioritisation {
     java.util.Properties properties = line.getOptionProperties(PROPERTY);
     if (properties != null) {
       for (String property : properties.stringPropertyNames()) {
-        Field f = parameters.stream().filter(field -> (field.getAnnotation(Parameter.class)).key().equals(property)).findFirst().get();
+        Optional<Field> f = parameters.stream().filter(field -> (field.getAnnotation(Parameter.class)).key().equals(property)).findFirst();
+        if(!f.isPresent()){
+          logger.info("Ignoring parameter "+property+ " because it could not be found in any class file");
+          continue;
+        }
         try {
-          Util.setParameter(f, properties.getProperty(property));
+          Util.setParameter(f.get(), properties.getProperty(property));
         } catch (IllegalAccessException e) {
           e.printStackTrace();
         }
