@@ -23,6 +23,8 @@ import org.junit.runner.manipulation.Filter;
 import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.Parameterized;
+import org.junit.runners.ParentRunner;
+import org.junit.runners.Suite;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.parameterized.BlockJUnit4ClassRunnerWithParameters;
 import org.kanonizo.framework.objects.ParameterisedTestCase;
@@ -128,14 +130,28 @@ public class JUnit4TestRunner implements KanonizoTestRunner {
       final List children = new ArrayList<>(super.getChildren());
       for(Iterator<?> it = children.iterator(); it.hasNext();){
         try {
-          final BlockJUnit4ClassRunnerWithParameters child = (BlockJUnit4ClassRunnerWithParameters) it.next();
-          final Field testParameterField = BlockJUnit4ClassRunnerWithParameters.class.getDeclaredField("parameters");
-          testParameterField.setAccessible(true);
-          final Object[] testParameters = (Object[]) testParameterField.get(child);
-          if(!Arrays.equals(testParameters, parameters)){
+          Object[] testParameters = null;
+          Object child = it.next();
+          if(child instanceof BlockJUnit4ClassRunnerWithParameters){
+            final BlockJUnit4ClassRunnerWithParameters c = (BlockJUnit4ClassRunnerWithParameters) it.next();
+            final Field testParameterField = BlockJUnit4ClassRunnerWithParameters.class.getDeclaredField("parameters");
+            testParameterField.setAccessible(true);
+            testParameters = (Object[]) testParameterField.get(c);
+          } else {
+            Class<?> childRunner = child.getClass();
+            try{
+              Field f = childRunner.getDeclaredField("fParameters");
+              f.setAccessible(true);
+              testParameters = (Object[]) f.get(child);
+            }catch(NoSuchFieldException e){
+              e.printStackTrace();
+            }
+          }
+
+          if(!Arrays.deepEquals(testParameters, parameters)){
             it.remove();
           }
-          child.filter(new Filter(){
+          ((ParentRunner)child).filter(new Filter(){
 
             @Override
             public boolean shouldRun(Description description) {
