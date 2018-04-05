@@ -126,6 +126,10 @@ public class TestCase {
   }
 
   public List<KanonizoTestFailure> getFailures() {
+    if(result == null){
+      logger.info("No result for test case "+this);
+      return null;
+    }
     return Collections.unmodifiableList(result.getFailures());
   }
 
