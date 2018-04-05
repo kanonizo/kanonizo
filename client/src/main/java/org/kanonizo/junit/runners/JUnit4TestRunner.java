@@ -24,9 +24,7 @@ import org.junit.runner.notification.RunNotifier;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.Parameterized;
 import org.junit.runners.ParentRunner;
-import org.junit.runners.Suite;
 import org.junit.runners.model.FrameworkMethod;
-import org.junit.runners.parameterized.BlockJUnit4ClassRunnerWithParameters;
 import org.kanonizo.framework.objects.ParameterisedTestCase;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.junit.KanonizoTestFailure;
@@ -58,7 +56,7 @@ public class JUnit4TestRunner implements KanonizoTestRunner {
         final Class<? extends Runner> runnerClass = runWith.value();
         if (runnerClass.isAssignableFrom(Parameterized.class)) {
           try {
-            if(tc instanceof ParameterisedTestCase){
+            if (tc instanceof ParameterisedTestCase) {
               ParameterisedTestCase ptc = (ParameterisedTestCase) tc;
               Class.forName(
                   "org.junit.runners.BlockJUnit4ClassRunner"); //ignore IgnoreIgnored for junit4.4 and <
@@ -120,6 +118,8 @@ public class JUnit4TestRunner implements KanonizoTestRunner {
 
     private final String myMethodName;
     private final Object[] parameters;
+    private static final Logger logger = LogManager.getLogger(ParameterizedMethodRunner.class);
+
     public ParameterizedMethodRunner(Class clazz, String methodName, Object[] parameters) throws Throwable {
       super(clazz);
       myMethodName = methodName;
@@ -128,30 +128,29 @@ public class JUnit4TestRunner implements KanonizoTestRunner {
 
     protected List getChildren() {
       final List children = new ArrayList<>(super.getChildren());
-      for(Iterator<?> it = children.iterator(); it.hasNext();){
+      for (Iterator<?> it = children.iterator(); it.hasNext(); ) {
         try {
           Object[] testParameters = null;
           Object child = it.next();
-          if(child instanceof BlockJUnit4ClassRunnerWithParameters){
-            final BlockJUnit4ClassRunnerWithParameters c = (BlockJUnit4ClassRunnerWithParameters) it.next();
-            final Field testParameterField = BlockJUnit4ClassRunnerWithParameters.class.getDeclaredField("parameters");
-            testParameterField.setAccessible(true);
-            testParameters = (Object[]) testParameterField.get(c);
-          } else {
-            Class<?> childRunner = child.getClass();
+          Class<?> childRunner = child.getClass();
+          Field parameterField = null;
+          try {
+            parameterField = childRunner.getDeclaredField("fParameters");
+          } catch (NoSuchFieldException e) {
             try{
-              Field f = childRunner.getDeclaredField("fParameters");
-              f.setAccessible(true);
-              testParameters = (Object[]) f.get(child);
-            }catch(NoSuchFieldException e){
-              e.printStackTrace();
+              parameterField = childRunner.getDeclaredField("parameters");
+            }catch(NoSuchFieldException e1){
+              logger.error("Couldn't find field fParameters or parameters in parameterised test class");
             }
           }
+          parameterField.setAccessible(true);
+          testParameters = (Object[]) parameterField.get(child);
 
-          if(!Arrays.deepEquals(testParameters, parameters)){
+
+          if (!Arrays.deepEquals(testParameters, parameters)) {
             it.remove();
           }
-          ((ParentRunner)child).filter(new Filter(){
+          ((ParentRunner) child).filter(new Filter() {
 
             @Override
             public boolean shouldRun(Description description) {
