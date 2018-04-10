@@ -315,7 +315,7 @@ public class Framework implements Serializable {
         return null;
       } else {
         cl = Class
-            .forName(jcl.getClassName(), true, Thread.currentThread().getContextClassLoader());
+            .forName(jcl.getClassName(), false, Thread.currentThread().getContextClassLoader());
       }
 
     } catch (ClassNotFoundException | NoClassDefFoundError e) {
