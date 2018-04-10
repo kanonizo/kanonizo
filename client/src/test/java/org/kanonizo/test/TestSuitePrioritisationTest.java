@@ -7,8 +7,13 @@ import static org.mockito.Mockito.when;
 
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import org.apache.commons.cli.CommandLine;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.kanonizo.Properties;
@@ -24,12 +29,36 @@ public class TestSuitePrioritisationTest extends MockitoTest {
   private java.util.Properties props = new java.util.Properties();
   private Reflections r = Util.getReflections();
   private Set<Field> parameters;
+  private Map<Field, Object> values = new HashMap<>();
 
   @Before
   public void setup() {
     props.clear();
     parameters = r.getFieldsAnnotatedWith(Parameter.class);
+    for (Field f : parameters) {
+      try {
+        if(!f.isAccessible()){
+          f.setAccessible(true);
+        }
+        values.put(f, f.get(null));
+      } catch (IllegalAccessException e) {
+        e.printStackTrace();
+      }
+    }
     when(line.getOptionProperties("D")).thenReturn(props);
+  }
+
+  @After
+  public void tearDown() throws IllegalAccessException {
+    for(Entry<Field, Object> param : values.entrySet()){
+      Object p = param.getValue();
+      if(p == null){
+        p = "null";
+      }
+      if(!Modifier.isFinal(param.getKey().getModifiers())) {
+        Util.setParameter(param.getKey(), p.toString());
+      }
+    }
   }
 
   @Test
