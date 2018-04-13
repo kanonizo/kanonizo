@@ -201,6 +201,11 @@ public class TestCase {
     return Description.createTestDescription(testClass, testMethod.getName()).toString();
   }
 
+  @Override
+  protected void finalize() throws Throwable {
+    super.finalize();
+  }
+
   private static final class TestCaseExecutionTimer extends AbstractTask {
     private String testClass;
     private String testMethod;

@@ -1,11 +1,16 @@
 package org.kanonizo.junit;
 
+import com.scythe.util.ArrayUtils;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import junit.framework.TestSuite;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -66,4 +71,29 @@ public class TestingUtils {
     }
     return testMethods;
   }
+
+  public static boolean isSuiteContainer(TestSuite suite) {
+    return suite.testCount() > 1 && Util.enumerationToList(suite.tests()).stream()
+        .anyMatch(t -> t instanceof TestSuite && ((TestSuite) t).testCount() > 1);
+  }
+
+
+  public static TestSuite getTestSuite(Class<?> cl) {
+    try {
+      Method suite = cl.getMethod("suite");
+      junit.framework.Test testSuite = (junit.framework.Test) suite.invoke(null);
+      if (testSuite instanceof TestSuite) {
+        TestSuite ts = (TestSuite) testSuite;
+        return ts;
+      }
+    } catch (NoSuchMethodException e) {
+
+    } catch (IllegalAccessException e) {
+      e.printStackTrace();
+    } catch (InvocationTargetException e) {
+      e.printStackTrace();
+    }
+    return null;
+  }
+
 }

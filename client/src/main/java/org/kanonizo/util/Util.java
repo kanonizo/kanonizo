@@ -317,4 +317,12 @@ public class Util {
     }
     return ret;
   }
+
+  public static <T> List<T> enumerationToList(Enumeration<T> enumeration){
+    ArrayList<T> ret = new ArrayList<>();
+    while(enumeration.hasMoreElements()){
+      ret.add(enumeration.nextElement());
+    }
+    return ret;
+  }
 }

@@ -23,7 +23,9 @@ public class SystemUnderTest implements Cloneable {
   }
 
   public void addTestCase(TestCase testCase) {
-    suite.addTestCase(testCase);
+    if(!suite.contains(testCase)) {
+      suite.addTestCase(testCase);
+    }
   }
 
   public TestSuite getTestSuite() {

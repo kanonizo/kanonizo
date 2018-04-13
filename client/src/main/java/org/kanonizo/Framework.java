@@ -7,7 +7,6 @@ import com.google.gson.annotations.Expose;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
-import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.File;
@@ -21,12 +20,14 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
+import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import junit.framework.Test;
+import junit.framework.TestSuite;
 import org.apache.bcel.classfile.ClassParser;
 import org.apache.bcel.classfile.JavaClass;
 import org.apache.logging.log4j.LogManager;
@@ -62,6 +63,8 @@ public class Framework implements Serializable {
 
   @Parameter(key = "forbidden_classnames", description = "Some projects have classes that deliberately should not load (e.g. Apache Commons Lang has some enum classes that are designed to fail to load). Use this parameter to prevent these classes from loading", category = "Framework")
   public static String FORBIDDEN_CLASSNAMES = "";
+  @Parameter(key = "use_suite_methods", description = "Many JUnit3 style test cases come with a \"suite\" method, that determines which test classes/test cases should be run. This flag tells Kanonizo to use the suite methods to find test cases instead of using reflection", category = "Framework")
+  public static boolean USE_SUITE_METHODS = false;
 
   private List<TestCaseSelectionListener> listeners = new ArrayList<>();
 
@@ -261,34 +264,44 @@ public class Framework implements Serializable {
       Class<?> cl = loadClassFromFile(file);
       if (cl != null) {
         if (Util.isTestClass(cl)) {
-          List<Method> testMethods = TestingUtils.getTestMethods(cl);
-          logger.info("Adding " + testMethods.size() + " test methods from " + cl.getName());
-          for (Method m : testMethods) {
-            if (TestingUtils.isParameterizedTest(cl, m)) {
-              Optional<Method> parameterMethod = Arrays.asList(cl.getMethods()).stream()
-                  .filter(method -> method.getAnnotation(Parameters.class) != null).findFirst();
-              if (parameterMethod.isPresent()) {
-                try {
-                  Iterable<Object[]> parameters = (Iterable<Object[]>) parameterMethod.get()
-                      .invoke(null, new Object[]{});
-                  for (Object[] inst : parameters) {
-                    ParameterisedTestCase ptc = new ParameterisedTestCase(cl, m, inst);
-                    sut.addTestCase(ptc);
+          if (USE_SUITE_METHODS) {
+            TestSuite ts = TestingUtils.getTestSuite(cl);
+            if (ts != null) {
+              if (TestingUtils.isSuiteContainer(ts)) {
+                logger.info("Found test suite in class " + cl.getSimpleName());
+                collectTestCases(ts, sut);
+              }
+            }
+          } else {
+            List<Method> testMethods = TestingUtils.getTestMethods(cl);
+            logger.info("Adding " + testMethods.size() + " test methods from " + cl.getName());
+            for (Method m : testMethods) {
+              if (TestingUtils.isParameterizedTest(cl, m)) {
+                Optional<Method> parameterMethod = Arrays.asList(cl.getMethods()).stream()
+                    .filter(method -> method.getAnnotation(Parameters.class) != null).findFirst();
+                if (parameterMethod.isPresent()) {
+                  try {
+                    Iterable<Object[]> parameters = (Iterable<Object[]>) parameterMethod.get()
+                        .invoke(null, new Object[]{});
+                    for (Object[] inst : parameters) {
+                      ParameterisedTestCase ptc = new ParameterisedTestCase(cl, m, inst);
+                      sut.addTestCase(ptc);
+                    }
+                  } catch (IllegalAccessException e) {
+                    logger.error(e);
+                  } catch (InvocationTargetException e) {
+                    logger.error(e);
                   }
-                } catch (IllegalAccessException e) {
-                  logger.error(e);
-                } catch (InvocationTargetException e) {
-                  logger.error(e);
+                } else {
+                  logger
+                      .error(
+                          "Trying to create parameterized test case that has no parameter method");
                 }
               } else {
-                logger
-                    .error("Trying to create parameterized test case that has no parameter method");
+                TestCase t = new TestCase(cl, m);
+                sut.addTestCase(t);
               }
-            } else {
-              TestCase t = new TestCase(cl, m);
-              sut.addTestCase(t);
             }
-
           }
         } else {
           sut.addExtraClass(cl);
@@ -302,13 +315,41 @@ public class Framework implements Serializable {
         + " classes and " + sut.getTestSuite().size() + " test cases");
   }
 
+  private void collectTestCases(TestSuite suite, SystemUnderTest sut) {
+    Enumeration<Test> tests = suite.tests();
+    if (TestingUtils.isSuiteContainer(suite)) {
+      while (tests.hasMoreElements()) {
+        junit.framework.Test next = tests.nextElement();
+        collectTestCases((TestSuite) next, sut);
+      }
+    } else {
+      logger.info("Adding " + suite.testCount() + " test cases from " + suite.getName());
+      while (tests.hasMoreElements()) {
+        junit.framework.Test next = tests.nextElement();
+        if (next instanceof junit.framework.TestCase) {
+          junit.framework.TestCase nextCase = (junit.framework.TestCase) next;
+          Class<? extends Test> testClass = next.getClass();
+          try {
+            Method m = testClass.getMethod(nextCase.getName());
+            TestCase tc = new TestCase(testClass, m);
+            sut.addTestCase(tc);
+          } catch (NoSuchMethodException e) {
+
+          }
+
+        }
+      }
+    }
+  }
+
   private Class<?> loadClassFromFile(File file) {
     Class<?> cl = null;
     try {
       ClassParser parser = new ClassParser(file.getAbsolutePath());
       JavaClass jcl = parser.parse();
       List<String> forbiddenClasses = Arrays.asList(FORBIDDEN_CLASSNAMES.split(","));
-      forbiddenClasses = forbiddenClasses.stream().filter(name -> !name.isEmpty()).collect(Collectors.toList());
+      forbiddenClasses = forbiddenClasses.stream().filter(name -> !name.isEmpty())
+          .collect(Collectors.toList());
       if (forbiddenClasses.size() > 0 && forbiddenClasses.stream().anyMatch(
           f -> jcl.getClassName().substring(jcl.getPackageName().length() + 1).startsWith(f))) {
         logger.info("Ignoring class " + jcl.getClassName() + " because it is forbidden");

@@ -233,6 +233,10 @@ public class TestSuite implements Comparable<TestSuite>, Disposable {
     evaluateFitness();
   }
 
+  public boolean contains(TestCase tc){
+    return testCases.stream().anyMatch(tc2 -> tc2.equals(tc));
+  }
+
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
