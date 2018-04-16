@@ -32,6 +32,7 @@ import org.apache.bcel.classfile.ClassParser;
 import org.apache.bcel.classfile.JavaClass;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.junit.runner.Description;
 import org.junit.runners.Parameterized.Parameters;
 import org.kanonizo.algorithms.MutationSearchAlgorithm;
 import org.kanonizo.algorithms.SearchAlgorithm;
@@ -44,6 +45,7 @@ import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.annotations.Prerequisite;
 import org.kanonizo.display.Display;
 import org.kanonizo.display.NullDisplay;
+import org.kanonizo.framework.TestCaseStore;
 import org.kanonizo.framework.instrumentation.Instrumenter;
 import org.kanonizo.framework.objects.ClassUnderTest;
 import org.kanonizo.framework.objects.ParameterisedTestCase;
@@ -179,7 +181,7 @@ public class Framework implements Serializable {
    * dependencies through using maven as a system tool
    *
    * @param lib - a library folder containing JAR files that are required for the test cases to
-   * execute properly
+   *            execute properly
    */
   public void addLibrary(File lib) {
     if (lib.isDirectory()) {
@@ -260,47 +262,45 @@ public class Framework implements Serializable {
     }
     Premain.instrument = false;
     List<File> testFiles = findClasses(testFolder);
+    List<TestSuite> testSuites = new ArrayList<>();
     for (File file : testFiles) {
       Class<?> cl = loadClassFromFile(file);
       if (cl != null) {
         if (Util.isTestClass(cl)) {
-          if (USE_SUITE_METHODS) {
-            TestSuite ts = TestingUtils.getTestSuite(cl);
-            if (ts != null) {
-              if (TestingUtils.isSuiteContainer(ts)) {
-                logger.info("Found test suite in class " + cl.getSimpleName());
-                collectTestCases(ts, sut);
-              }
+          TestSuite ts = TestingUtils.getTestSuite(cl);
+          if (ts != null) {
+            if (TestingUtils.isSuiteContainer(ts)) {
+              logger.info("Found test suite in class " + cl.getSimpleName());
+              testSuites.add(ts);
             }
-          } else {
-            List<Method> testMethods = TestingUtils.getTestMethods(cl);
-            logger.info("Adding " + testMethods.size() + " test methods from " + cl.getName());
-            for (Method m : testMethods) {
-              if (TestingUtils.isParameterizedTest(cl, m)) {
-                Optional<Method> parameterMethod = Arrays.asList(cl.getMethods()).stream()
-                    .filter(method -> method.getAnnotation(Parameters.class) != null).findFirst();
-                if (parameterMethod.isPresent()) {
-                  try {
-                    Iterable<Object[]> parameters = (Iterable<Object[]>) parameterMethod.get()
-                        .invoke(null, new Object[]{});
-                    for (Object[] inst : parameters) {
-                      ParameterisedTestCase ptc = new ParameterisedTestCase(cl, m, inst);
-                      sut.addTestCase(ptc);
-                    }
-                  } catch (IllegalAccessException e) {
-                    logger.error(e);
-                  } catch (InvocationTargetException e) {
-                    logger.error(e);
+          }
+          List<Method> testMethods = TestingUtils.getTestMethods(cl);
+          logger.info("Adding " + testMethods.size() + " test methods from " + cl.getName());
+          for (Method m : testMethods) {
+            if (TestingUtils.isParameterizedTest(cl, m)) {
+              Optional<Method> parameterMethod = Arrays.asList(cl.getMethods()).stream()
+                  .filter(method -> method.getAnnotation(Parameters.class) != null).findFirst();
+              if (parameterMethod.isPresent()) {
+                try {
+                  Iterable<Object[]> parameters = (Iterable<Object[]>) parameterMethod.get()
+                      .invoke(null, new Object[]{});
+                  for (Object[] inst : parameters) {
+                    ParameterisedTestCase ptc = new ParameterisedTestCase(cl, m, inst);
+                    sut.addTestCase(ptc);
                   }
-                } else {
-                  logger
-                      .error(
-                          "Trying to create parameterized test case that has no parameter method");
+                } catch (IllegalAccessException e) {
+                  logger.error(e);
+                } catch (InvocationTargetException e) {
+                  logger.error(e);
                 }
               } else {
-                TestCase t = new TestCase(cl, m);
-                sut.addTestCase(t);
+                logger
+                    .error(
+                        "Trying to create parameterized test case that has no parameter method");
               }
+            } else {
+              TestCase t = new TestCase(cl, m);
+              sut.addTestCase(t);
             }
           }
         } else {
@@ -309,18 +309,28 @@ public class Framework implements Serializable {
         }
       }
     }
-
+    if(testSuites.size() > 0){
+      sut.getTestSuite().clear();
+      for(TestSuite ts : testSuites){
+        List<TestCase> testCases = collectTestCases(ts);
+        for(TestCase tc : testCases){
+          if(!sut.getTestSuite().contains(tc)) {
+            sut.getTestSuite().addTestCase(tc);
+          }
+        }
+      }
+    }
     ClassUnderTest.resetCount();
-    logger.info("Finished adding source and test files. Total " + sut.getClassesUnderTest().size()
-        + " classes and " + sut.getTestSuite().size() + " test cases");
+    logger.info("Finished adding source and test files. Total " + sut.getClassesUnderTest().size() + " classes and " + sut.getTestSuite().size() + " test cases");
   }
 
-  private void collectTestCases(TestSuite suite, SystemUnderTest sut) {
+  private List<TestCase> collectTestCases(TestSuite suite) {
+    List<TestCase> retTests = new ArrayList<>();
     Enumeration<Test> tests = suite.tests();
     if (TestingUtils.isSuiteContainer(suite)) {
       while (tests.hasMoreElements()) {
         junit.framework.Test next = tests.nextElement();
-        collectTestCases((TestSuite) next, sut);
+        retTests.addAll(collectTestCases((TestSuite) next));
       }
     } else {
       logger.info("Adding " + suite.testCount() + " test cases from " + suite.getName());
@@ -331,8 +341,7 @@ public class Framework implements Serializable {
           Class<? extends Test> testClass = next.getClass();
           try {
             Method m = testClass.getMethod(nextCase.getName());
-            TestCase tc = new TestCase(testClass, m);
-            sut.addTestCase(tc);
+            retTests.add(TestCaseStore.with(Description.createTestDescription(testClass, m.getName()).toString()));
           } catch (NoSuchMethodException e) {
 
           }
@@ -340,6 +349,7 @@ public class Framework implements Serializable {
         }
       }
     }
+    return retTests;
   }
 
   private Class<?> loadClassFromFile(File file) {

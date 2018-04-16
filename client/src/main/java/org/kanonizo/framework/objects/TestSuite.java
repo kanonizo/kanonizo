@@ -63,6 +63,10 @@ public class TestSuite implements Comparable<TestSuite>, Disposable {
     return new ArrayList<>(testCases);
   }
 
+  public void clear(){
+    testCases.clear();
+  }
+
   public List<Integer> getIds() {
     return testCases.stream().map(TestCase::getId).collect(Collectors.toList());
   }
