@@ -64,16 +64,9 @@ public class ScytheInstrumenter implements Instrumenter {
   public static File SCYTHE_FILE = new File("scythe_coverage.json");
 
   private TestSuite testSuite;
-  private static Logger logger;
+  private static Logger logger = LogManager.getLogger(ScytheInstrumenter.class);;
   private Map<TestCase, Set<org.kanonizo.framework.objects.Line>> linesCovered = new HashMap<>();
   private Map<TestCase, Set<org.kanonizo.framework.objects.Branch>> branchesCovered = new HashMap<>();
-
-  static {
-    logger = LogManager.getLogger(ScytheInstrumenter.class);
-
-    InstrumentationProperties.INSTRUMENT_BRANCHES = false;
-
-  }
 
   private static final String[] forbiddenPackages = new String[]{"org/kanonizo", "org/junit",
       "org/apache/commons/cli", "junit", "org/apache/bcel", "org/apache/logging/log4j",

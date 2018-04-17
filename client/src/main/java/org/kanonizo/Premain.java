@@ -30,7 +30,6 @@ public class Premain {
     }
 
     InstrumentingClassLoader loader = InstrumentingClassLoader.getInstance();
-    InstrumentationProperties.INSTRUMENT_BRANCHES = false;
     InstrumentationProperties.WRITE_CLASS_IF_MODIFIED = true;
     instr.addTransformer((l, n, c, p, buf) -> {
       try {
