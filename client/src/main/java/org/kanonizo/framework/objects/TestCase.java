@@ -86,10 +86,15 @@ public class TestCase {
       TaskTimer.taskStart(timerTask);
     }
     File rootFolder;
-    if(EXECUTE_IN_ROOT_FOLDER && (rootFolder = Framework.getInstance().getRootFolder()) != null){
+    if (EXECUTE_IN_ROOT_FOLDER && (rootFolder = Framework.getInstance().getRootFolder()) != null) {
       System.setProperty("user.dir", rootFolder.getAbsolutePath());
     }
-    KanonizoTestRunner testCaseRunner = TestingUtils.isJUnit4Class(testClass) ? new JUnit4TestRunner() : new JUnit3TestRunner();
+    KanonizoTestRunner testCaseRunner;
+    if (TestingUtils.isJUnit4Class(testClass)) {
+      testCaseRunner = new JUnit4TestRunner(this);
+    } else {
+      testCaseRunner = new JUnit3TestRunner();
+    }
     KanonizoTestResult result = null;
     if (USE_TIMEOUT) {
       ExecutorService service = Executors.newSingleThreadExecutor();
@@ -126,8 +131,8 @@ public class TestCase {
   }
 
   public List<KanonizoTestFailure> getFailures() {
-    if(result == null){
-      logger.info("No result for test case "+this);
+    if (result == null) {
+      logger.info("No result for test case " + this);
       return Collections.emptyList();
     }
     return Collections.unmodifiableList(result.getFailures());

@@ -1,6 +1,8 @@
 package org.kanonizo.junit.runners;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -10,8 +12,10 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.AssumptionViolatedException;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.internal.requests.ClassRequest;
+import org.junit.internal.runners.ErrorReportingRunner;
 import org.junit.internal.runners.model.EachTestNotifier;
 import org.junit.runner.Description;
 import org.junit.runner.JUnitCore;
@@ -25,15 +29,25 @@ import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.Parameterized;
 import org.junit.runners.ParentRunner;
 import org.junit.runners.model.FrameworkMethod;
+import org.junit.runners.model.InitializationError;
+import org.junit.runners.model.Statement;
+import org.junit.runners.model.TestClass;
 import org.kanonizo.framework.objects.ParameterisedTestCase;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.junit.KanonizoTestFailure;
 import org.kanonizo.junit.KanonizoTestResult;
+import org.kanonizo.util.Util;
 
 public class JUnit4TestRunner implements KanonizoTestRunner {
 
   private final Logger logger = LogManager.getLogger(JUnit4TestRunner.class);
+  private static List<TestClass> initialisedClasses = new ArrayList<>();
   private JUnitCore runner = new JUnitCore();
+  private TestCase testCase;
+
+  public JUnit4TestRunner(TestCase tc) {
+    this.testCase = tc;
+  }
 
   @Override
   public KanonizoTestResult runTest(TestCase tc) {
@@ -66,6 +80,16 @@ public class JUnit4TestRunner implements KanonizoTestRunner {
           } catch (Throwable thrown) {
             logger.error(thrown);
           }
+        } else {
+          Constructor<?> con = Util.getConstructor(runnerClass, new Class[]{Class.class});
+          if(con != null) {
+            try {
+              Runner runner = (Runner) con.newInstance(new Object[]{testClass});
+              return Request.runner(runner).filterWith(Description.createTestDescription(testClass, testMethod.getName()));
+            } catch (InvocationTargetException e) {
+
+            }
+          }
         }
       } else {
         if (testMethod != null
@@ -86,8 +110,30 @@ public class JUnit4TestRunner implements KanonizoTestRunner {
     } catch (Exception ignored) {
       logger.error(ignored);
     }
-    return Request.method(testClass, testMethod.getName());
+    return new Request() {
+      @Override
+      public Runner getRunner() {
+        try {
+          return new BlockJUnit4ClassRunner(testCase.getTestClass()) {
+            @Override
+            protected Statement withBeforeClasses(Statement statement) {
+              List<FrameworkMethod> beforeClass = getTestClass().getAnnotatedMethods(BeforeClass.class);
+              TestClass testClass = getTestClass();
+              if (beforeClass.size() > 0 && !initialisedClasses.stream().anyMatch(tc -> tc.getJavaClass().equals(testClass.getJavaClass()))) {
+                initialisedClasses.add(testClass);
+                return super.withBeforeClasses(statement);
+              } else {
+                return statement;
+              }
+            }
+          };
+        } catch (InitializationError e) {
+          return new ErrorReportingRunner(tc.getTestClass(), e);
+        }
+      }
+    }.filterWith(Description.createTestDescription(testClass, testMethod.getName()));
   }
+
 
   private static class IgnoreIgnoredTestJUnit4ClassRunner extends BlockJUnit4ClassRunner
 
@@ -137,9 +183,9 @@ public class JUnit4TestRunner implements KanonizoTestRunner {
           try {
             parameterField = childRunner.getDeclaredField("fParameters");
           } catch (NoSuchFieldException e) {
-            try{
+            try {
               parameterField = childRunner.getDeclaredField("parameters");
-            }catch(NoSuchFieldException e1){
+            } catch (NoSuchFieldException e1) {
               logger.error("Couldn't find field fParameters or parameters in parameterised test class");
             }
           }
