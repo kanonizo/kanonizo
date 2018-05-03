@@ -228,5 +228,4 @@
     </dependencies>
     <properties>
     </properties>
-    <packaging>ejb</packaging>
 </project>
