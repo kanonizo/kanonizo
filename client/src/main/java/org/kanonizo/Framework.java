@@ -442,7 +442,7 @@ public class Framework implements Serializable {
     }
     TestCaseOrderingWriter writer = new TestCaseOrderingWriter(algorithm);
     addWriter(writer);
-    addWriter(new CoverageWriter(sut));
+    //addWriter(new CoverageWriter(sut));
     addWriter(new MiscStatsWriter(algorithm));
     if (Properties.PRIORITISE) {
       algorithm.start();
