@@ -341,7 +341,13 @@ public class Framework implements Serializable {
           Class<? extends Test> testClass = next.getClass();
           try {
             Method m = testClass.getMethod(nextCase.getName());
-            retTests.add(TestCaseStore.with(Description.createTestDescription(testClass, m.getName()).toString()));
+            String desc = Description.createTestDescription(testClass, m.getName()).toString();
+            TestCase tc = TestCaseStore.with(desc);
+            // some test cases never get added to the test case store because kanonizo doesn't recognise them
+            // as test cases. To prevent NPEs later on we only at test cases that are registered in the store
+            if(tc != null){
+              retTests.add(tc);
+            }
           } catch (NoSuchMethodException e) {
 
           }
