@@ -118,7 +118,7 @@ public class TestCase {
     }
   }
 
-  private void setResult(KanonizoTestResult result) {
+  public void setResult(KanonizoTestResult result) {
     this.result = result;
   }
 

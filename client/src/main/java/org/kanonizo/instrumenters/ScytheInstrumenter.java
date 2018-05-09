@@ -42,6 +42,7 @@ import org.kanonizo.framework.objects.LineStore;
 import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
+import org.kanonizo.junit.KanonizoTestResult;
 import org.kanonizo.util.HashSetCollector;
 import org.kanonizo.util.Util;
 
@@ -338,7 +339,14 @@ public class ScytheInstrumenter implements Instrumenter {
       out.name("testSuite");
       out.beginArray();
       for (TestCase tc : inst.testSuite.getTestCases()) {
+        out.beginObject();
+        out.name("name");
         out.value(tc.toString());
+        out.name("result");
+        out.value(tc.getFailures().size() == 0);
+        out.name("time");
+        out.value(tc.getExecutionTime());
+        out.endObject();
       }
       out.endArray();
       out.endObject();
@@ -394,12 +402,20 @@ public class ScytheInstrumenter implements Instrumenter {
           case "testSuite":
             in.beginArray();
             while (in.hasNext()) {
+              in.beginObject();
+              in.nextName();
               String testString = in.nextString();
+              in.nextName();
+              boolean result = in.nextBoolean();
               TestCase test = TestCaseStore.with(testString);
+              in.nextName();
+              long executionTime = in.nextLong();
+              test.setResult(new KanonizoTestResult(test.getTestClass(), test.getMethod(), result, Collections.emptyList(), executionTime));
               inst.testSuite.addTestCase(test);
               if (test == null) {
                 logger.debug("Error deserialising test case " + testString + ".");
               }
+              in.endObject();
             }
             in.endArray();
         }
