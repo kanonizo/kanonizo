@@ -75,7 +75,7 @@ public class TestingUtils {
 
   public static boolean isSuiteContainer(TestSuite suite) {
     return suite.testCount() > 1 && Util.enumerationToList(suite.tests()).stream()
-        .anyMatch(t -> t instanceof TestSuite && ((TestSuite) t).testCount() > 1);
+        .anyMatch(t -> t instanceof TestSuite && ((TestSuite) t).testCount() >= 1);
   }
 
 
