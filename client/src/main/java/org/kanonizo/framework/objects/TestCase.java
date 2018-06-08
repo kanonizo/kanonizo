@@ -123,11 +123,11 @@ public class TestCase {
   }
 
   public boolean hasFailures() {
-    if (result == null) {
-      // deserialised test case maybe?
-      return false;
-    }
-    return result.getFailures().size() > 0;
+    return result != null && result.getFailures().size() > 0;
+  }
+
+  public boolean isSuccessful(){
+    return result != null && result.isSuccessful();
   }
 
   public List<KanonizoTestFailure> getFailures() {

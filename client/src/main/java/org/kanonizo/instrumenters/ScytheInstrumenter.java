@@ -5,7 +5,6 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.TypeAdapter;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
-import com.scythe.instrumenter.InstrumentationProperties;
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
 import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import com.scythe.instrumenter.instrumentation.ClassReplacementTransformer;
@@ -16,6 +15,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -42,6 +43,7 @@ import org.kanonizo.framework.objects.LineStore;
 import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
+import org.kanonizo.junit.KanonizoTestFailure;
 import org.kanonizo.junit.KanonizoTestResult;
 import org.kanonizo.util.HashSetCollector;
 import org.kanonizo.util.Util;
@@ -65,7 +67,8 @@ public class ScytheInstrumenter implements Instrumenter {
   public static File SCYTHE_FILE = new File("scythe_coverage.json");
 
   private TestSuite testSuite;
-  private static Logger logger = LogManager.getLogger(ScytheInstrumenter.class);;
+  private static Logger logger = LogManager.getLogger(ScytheInstrumenter.class);
+  ;
   private Map<TestCase, Set<org.kanonizo.framework.objects.Line>> linesCovered = new HashMap<>();
   private Map<TestCase, Set<org.kanonizo.framework.objects.Branch>> branchesCovered = new HashMap<>();
 
@@ -343,7 +346,18 @@ public class ScytheInstrumenter implements Instrumenter {
         out.name("name");
         out.value(tc.toString());
         out.name("result");
-        out.value(tc.getFailures().size() == 0);
+        out.value(tc.isSuccessful());
+        out.name("errors");
+        out.beginArray();
+        for (KanonizoTestFailure f : tc.getFailures()) {
+          out.beginObject();
+          out.name("class");
+          out.value(f.getCause().getClass().getName());
+          out.name("message");
+          out.value(f.getCause().getMessage());
+          out.endObject();
+        }
+        out.endArray();
         out.name("time");
         out.value(tc.getExecutionTime());
         out.endObject();
@@ -410,7 +424,35 @@ public class ScytheInstrumenter implements Instrumenter {
               TestCase test = TestCaseStore.with(testString);
               in.nextName();
               long executionTime = in.nextLong();
-              test.setResult(new KanonizoTestResult(test.getTestClass(), test.getMethod(), result, Collections.emptyList(), executionTime));
+              in.beginArray();
+              ArrayList<KanonizoTestFailure> failures = new ArrayList<>();
+              while (in.hasNext()) {
+                in.beginObject();
+                in.nextName();
+                String className = in.nextString();
+                in.nextName();
+                String message = in.nextString();
+                try {
+                  Class<? extends Throwable> thrown = (Class<? extends Throwable>) Class.forName(className);
+                  Constructor<? extends Throwable> stringConstructor = thrown.getConstructor(String.class);
+                  Throwable t = stringConstructor.newInstance(message);
+                  failures.add(new KanonizoTestFailure(t, message));
+                } catch (ClassNotFoundException e) {
+                  e.printStackTrace();
+                } catch (NoSuchMethodException e) {
+                  e.printStackTrace();
+                } catch (IllegalAccessException e) {
+                  e.printStackTrace();
+                } catch (InstantiationException e) {
+                  e.printStackTrace();
+                } catch (InvocationTargetException e) {
+                  e.printStackTrace();
+                }
+
+                in.endObject();
+              }
+              in.endArray();
+              test.setResult(new KanonizoTestResult(test.getTestClass(), test.getMethod(), result, failures, executionTime));
               inst.testSuite.addTestCase(test);
               if (test == null) {
                 logger.debug("Error deserialising test case " + testString + ".");
