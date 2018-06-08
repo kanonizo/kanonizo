@@ -423,7 +423,6 @@ public class ScytheInstrumenter implements Instrumenter {
               boolean result = in.nextBoolean();
               TestCase test = TestCaseStore.with(testString);
               in.nextName();
-              long executionTime = in.nextLong();
               in.beginArray();
               ArrayList<KanonizoTestFailure> failures = new ArrayList<>();
               while (in.hasNext()) {
@@ -434,12 +433,20 @@ public class ScytheInstrumenter implements Instrumenter {
                 String message = in.nextString();
                 try {
                   Class<? extends Throwable> thrown = (Class<? extends Throwable>) Class.forName(className);
-                  Constructor<? extends Throwable> stringConstructor = thrown.getConstructor(String.class);
-                  Throwable t = stringConstructor.newInstance(message);
+                  Constructor<? extends Throwable> constructor = null;
+                  Throwable t = null;
+                  if((constructor = Util.getConstructor(thrown, String.class)) != null) {
+                    t = constructor.newInstance(message);
+                  } else if((constructor = Util.getConstructor(thrown, String.class, String.class, String.class)) != null){
+                    t = constructor.newInstance(message, null, null);
+                  } else if ((constructor = Util.getConstructor(thrown, new Class[]{})) != null){
+                    t = constructor.newInstance(new Object[]{});
+                  }
+                  if(t == null){
+                    logger.error("Could not find an appropriate constructor for "+thrown.getClass());
+                  }
                   failures.add(new KanonizoTestFailure(t, message));
                 } catch (ClassNotFoundException e) {
-                  e.printStackTrace();
-                } catch (NoSuchMethodException e) {
                   e.printStackTrace();
                 } catch (IllegalAccessException e) {
                   e.printStackTrace();
@@ -448,10 +455,11 @@ public class ScytheInstrumenter implements Instrumenter {
                 } catch (InvocationTargetException e) {
                   e.printStackTrace();
                 }
-
                 in.endObject();
               }
               in.endArray();
+              in.nextName();
+              long executionTime = in.nextLong();
               test.setResult(new KanonizoTestResult(test.getTestClass(), test.getMethod(), result, failures, executionTime));
               inst.testSuite.addTestCase(test);
               if (test == null) {

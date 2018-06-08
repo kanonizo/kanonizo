@@ -247,7 +247,7 @@ public class Util {
         || getConstructor(cl, new Class[]{String.class}) != null;
   }
 
-  public static <T> Constructor<T> getConstructor(Class<T> cl, Class[] classes) {
+  public static <T> Constructor<T> getConstructor(Class<T> cl, Class... classes) {
     try {
       // constructor that takes a string for test name
       Constructor<T> con = cl.getConstructor(classes);
