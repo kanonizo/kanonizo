@@ -1,5 +1,6 @@
 package org.kanonizo.algorithms.metaheuristics;
 
+import java.util.Collections;
 import java.util.List;
 import org.kanonizo.algorithms.AbstractSearchAlgorithm;
 import org.kanonizo.algorithms.TestSuitePrioritiser;
@@ -14,11 +15,11 @@ public class HypervolumeGeneticAlgorithm extends TestSuitePrioritiser {
 
 	@Override
 	protected List<TestSuite> generateInitialPopulation() {
-		return null;
+		return Collections.emptyList();
 	}
 
 	@Override
-	protected void evolve() {
-
+	protected List<TestSuite> evolve() {
+		return Collections.emptyList();
 	}
 }

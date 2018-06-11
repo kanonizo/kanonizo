@@ -67,10 +67,10 @@ public abstract class TestSuitePrioritiser extends AbstractSearchAlgorithm {
         .ofInstant(Instant.ofEpochMilli(startTime), TimeZone.getDefault().toZoneId());
     DateTimeFormatter format = DateTimeFormatter.ofPattern("dd/MM/yyyy 'at' HH:mm:ss");
     logger.info(getClass().getSimpleName() + " started searching at : " + date.format(format));
-    generateInitialPopulation();
+    population = generateInitialPopulation();
     while (!shouldFinish()) {
       age++;
-      evolve();
+      population = evolve();
       for (EvolutionListener e : evolutionListeners) {
         e.evolutionComplete();
       }
@@ -95,7 +95,7 @@ public abstract class TestSuitePrioritiser extends AbstractSearchAlgorithm {
 
   protected abstract List<TestSuite> generateInitialPopulation();
 
-  protected abstract void evolve();
+  protected abstract List<TestSuite> evolve();
 
   public interface EvolutionListener {
 

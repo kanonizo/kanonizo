@@ -81,6 +81,7 @@ public class GeneticAlgorithm extends TestSuitePrioritiser {
 
   protected List<TestSuite> generateInitialPopulation() {
     logger.info("Generating initial population");
+    List<TestSuite> pop = new ArrayList<>();
     for (int i = 0; i < POPULATION_SIZE; i++) {
       TestSuite clone = problem.clone().getTestSuite();
       List<Integer> testCaseOrdering = IntStream.range(0, clone.getTestCases().size())
@@ -94,12 +95,12 @@ public class GeneticAlgorithm extends TestSuitePrioritiser {
         testCaseOrdering.remove(index);
       }
       clone.setTestCases(randomOrdering);
-      population.add(clone);
+      pop.add(clone);
     }
-    return population;
+    return pop;
   }
 
-  protected void evolve() {
+  protected List<TestSuite> evolve() {
     long startTime = System.currentTimeMillis();
     List<TestSuite> newIndividuals = new ArrayList<>();
     // apply elitism
@@ -124,12 +125,13 @@ public class GeneticAlgorithm extends TestSuitePrioritiser {
       evolutionComplete(offspring1, offspring2);
       newIndividuals.addAll(getNFittest(2, parent1, parent2, offspring1, offspring2));
     }
-    population = newIndividuals;
+
     if (Properties.PROFILE) {
       System.out
           .println("Evolution completed in: " + (System.currentTimeMillis() - startTime) + "ms");
       System.out.println("Fittest individual has fitness: " + population.get(0).getFitness());
     }
+    return newIndividuals;
   }
 
   protected void evolutionComplete(TestSuite... evolved) {

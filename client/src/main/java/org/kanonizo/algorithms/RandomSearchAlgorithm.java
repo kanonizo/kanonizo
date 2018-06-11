@@ -39,13 +39,15 @@ public class RandomSearchAlgorithm extends TestSuitePrioritiser {
   }
 
   @Override
-  protected void evolve() {
+  protected List<TestSuite> evolve() {
     clone = getCurrentOptimal().clone();
     List<TestCase> testCases = clone.getTestCases();
     List<TestCase> randomOrdering = generateRandomOrder(testCases);
     clone.setTestCases(randomOrdering);
     if (clone.fitter(getCurrentOptimal()).equals(clone)) {
-      setCurrentOptimal(clone);
+      return Collections.singletonList(clone);
+    } else {
+      return Collections.singletonList(getCurrentOptimal());
     }
   }
 
