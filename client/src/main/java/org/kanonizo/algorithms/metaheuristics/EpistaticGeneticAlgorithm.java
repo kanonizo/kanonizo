@@ -1,12 +1,21 @@
 package org.kanonizo.algorithms.metaheuristics;
 
+import java.util.List;
 import org.kanonizo.algorithms.AbstractSearchAlgorithm;
+import org.kanonizo.algorithms.TestSuitePrioritiser;
+import org.kanonizo.framework.objects.TestSuite;
 
-public class EpistaticGeneticAlgorithm extends AbstractSearchAlgorithm {
+public class EpistaticGeneticAlgorithm extends TestSuitePrioritiser {
+
 
 	@Override
-	public void generateSolution() {
-		// TODO Auto-generated method stub
+	protected List<TestSuite> generateInitialPopulation() {
+		return null;
+	}
+
+	@Override
+	protected void evolve() {
+
 	}
 
 	@Override

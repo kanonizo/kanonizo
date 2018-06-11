@@ -1,21 +1,20 @@
 package org.kanonizo.algorithms.metaheuristics;
 
+import java.util.List;
 import org.kanonizo.algorithms.AbstractSearchAlgorithm;
+import org.kanonizo.algorithms.TestSuitePrioritiser;
+import org.kanonizo.framework.objects.TestSuite;
 
-public class HillClimbAlgorithm extends AbstractSearchAlgorithm {
+public class HillClimbAlgorithm extends TestSuitePrioritiser {
+
 	@Override
-	public void generateSolution() {
-		// generate random starting point
+	protected List<TestSuite> generateInitialPopulation() {
+		return null;
+	}
 
-		// evaluate fitness of starting point
+	@Override
+	protected void evolve() {
 
-		// while no optiomal solution found
-
-		// generate neighbours of current solution
-
-		// evaluate fitnesses of neighbours
-
-		// select fittest neighbour
 	}
 
 	@Override

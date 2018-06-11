@@ -17,11 +17,16 @@ import org.apache.logging.log4j.Logger;
 import org.kanonizo.Framework;
 import org.kanonizo.Properties;
 import org.kanonizo.algorithms.AbstractSearchAlgorithm;
+import org.kanonizo.algorithms.TestSuitePrioritiser;
 import org.kanonizo.algorithms.metaheuristics.crossover.CrossoverFunction;
 import org.kanonizo.algorithms.metaheuristics.crossover.SinglePointCrossover;
 import org.kanonizo.algorithms.metaheuristics.selection.RankSelection;
 import org.kanonizo.algorithms.metaheuristics.selection.SelectionFunction;
+import org.kanonizo.algorithms.stoppingconditions.FitnessStoppingCondition;
+import org.kanonizo.algorithms.stoppingconditions.IterationsStoppingCondition;
+import org.kanonizo.algorithms.stoppingconditions.StagnationStoppingCondition;
 import org.kanonizo.algorithms.stoppingconditions.StoppingCondition;
+import org.kanonizo.algorithms.stoppingconditions.TimeStoppingCondition;
 import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.display.Display;
 import org.kanonizo.framework.objects.TestCase;
@@ -30,7 +35,7 @@ import org.kanonizo.reporting.FitnessWriter;
 import org.kanonizo.util.RandomInstance;
 
 @Algorithm
-public class GeneticAlgorithm extends AbstractSearchAlgorithm {
+public class GeneticAlgorithm extends TestSuitePrioritiser {
   @Parameter(key = "track_generation_fitness", description = "In the FitnessWriter it is possible to track the current fitness evaluation or the entire generation max fitness. Seeing the entire generation max fitness allows the user to see the progression of the population over time (for example in the GA), while seeing the individual fitness allows to see the spread of fitness scores across the population/evolutions. Set to true to track the whole generation fitness, set to false to see individual evaluation fitness", category = "TCP")
   public static boolean TRACK_GENERATION_FITNESS = true;
 
@@ -48,9 +53,6 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
   @Parameter(key = "crossover_chance", description = "The probability during any evolution that an individual is crossed over", category = "TCP")
   public static double CROSSOVER_CHANCE = 0.7;
 
-
-
-  private List<TestSuite> population = new ArrayList<TestSuite>();
   private static Logger logger = LogManager.getLogger(GeneticAlgorithm.class);
   private SelectionFunction<TestSuite> selection = new RankSelection<>();
   private CrossoverFunction crossover = new SinglePointCrossover();
@@ -63,50 +65,21 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
     this.selection = function;
   }
 
-
-  @Override
-  public void generateSolution() {
+  public GeneticAlgorithm(){
     if(writer == null){
       writer = new FitnessWriter(this);
     }
-    LocalDateTime date = LocalDateTime
-        .ofInstant(Instant.ofEpochMilli(startTime), TimeZone.getDefault().toZoneId());
-    DateTimeFormatter format = DateTimeFormatter.ofPattern("dd/MM/yyyy 'at' HH:mm:ss");
-    logger.info("Genetic Algorithm started searching at : " + date.format(format));
-    generateInitialPopulation();
-    startTime = System.currentTimeMillis();
-    logger.info(
-        "Genetic Algorithm running for: " + MAX_EXECUTION_TIME / 1000 + " seconds");
-    setCurrentOptimal(population.get(0));
-    Display d = Framework.getInstance().getDisplay();
-    System.out.println("Genetic Algorithm");
-    while (!shouldFinish()) {
-      age++;
-      evolve();
-      sortPopulation();
-      setCurrentOptimal(population.get(0));
-      if (TRACK_GENERATION_FITNESS) {
-        writer.addRow(age, getCurrentOptimal().getFitness());
+    super.addEvolutionListener(new EvolutionListener() {
+      @Override
+      public void evolutionComplete() {
+        if (TRACK_GENERATION_FITNESS) {
+          writer.addRow(age, getCurrentOptimal().getFitness());
+        }
       }
-      d.reportProgress(
-          Math.min((double) System.currentTimeMillis() - startTime, MAX_EXECUTION_TIME),
-          MAX_EXECUTION_TIME);
-    }
-    writer.write();
-    System.out.println();
-    StoppingCondition terminatingStoppingCondition = stoppingConditions.stream()
-        .filter(cond -> cond.shouldFinish(this)).findFirst().get();
-    LocalDateTime enddate = LocalDateTime
-        .ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()),
-            TimeZone.getDefault().toZoneId());
-    logger.info("Total Number of iterations: " + age + "\n");
-    logger.info("Genetic Algorithm finished execution at : " + enddate.format(format));
-    logger.info("Genetic Algorithm terminated by: " + terminatingStoppingCondition.getClass()
-        .getSimpleName());
-
+    });
   }
 
-  protected void generateInitialPopulation() {
+  protected List<TestSuite> generateInitialPopulation() {
     logger.info("Generating initial population");
     for (int i = 0; i < POPULATION_SIZE; i++) {
       TestSuite clone = problem.clone().getTestSuite();
@@ -123,6 +96,7 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
       clone.setTestCases(randomOrdering);
       population.add(clone);
     }
+    return population;
   }
 
   protected void evolve() {
@@ -168,9 +142,7 @@ public class GeneticAlgorithm extends AbstractSearchAlgorithm {
     }
   }
 
-  protected void sortPopulation() {
-    Collections.sort(population);
-  }
+
 
   @Override
   public TestSuite getCurrentOptimal() {

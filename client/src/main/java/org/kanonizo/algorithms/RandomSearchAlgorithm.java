@@ -4,6 +4,7 @@ import static org.kanonizo.algorithms.metaheuristics.GeneticAlgorithm.TRACK_GENE
 import static org.kanonizo.algorithms.stoppingconditions.TimeStoppingCondition.MAX_EXECUTION_TIME;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.kanonizo.Framework;
 import org.kanonizo.annotations.Algorithm;
@@ -14,34 +15,38 @@ import org.kanonizo.reporting.FitnessWriter;
 import org.kanonizo.util.RandomInstance;
 
 @Algorithm
-public class RandomSearchAlgorithm extends AbstractSearchAlgorithm {
+public class RandomSearchAlgorithm extends TestSuitePrioritiser {
+
+  private TestSuite clone;
+
+  public RandomSearchAlgorithm(){
+    FitnessWriter writer = new FitnessWriter(this);
+    addEvolutionListener(new EvolutionListener() {
+      @Override
+      public void evolutionComplete() {
+        if (TRACK_GENERATION_FITNESS) {
+          writer.addRow(age, getCurrentOptimal().getFitness());
+        } else {
+          writer.addRow(age, clone.getFitness());
+        }
+      }
+    });
+  }
 
   @Override
-  public void generateSolution() {
-    FitnessWriter writer = new FitnessWriter(this);
-    List<TestCase> testCases = problem.getTestSuite().getTestCases();
-    Display d = Framework.getInstance().getDisplay();
-    System.out.println("Running Random Search");
-    while (!shouldFinish()) {
-      age++;
-      TestSuite clone = getCurrentOptimal().clone();
-      List<TestCase> randomOrdering = generateRandomOrder(testCases);
-      clone.setTestCases(randomOrdering);
-      fitnessEvaluations++;
-      if (clone.fitter(getCurrentOptimal()).equals(clone)) {
-        setCurrentOptimal(clone);
-      }
-      if (TRACK_GENERATION_FITNESS) {
-        writer.addRow(age, getCurrentOptimal().getFitness());
-      } else {
-        writer.addRow(age, clone.getFitness());
-      }
-      d.reportProgress(
-          Math.min((double) System.currentTimeMillis() - startTime, MAX_EXECUTION_TIME),
-          MAX_EXECUTION_TIME);
+  protected List<TestSuite> generateInitialPopulation() {
+    return Collections.singletonList(problem.getTestSuite());
+  }
+
+  @Override
+  protected void evolve() {
+    clone = getCurrentOptimal().clone();
+    List<TestCase> testCases = clone.getTestCases();
+    List<TestCase> randomOrdering = generateRandomOrder(testCases);
+    clone.setTestCases(randomOrdering);
+    if (clone.fitter(getCurrentOptimal()).equals(clone)) {
+      setCurrentOptimal(clone);
     }
-    System.out.println();
-    writer.write();
   }
 
   private List<TestCase> generateRandomOrder(List<TestCase> testCases) {

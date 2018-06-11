@@ -1,16 +1,24 @@
 package org.kanonizo.algorithms.metaheuristics;
 
+import java.util.List;
 import org.kanonizo.algorithms.AbstractSearchAlgorithm;
+import org.kanonizo.algorithms.TestSuitePrioritiser;
+import org.kanonizo.framework.objects.TestSuite;
 
-public class HypervolumeGeneticAlgorithm extends AbstractSearchAlgorithm {
-
-	@Override
-	public void generateSolution() {
-		// TODO Auto-generated method stub
-	}
+public class HypervolumeGeneticAlgorithm extends TestSuitePrioritiser {
 
 	@Override
 	public String readableName() {
 		return "hypervolumega";
+	}
+
+	@Override
+	protected List<TestSuite> generateInitialPopulation() {
+		return null;
+	}
+
+	@Override
+	protected void evolve() {
+
 	}
 }

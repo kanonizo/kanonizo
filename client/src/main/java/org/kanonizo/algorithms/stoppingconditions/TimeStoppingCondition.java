@@ -21,7 +21,7 @@ public class TimeStoppingCondition implements StoppingCondition {
 
 	@Override
 	public boolean shouldFinish(SearchAlgorithm algorithm) {
-		return System.currentTimeMillis() - algorithm.getStartTime() > MAX_EXECUTION_TIME;
+		return USE_TIME && System.currentTimeMillis() - algorithm.getStartTime() > MAX_EXECUTION_TIME;
 	}
 
 }

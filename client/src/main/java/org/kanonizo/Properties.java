@@ -4,9 +4,7 @@ import com.scythe.instrumenter.InstrumentationProperties.Parameter;
 
 public class Properties {
 
-    public static int TOTAL_TESTS;
-
-    public static enum CoverageApproach {
+    public enum CoverageApproach {
         BRANCH, LINE
     }
 

@@ -20,7 +20,7 @@ public class IterationsStoppingCondition implements StoppingCondition {
 	public static int MAX_ITERATIONS = 10000;
 	@Override
 	public boolean shouldFinish(SearchAlgorithm algorithm) {
-		return algorithm.getAge() >= MAX_ITERATIONS;
+		return USE_ITERATIONS && algorithm.getAge() >= MAX_ITERATIONS;
 	}
 
 }

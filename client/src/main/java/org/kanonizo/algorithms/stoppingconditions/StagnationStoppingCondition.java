@@ -29,6 +29,9 @@ public class StagnationStoppingCondition implements StoppingCondition {
 
     @Override
     public boolean shouldFinish(SearchAlgorithm algorithm) {
+        if(!USE_STAGNATION){
+            return false;
+        }
         double fitness = algorithm.getCurrentOptimal().getFitness();
         if (fitness == previousFitness && ++timeStagnant == patience) {
             return true;

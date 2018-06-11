@@ -19,18 +19,12 @@ public abstract class TestCasePrioritiser extends AbstractSearchAlgorithm {
     List<TestCase> testCases = suite.getTestCases();
     List<TestCase> orderedTestCases = new ArrayList<>();
     init(testCases);
-    while (!testCases.isEmpty() && !shouldFinish()) {
+    while (!testCases.isEmpty()) {
       TestCase tc = selectTestCase(testCases);
       testCases.remove(tc);
       orderedTestCases.add(tc);
       fw.notifyTestCaseSelection(tc);
       fw.getDisplay().reportProgress(orderedTestCases.size(), testCases.size() + orderedTestCases.size());
-    }
-    if (!testCases.isEmpty()) {
-      StoppingCondition terminatingStoppingCondition = stoppingConditions.stream()
-          .filter(cond -> cond.shouldFinish(this)).findFirst().get();
-      logger.info("Algorithm terminated by "+terminatingStoppingCondition.getClass().getSimpleName());
-      orderedTestCases.addAll(testCases);
     }
     suite.setTestCases(orderedTestCases);
     fw.getDisplay().fireTestSuiteChange(suite);
