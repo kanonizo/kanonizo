@@ -1,6 +1,9 @@
 package org.kanonizo.junit;
 
-public class KanonizoTestFailure {
+import java.io.Serializable;
+
+public class KanonizoTestFailure implements Serializable {
+
   private Throwable cause;
   private String trace;
 

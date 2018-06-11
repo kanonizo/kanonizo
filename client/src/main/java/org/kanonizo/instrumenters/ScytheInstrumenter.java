@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.commons.lang.SerializationUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kanonizo.Framework;
@@ -351,10 +352,8 @@ public class ScytheInstrumenter implements Instrumenter {
         out.beginArray();
         for (KanonizoTestFailure f : tc.getFailures()) {
           out.beginObject();
-          out.name("class");
-          out.value(f.getCause().getClass().getName());
-          out.name("message");
-          out.value(f.getCause().getMessage());
+          out.name("bytes");
+          out.value(Arrays.toString(SerializationUtils.serialize(f)));
           out.endObject();
         }
         out.endArray();
@@ -428,33 +427,10 @@ public class ScytheInstrumenter implements Instrumenter {
               while (in.hasNext()) {
                 in.beginObject();
                 in.nextName();
-                String className = in.nextString();
-                in.nextName();
-                String message = in.nextString();
-                try {
-                  Class<? extends Throwable> thrown = (Class<? extends Throwable>) Class.forName(className);
-                  Constructor<? extends Throwable> constructor = null;
-                  Throwable t = null;
-                  if((constructor = Util.getConstructor(thrown, String.class)) != null) {
-                    t = constructor.newInstance(message);
-                  } else if((constructor = Util.getConstructor(thrown, String.class, String.class, String.class)) != null){
-                    t = constructor.newInstance(message, null, null);
-                  } else if ((constructor = Util.getConstructor(thrown, new Class[]{})) != null){
-                    t = constructor.newInstance(new Object[]{});
-                  }
-                  if(t == null){
-                    logger.error("Could not find an appropriate constructor for "+thrown.getClass());
-                  }
-                  failures.add(new KanonizoTestFailure(t, message));
-                } catch (ClassNotFoundException e) {
-                  e.printStackTrace();
-                } catch (IllegalAccessException e) {
-                  e.printStackTrace();
-                } catch (InstantiationException e) {
-                  e.printStackTrace();
-                } catch (InvocationTargetException e) {
-                  e.printStackTrace();
-                }
+                String bytesString = in.nextString();
+                byte[] bytes = getBytes(bytesString);
+                KanonizoTestFailure f = (KanonizoTestFailure) SerializationUtils.deserialize(bytes);
+                failures.add(f);
                 in.endObject();
               }
               in.endArray();
@@ -472,6 +448,17 @@ public class ScytheInstrumenter implements Instrumenter {
       }
       in.endObject();
       return inst;
+    }
+
+    private byte[] getBytes(String bytesString){
+      String elemsPart = bytesString.substring(1, bytesString.length() - 1);
+      String[] parts = elemsPart.split(",");
+      int elems = parts.length;
+      byte[] bytes = new byte[elems];
+      for(int i = 0; i < elems; i++){
+        bytes[i] = new Byte(parts[i].trim());
+      }
+      return bytes;
     }
 
     private <T extends Goal> Map<TestCase, Set<T>> readCoverage(
