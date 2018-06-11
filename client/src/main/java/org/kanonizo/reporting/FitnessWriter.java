@@ -31,21 +31,10 @@ public class FitnessWriter extends CsvWriter {
   @Override
   protected void prepareCsv() {
     setHeaders(new String[] { "Iteration", "Best Individual Fitness" });
-  }
+    }
 
   public void addRow(int iteration, double fitness) {
     super.addRow(new String[] { Integer.toString(iteration), Double.toString(1 - fitness) });
-  }
-
-  @Override
-  protected String getLogFileName() {
-    return InstrumentationProperties.LOG_FILENAME.equals("")
-        ? getSimpleName() + FORMAT.format(Calendar.getInstance().getTime()) + ".csv"
-        : InstrumentationProperties.LOG_FILENAME + ".csv";
-  }
-
-  private String getSimpleName() {
-    return algorithm == null ? func.getClass().getSimpleName() : algorithm.getClass().getSimpleName();
   }
 
 }
