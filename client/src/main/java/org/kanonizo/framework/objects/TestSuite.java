@@ -264,6 +264,7 @@ public class TestSuite implements Comparable<TestSuite>, Disposable {
   @Override
   public TestSuite clone() {
     TestSuite clone = new TestSuite();
+    clone.parent = parent;
     clone.testCases = new ArrayList<>(testCases);
     clone.removedTestCases = new ArrayList<>(removedTestCases);
     clone.originalOrdering = new ArrayList<>(originalOrdering);
