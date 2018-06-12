@@ -8,17 +8,17 @@ import org.kanonizo.framework.objects.Goal;
 import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 
-public abstract class APFDFunction extends InstrumentedFitnessFunction {
+public abstract class APFDFunction implements FitnessFunction {
   protected Set<? extends Goal> totalGoals;
   protected double coveredGoals = 0;
   protected SystemUnderTest sut;
 
   public APFDFunction(SystemUnderTest sut) {
     this.sut = sut;
+    calculateTotalGoalsCovered();
     totalGoals = getGoals();
   }
 
-  @Override
   protected abstract void calculateTotalGoalsCovered();
 
   protected Map<Goal, Integer> getGoalMap() {

@@ -40,7 +40,6 @@ import org.kanonizo.algorithms.metaheuristics.fitness.APBCFunction;
 import org.kanonizo.algorithms.metaheuristics.fitness.APFDFunction;
 import org.kanonizo.algorithms.metaheuristics.fitness.APLCFunction;
 import org.kanonizo.algorithms.metaheuristics.fitness.FitnessFunction;
-import org.kanonizo.algorithms.metaheuristics.fitness.InstrumentedFitnessFunction;
 import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.annotations.Prerequisite;
 import org.kanonizo.display.Display;
@@ -54,7 +53,6 @@ import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.instrumenters.NullInstrumenter;
 import org.kanonizo.junit.TestingUtils;
 import org.kanonizo.listeners.TestCaseSelectionListener;
-import org.kanonizo.reporting.CoverageWriter;
 import org.kanonizo.reporting.CsvWriter;
 import org.kanonizo.reporting.MiscStatsWriter;
 import org.kanonizo.reporting.TestCaseOrderingWriter;
@@ -407,7 +405,6 @@ public class Framework implements Serializable {
       func = ((MutationSearchAlgorithm) algorithm).getFitnessFunction();
     }
     sut.getTestSuite().setFitnessFunction(func);
-    Properties.INSTRUMENT = func instanceof InstrumentedFitnessFunction;
   }
 
   /**
@@ -446,6 +443,12 @@ public class Framework implements Serializable {
     if (algorithm.needsFitnessFunction()) {
       setupFitnessFunction();
     }
+
+    // collect (or read) coverage
+    Instrumenter inst = getInstrumenter();
+    inst.setTestSuite(sut.getTestSuite());
+    inst.collectCoverage();
+
     TestCaseOrderingWriter writer = new TestCaseOrderingWriter(algorithm);
     addWriter(writer);
     //addWriter(new CoverageWriter(sut));

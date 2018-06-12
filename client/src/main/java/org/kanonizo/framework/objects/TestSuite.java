@@ -17,7 +17,6 @@ import org.kanonizo.Properties;
 import org.kanonizo.algorithms.metaheuristics.fitness.APBCFunction;
 import org.kanonizo.algorithms.metaheuristics.fitness.APLCFunction;
 import org.kanonizo.algorithms.metaheuristics.fitness.FitnessFunction;
-import org.kanonizo.algorithms.metaheuristics.fitness.InstrumentedFitnessFunction;
 import org.kanonizo.framework.instrumentation.Instrumenter;
 import org.kanonizo.util.RandomInstance;
 
@@ -231,9 +230,6 @@ public class TestSuite implements Comparable<TestSuite>, Disposable {
 
   public void setFitnessFunction(FitnessFunction<SystemUnderTest> func) {
     this.func = func;
-    if (func instanceof InstrumentedFitnessFunction) {
-      ((InstrumentedFitnessFunction) func).instrument(this);
-    }
     evaluateFitness();
   }
 
