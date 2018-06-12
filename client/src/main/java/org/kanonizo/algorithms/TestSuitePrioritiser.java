@@ -62,12 +62,12 @@ public abstract class TestSuitePrioritiser extends AbstractSearchAlgorithm {
   @Override
   protected final void generateSolution() {
     Display d = Framework.getInstance().getDisplay();
-    startTime = System.currentTimeMillis();
     LocalDateTime date = LocalDateTime
         .ofInstant(Instant.ofEpochMilli(startTime), TimeZone.getDefault().toZoneId());
     DateTimeFormatter format = DateTimeFormatter.ofPattern("dd/MM/yyyy 'at' HH:mm:ss");
     logger.info(getClass().getSimpleName() + " started searching at : " + date.format(format));
     population = generateInitialPopulation();
+    startTime = System.currentTimeMillis();
     while (!shouldFinish()) {
       age++;
       population = evolve();
