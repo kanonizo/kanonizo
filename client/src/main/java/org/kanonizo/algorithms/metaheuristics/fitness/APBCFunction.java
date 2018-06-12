@@ -36,8 +36,8 @@ public class APBCFunction extends APFDFunction {
   }
 
   @Override
-  protected void calculateTotalGoalsCovered() {
-    coveredGoals = inst.getBranchesCovered(sut).size();
+  protected double calculateTotalGoalsCovered() {
+    return inst.getBranchesCovered(sut).size();
   }
 
 }

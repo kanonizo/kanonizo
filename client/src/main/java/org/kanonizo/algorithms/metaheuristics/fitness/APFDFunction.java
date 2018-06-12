@@ -9,17 +9,18 @@ import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 
 public abstract class APFDFunction implements FitnessFunction {
-  protected Set<? extends Goal> totalGoals;
-  protected double coveredGoals = 0;
+  protected static HashMap<SystemUnderTest, Set<? extends Goal>> totalGoals = new HashMap<>();
   protected SystemUnderTest sut;
-
+  protected static HashMap<SystemUnderTest, Double> coveredGoals = new HashMap<>();
   public APFDFunction(SystemUnderTest sut) {
     this.sut = sut;
-    calculateTotalGoalsCovered();
-    totalGoals = getGoals();
+    if(!coveredGoals.containsKey(sut)){
+      coveredGoals.put(sut, calculateTotalGoalsCovered());
+      totalGoals.put(sut, getGoals());
+    }
   }
 
-  protected abstract void calculateTotalGoalsCovered();
+  protected abstract double calculateTotalGoalsCovered();
 
   protected Map<Goal, Integer> getGoalMap() {
     Map<Goal, Integer> goalMap = new HashMap<>();
@@ -54,7 +55,7 @@ public abstract class APFDFunction implements FitnessFunction {
   }
 
   protected double getP() {
-    return totalGoals.size() == 0 ? 0 : coveredGoals / totalGoals.size();
+    return totalGoals.size() == 0 ? 0 : coveredGoals.get(sut) / totalGoals.size();
   }
 
   public abstract Set<? extends Goal> getCoveredGoals(TestCase tc);

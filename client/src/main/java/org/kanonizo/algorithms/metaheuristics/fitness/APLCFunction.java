@@ -34,7 +34,7 @@ public class APLCFunction extends APFDFunction {
   }
 
   @Override
-  protected void calculateTotalGoalsCovered() {
-    coveredGoals = Framework.getInstance().getInstrumenter().getLinesCovered(sut).size();
+  protected double calculateTotalGoalsCovered() {
+    return Framework.getInstance().getInstrumenter().getLinesCovered(sut).size();
   }
 }
