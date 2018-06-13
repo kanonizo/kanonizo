@@ -1,5 +1,6 @@
 package org.kanonizo.util;
 
+import com.scythe.instrumenter.InstrumentationProperties.Parameter;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.File;
@@ -20,11 +21,15 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import junit.framework.TestCase;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.Test;
 import org.junit.runner.Runner;
-import org.kanonizo.Main;
+import org.kanonizo.annotations.OptionProvider;
+import org.kanonizo.framework.Readable;
 import org.reflections.Reflections;
 import org.reflections.scanners.FieldAnnotationsScanner;
 import org.reflections.scanners.SubTypesScanner;
@@ -33,6 +38,8 @@ import org.reflections.util.ClasspathHelper;
 import org.reflections.util.ConfigurationBuilder;
 
 public class Util {
+
+  private static final Logger logger = LogManager.getLogger(Util.class);
 
   private static PrintStream defaultSysOut, defaultSysErr;
 
@@ -90,7 +97,7 @@ public class Util {
   public static void addToClassPath(File file) throws SecurityException {
     userEntries.add(file);
     if (file.isDirectory() || file.getName().endsWith(".jar")) {
-      Main.logger.info("Adding " + file.getName() + " to class path");
+      logger.info("Adding " + file.getName() + " to class path");
       try {
         File absoluteFile = file.getAbsoluteFile();
         if (file.getPath().startsWith("./")) {
@@ -118,7 +125,7 @@ public class Util {
   public static void removeFromClassPath(File file) throws SecurityException {
     if (file != null) {
       userEntries.remove(file);
-      Main.logger.info("Removed " + file.getName() + " from class path");
+      logger.info("Removed " + file.getName() + " from class path");
     }
   }
 
@@ -149,7 +156,9 @@ public class Util {
     }
     return f;
   }
+
   private static PropertyChangeSupport changeSupport = new PropertyChangeSupport(Util.class);
+
   @SuppressWarnings({"unchecked", "rawtypes"})
   public static void setParameter(Field f, String value)
       throws IllegalArgumentException, IllegalAccessException {
@@ -185,24 +194,67 @@ public class Util {
     if (f.getType().isEnum()) {
       f.set(null, Enum.valueOf((Class<Enum>) f.getType(), value.toUpperCase()));
     }
+    if (f.getAnnotation(Parameter.class).hasOptions()) {
+      Method m = findOptionProvider(f);
+      if(m != null){
+        try {
+          List<?> options = (List<?>) m.invoke(null, null);
+          for(Object opt : options){
+            if(!(opt instanceof Readable)){
+              logger.error("Can't compare option "+opt+" as it is not readable");
+            }
+            if(((Readable)opt).readableName().equals(value)){
+              f.set(null, opt);
+              break;
+            }
+          }
+
+        } catch (InvocationTargetException e) {
+          e.printStackTrace();
+        }
+      }
+    }
     changeSupport.firePropertyChange(f.getName(), old, value);
   }
 
-  public static void addPropertyChangeListener(String propertyName, PropertyChangeListener pcl){
+  public static Method findOptionProvider(Field f) {
+    List<Method> methods = Arrays.asList(f.getDeclaringClass().getMethods());
+    String paramKey = f.getAnnotation(Parameter.class).key();
+    Optional<Method> opt = methods.stream().filter(
+        m -> m.isAnnotationPresent(OptionProvider.class) && m.getAnnotation(OptionProvider.class)
+            .paramKey().equals(paramKey)).findFirst();
+    if(opt.isPresent()){
+      Method optionProvider = opt.get();
+      if (optionProvider.getReturnType() != List.class) {
+        logger.error("OptionProvider must return a list");
+        return null;
+      }
+      if (!Modifier.isStatic(optionProvider.getModifiers())) {
+        logger.error("OptionProvider must be static");
+        return null;
+      }
+      return optionProvider;
+    } else {
+      return null;
+    }
+  }
+
+  public static void addPropertyChangeListener(String propertyName, PropertyChangeListener pcl) {
     changeSupport.addPropertyChangeListener(propertyName, pcl);
   }
 
-  public static void addPropertyChangeListener(PropertyChangeListener pcl){
+  public static void addPropertyChangeListener(PropertyChangeListener pcl) {
     changeSupport.addPropertyChangeListener(pcl);
   }
 
-  public static void removePropertyChangeListener(String propertyName, PropertyChangeListener pcl){
+  public static void removePropertyChangeListener(String propertyName, PropertyChangeListener pcl) {
     changeSupport.removePropertyChangeListener(propertyName, pcl);
   }
 
-  public static void removePropertyChangeListener(PropertyChangeListener pcl){
+  public static void removePropertyChangeListener(PropertyChangeListener pcl) {
     changeSupport.removePropertyChangeListener(pcl);
   }
+
   private static Reflections r;
 
   public static Reflections getReflections() {
@@ -318,9 +370,9 @@ public class Util {
     return ret;
   }
 
-  public static <T> List<T> enumerationToList(Enumeration<T> enumeration){
+  public static <T> List<T> enumerationToList(Enumeration<T> enumeration) {
     ArrayList<T> ret = new ArrayList<>();
-    while(enumeration.hasMoreElements()){
+    while (enumeration.hasMoreElements()) {
       ret.add(enumeration.nextElement());
     }
     return ret;
