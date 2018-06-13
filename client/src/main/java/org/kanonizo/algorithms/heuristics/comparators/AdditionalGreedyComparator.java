@@ -5,18 +5,20 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
 import org.kanonizo.Framework;
+import org.kanonizo.framework.Readable;
 import org.kanonizo.framework.instrumentation.Instrumenter;
 import org.kanonizo.framework.objects.Line;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.listeners.TestCaseSelectionListener;
 
-public class AdditionalComparator implements Comparator<TestCase>, TestCaseSelectionListener {
+public class AdditionalGreedyComparator implements Comparator<TestCase>, TestCaseSelectionListener,
+    Readable {
 
   private Set<Line> cache = new HashSet<>();
   private Instrumenter inst;
   private Framework fw = Framework.getInstance();
 
-  public AdditionalComparator() {
+  public AdditionalGreedyComparator() {
     fw.addSelectionListener(this);
     fw.addPropertyChangeListener(Framework.INSTRUMENTER_PROPERTY_NAME, (e) -> {
       inst = (Instrumenter) e.getNewValue();
@@ -35,5 +37,10 @@ public class AdditionalComparator implements Comparator<TestCase>, TestCaseSelec
   @Override
   public void testCaseSelected(TestCase tc) {
     cache.addAll(inst.getLinesCovered(tc));
+  }
+
+  @Override
+  public String readableName() {
+    return "additional";
   }
 }

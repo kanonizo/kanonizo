@@ -19,7 +19,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kanonizo.Framework;
 import org.kanonizo.algorithms.TestCasePrioritiser;
-import org.kanonizo.algorithms.heuristics.comparators.AdditionalComparator;
+import org.kanonizo.algorithms.heuristics.comparators.AdditionalGreedyComparator;
 import org.kanonizo.algorithms.heuristics.comparators.GreedyComparator;
 import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.annotations.ConditionalParameter;
@@ -37,15 +37,15 @@ public class Schwa extends TestCasePrioritiser {
   private static Logger logger = LogManager.getLogger(Schwa.class);
 
   @Parameter(key = "schwa_revisions_weight", description = "How much influence the number of revisions to a file should have over its likelihood of containing a fault", category = "schwa")
-  @ConditionalParameter(condition="Schwa.SCHWA_FILE == null", listensTo="SCHWA_FILE")
+  @ConditionalParameter(condition = "Schwa.SCHWA_FILE == null", listensTo = "SCHWA_FILE")
   public static double REVISIONS_WEIGHT = 0.3;
 
   @Parameter(key = "schwa_authors_weight", description = "How much influence the number of authors= who have committed to a file should have over its likelihood of containing a fault", category = "schwa")
-  @ConditionalParameter(condition="Schwa.SCHWA_FILE == null", listensTo="SCHWA_FILE")
+  @ConditionalParameter(condition = "Schwa.SCHWA_FILE == null", listensTo = "SCHWA_FILE")
   public static double AUTHORS_WEIGHT = 0.2;
 
   @Parameter(key = "schwa_fixes_weight", description = "How much influence the number of times a file has been associated with a \"fix\" should have over its likelihood of containing a fault", category = "schwa")
-  @ConditionalParameter(condition="Schwa.SCHWA_FILE == null", listensTo="SCHWA_FILE")
+  @ConditionalParameter(condition = "Schwa.SCHWA_FILE == null", listensTo = "SCHWA_FILE")
   public static double FIXES_WEIGHT = 0.5;
 
   @Parameter(key = "schwa_secondary_objective", description = "Since Schwa tells us the likelihood of each class/method containing a fault, we discover the test cases that execute that area of code. However, a secondary objective can allow us to prioritise test cases within the set of test cases that cover a faulty objective", category = "schwa", hasOptions = true)
@@ -54,21 +54,24 @@ public class Schwa extends TestCasePrioritiser {
   @Parameter(key = "classes_per_group", description = "Schwa tells us the likelihood of classes containing a fault - prioritising using this information involves finding all tests that execute a faulty class. This variable controls how many classes to \"group\" together when finding test cases to prioritise", category = "schwa")
   public static int CLASSES_PER_GROUP = 1;
 
-  @Parameter(key = "schwa_file", description = "Running schwa creates a json file containing the probabilities of faults in every class. If this has already been created then it can be used instead of running Schwa from Kanonizo", category="schwa")
-  public static File SCHWA_FILE=null;
+  @Parameter(key = "schwa_file", description = "Running schwa creates a json file containing the probabilities of faults in every class. If this has already been created then it can be used instead of running Schwa from Kanonizo", category = "schwa")
+  public static File SCHWA_FILE = null;
 
   private List<SchwaClass> classes;
   private List<SchwaClass> active = new ArrayList<>();
   private List<TestCase> testCasesForActive = new ArrayList<>();
-  private static boolean validSchwaFile(){
-    return SCHWA_FILE != null && SCHWA_FILE.exists() && SCHWA_FILE.getAbsolutePath().endsWith(".json");
+
+  private static boolean validSchwaFile() {
+    return SCHWA_FILE != null && SCHWA_FILE.exists() && SCHWA_FILE.getAbsolutePath()
+        .endsWith(".json");
   }
+
   public void init(List<TestCase> testCases) {
     super.init(testCases);
     // run schwa
     try {
       boolean createTemp = !validSchwaFile();
-      if(createTemp) {
+      if (createTemp) {
         SCHWA_FILE = File.createTempFile("schwa-json-output", ".tmp");
         Framework.getInstance().getDisplay().notifyTaskStart("Running Schwa", true);
         runProcess(SCHWA_FILE, "schwa", fw.getRootFolder().getAbsolutePath(), "-j");
@@ -76,11 +79,17 @@ public class Schwa extends TestCasePrioritiser {
       }
       Gson gson = new Gson();
       SchwaRoot root = gson.fromJson(new FileReader(SCHWA_FILE), SchwaRoot.class);
-      classes = root.getChildren().stream().filter(cl -> cl.getPath().endsWith(".java"))
+      classes = root.getChildren().stream().filter(
+          cl -> cl.getPath().endsWith(".java") && getClassFile(cl.getPath()) != null
+              && ClassStore.get(getClassName(getClassFile(cl.getPath()))) != null)
           .collect(Collectors.toList());
+      if (classes.isEmpty()) {
+        logger.error(
+            "No classes remaining. Is the project root set correctly so that we can identify java files from the Schwa output?");
+      }
       // sort classes by probability of containing a fault
       Collections.sort(classes, Comparator.comparingDouble(o -> o.getProb()));
-      if(createTemp){
+      if (createTemp) {
         SCHWA_FILE.delete();
       }
     } catch (IOException e) {
@@ -94,7 +103,7 @@ public class Schwa extends TestCasePrioritiser {
       if (classes.size() > 0) {
         // pick next n classes to prioritise tests for, either CLASSES_PER_GROUP or all remaining classes
         active.clear();
-        for(int i = 0; i < Math.min(CLASSES_PER_GROUP, classes.size()); i++){
+        for (int i = 0; i < Math.min(CLASSES_PER_GROUP, classes.size()); i++) {
           active.add(classes.get(i));
         }
         classes.removeAll(active);
@@ -118,7 +127,7 @@ public class Schwa extends TestCasePrioritiser {
       List<SchwaClass> classes) {
     List<TestCase> tests = new ArrayList<>();
     Iterator<SchwaClass> it = classes.iterator();
-    while (it.hasNext()){
+    while (it.hasNext()) {
       SchwaClass cl = it.next();
       String filePath = cl.getPath();
       tests.addAll(getTestsCoveringClass(candidates, filePath));
@@ -126,55 +135,73 @@ public class Schwa extends TestCasePrioritiser {
     return tests;
   }
 
-  private List<TestCase> getTestsCoveringClass(List<TestCase> candidates, String filePath) {
+  private File getClassFile(String filePath) {
     String fullPath = fw.getRootFolder().getAbsolutePath() + File.separator + filePath;
     File javaFile = new File(fullPath);
+    if (!javaFile.exists()) {
+      return null;
+    }
+    String className = getClassName(javaFile);
+    ClassUnderTest cut = ClassStore.get(className);
+    if (cut == null) {
+      return null;
+    }
+
+    return javaFile;
+  }
+
+  private String getClassName(File javaFile) {
     try {
       List<String> lines = Files.readLines(javaFile, Charset.defaultCharset());
       Optional<String> pkgOpt = lines.stream().filter(line -> line.startsWith("package"))
           .findFirst();
-      String pkg;
-      if (pkgOpt.isPresent()) {
-        pkg = pkgOpt.get();
-        pkg = pkg.substring("package".length() + 1, pkg.length() - 1);
-      } else {
-        pkg = "";
-      }
-      String className = filePath
-          .substring(filePath.lastIndexOf(File.separator) + 1,
-              filePath.length() - ".java".length());
-      ClassUnderTest cut = ClassStore.get(pkg.isEmpty() ? className : pkg + "." + className);
-      if (cut == null) {
-        // test class
-        return Collections.emptyList();
-      }
-      Set<Line> linesInCut = inst.getLines(cut);
-      return candidates.stream()
-          .filter(tc -> inst.getLinesCovered(tc).stream().anyMatch(l -> linesInCut.contains(l)))
-          .collect(
-              Collectors.toList());
+      String pkg = pkgOpt.map(p -> p.substring("package".length() + 1, p.length() - 1)).orElse("");
+      String className = (!pkg.isEmpty() ? pkg + "." : "") + (javaFile.getAbsolutePath()
+          .substring(javaFile.getAbsolutePath().lastIndexOf(File.separatorChar) + 1,
+              javaFile.getAbsolutePath().length() - ".java".length()));
+      return className;
     } catch (IOException e) {
       e.printStackTrace();
     }
-    return Collections.emptyList();
+    return "";
+  }
+
+  private List<TestCase> getTestsCoveringClass(List<TestCase> candidates, String filePath) {
+    if (getClassFile(filePath) == null) {
+      return Collections.emptyList();
+    }
+
+    File javaFile = getClassFile(filePath);
+    String className = getClassName(javaFile);
+    ClassUnderTest cut = ClassStore.get(className);
+    if (cut == null) {
+      // test class
+      return Collections.emptyList();
+    }
+    Set<Line> linesInCut = inst.getLines(cut);
+    return candidates.stream()
+        .filter(tc -> inst.getLinesCovered(tc).stream().anyMatch(l -> linesInCut.contains(l)))
+        .collect(
+            Collectors.toList());
   }
 
   @OptionProvider(paramKey = "schwa_secondary_objective")
   public static List<Comparator> getOptions() {
     ArrayList<Comparator> options = new ArrayList<>();
     options.add(new GreedyComparator());
-    options.add(new AdditionalComparator());
+    options.add(new AdditionalGreedyComparator());
     return options;
   }
 
   @Prerequisite(failureMessage = "Feature weights do not add up to 1. -Dschwa_revisions_weight, -Dschwa_authors_weight and -Dschwa_fixes_weight should sum to 1")
   public static boolean checkWeights() {
-    return validSchwaFile() || Util.doubleEquals(REVISIONS_WEIGHT + AUTHORS_WEIGHT + FIXES_WEIGHT, 1);
+    return validSchwaFile() || Util
+        .doubleEquals(REVISIONS_WEIGHT + AUTHORS_WEIGHT + FIXES_WEIGHT, 1);
   }
 
   @Prerequisite(failureMessage = "Python3 is not installed on this system or is not executable on the system path. Please check your python3 installation.")
   public static boolean checkPythonInstallation() {
-    if(validSchwaFile()){
+    if (validSchwaFile()) {
       return true;
     }
     int returnCode = runProcess("python3", "--version");
@@ -184,7 +211,7 @@ public class Schwa extends TestCasePrioritiser {
 
   @Prerequisite(failureMessage = "Schwa is not installed on this system, and Kanonizo failed to install it. Try again or visit Schwa on GitHub (https://github.com/andrefreitas/schwa) to manually install")
   public static boolean checkSchwaInstallation() {
-    if(validSchwaFile()){
+    if (validSchwaFile()) {
       return true;
     }
     int returnCode = runProcess("schwa", "-h");
@@ -196,14 +223,15 @@ public class Schwa extends TestCasePrioritiser {
   }
 
   @Prerequisite(failureMessage = "In order to use Schwa, project root must be set. The project root must be a git repository")
-  public static boolean checkProjectRoot(){
-    if(validSchwaFile()){
+  public static boolean checkProjectRoot() {
+    if (validSchwaFile()) {
       return true;
     }
-    return Framework.getInstance().getRootFolder() != null && isGitRepository(Framework.getInstance().getRootFolder());
+    return Framework.getInstance().getRootFolder() != null && isGitRepository(
+        Framework.getInstance().getRootFolder());
   }
 
-  private static boolean isGitRepository(File root){
+  private static boolean isGitRepository(File root) {
     return root.listFiles((n) -> n != null && n.getName().equals(".git")).length > 0;
   }
 
