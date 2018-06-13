@@ -10,14 +10,15 @@ import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.util.HashSetCollector;
 
 public class APLCFunction extends APFDFunction {
-
+  private Instrumenter inst;
   public APLCFunction(SystemUnderTest sut) {
     super(sut);
+    inst=Framework.getInstance().getInstrumenter();
   }
 
   @Override
   public Set<? extends Goal> getCoveredGoals(TestCase tc) {
-    return Framework.getInstance().getInstrumenter().getLinesCovered(tc);
+    return inst.getLinesCovered(tc);
   }
 
   @Override

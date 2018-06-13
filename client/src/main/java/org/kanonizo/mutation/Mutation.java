@@ -83,7 +83,7 @@ public class Mutation {
         }
         int testCase = Integer.parseInt(record.get(0));
         int mutantKilled = Integer.parseInt(record.get(1));
-        TestCase test = testSuite.getOriginalOrdering().get(testCase - 1);
+        TestCase test = testSuite.getTestCases().get(testCase - 1);
         if (!killMap.containsKey(test)) {
           killMap.put(test, new ArrayList<Mutant>());
         }

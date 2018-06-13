@@ -440,14 +440,15 @@ public class Framework implements Serializable {
     if (Properties.PRIORITISE) {
       algorithm.setSearchProblem(sut);
     }
-    if (algorithm.needsFitnessFunction()) {
-      setupFitnessFunction();
-    }
 
     // collect (or read) coverage
     Instrumenter inst = getInstrumenter();
     inst.setTestSuite(sut.getTestSuite());
     inst.collectCoverage();
+    
+    if (algorithm.needsFitnessFunction()) {
+      setupFitnessFunction();
+    }
 
     TestCaseOrderingWriter writer = new TestCaseOrderingWriter(algorithm);
     addWriter(writer);

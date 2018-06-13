@@ -49,13 +49,13 @@ public abstract class APFDFunction implements FitnessFunction {
     double apfd = calculateTestCaseIndices();
     double p = getP();
     double n = sut.getTestSuite().getTestCases().size();
-    double m = totalGoals.size();
+    double m = totalGoals.get(sut).size();
     m = Math.max(m, 1);
     return 1 - (p - apfd / (m * n) + p / (2 * n));
   }
 
   protected double getP() {
-    return totalGoals.size() == 0 ? 0 : coveredGoals.get(sut) / totalGoals.size();
+    return (!totalGoals.containsKey(sut)) || totalGoals.get(sut).size() == 0 ? 0 : coveredGoals.get(sut) / totalGoals.get(sut).size();
   }
 
   public abstract Set<? extends Goal> getCoveredGoals(TestCase tc);

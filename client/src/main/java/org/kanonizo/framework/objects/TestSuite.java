@@ -38,7 +38,6 @@ public class TestSuite implements Comparable<TestSuite>, Disposable {
   private double fitness;
   private List<TestCase> testCases = new ArrayList<>();
   private FitnessFunction<SystemUnderTest> func;
-  private List<TestCase> originalOrdering = new ArrayList<>();
   private static Logger logger = LogManager.getLogger(TestSuite.class);
   private int fitnessEvaluations;
   private boolean changed = false;
@@ -258,14 +257,41 @@ public class TestSuite implements Comparable<TestSuite>, Disposable {
 
 
   @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    TestSuite testSuite = (TestSuite) o;
+
+    return testCases != null ? testCases.equals(testSuite.testCases) : testSuite.testCases == null;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = 0;
+    for (TestCase t : testCases){
+      //independent of order
+      result += t.hashCode();
+    }
+    return result;
+  }
+
+  @Override
   public TestSuite clone() {
+    long startTime = System.currentTimeMillis();
     TestSuite clone = new TestSuite();
     clone.parent = parent;
     clone.testCases = new ArrayList<>(testCases);
     clone.removedTestCases = new ArrayList<>(removedTestCases);
-    clone.originalOrdering = new ArrayList<>(originalOrdering);
     clone.fitness = fitness;
     clone.func = func == null ? null : func.clone(parent);
+    if(Properties.PROFILE){
+      System.out.println("Cloned test suite in "+(System.currentTimeMillis() - startTime)+"ms");
+    }
     return clone;
   }
 
@@ -297,10 +323,6 @@ public class TestSuite implements Comparable<TestSuite>, Disposable {
     }
   }
 
-  public List<TestCase> getOriginalOrdering() {
-    return Collections.unmodifiableList(originalOrdering);
-  }
-
   public boolean isDisposed() {
     return disposed;
   }
@@ -315,7 +337,6 @@ public class TestSuite implements Comparable<TestSuite>, Disposable {
       func = null;
       parent = null;
       testCases = null;
-      originalOrdering = null;
     }
   }
 
