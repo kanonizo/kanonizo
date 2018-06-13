@@ -445,7 +445,7 @@ public class Framework implements Serializable {
     Instrumenter inst = getInstrumenter();
     inst.setTestSuite(sut.getTestSuite());
     inst.collectCoverage();
-    
+
     if (algorithm.needsFitnessFunction()) {
       setupFitnessFunction();
     }
