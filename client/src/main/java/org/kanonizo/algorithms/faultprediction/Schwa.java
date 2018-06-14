@@ -54,12 +54,16 @@ public class Schwa extends TestCasePrioritiser {
   @Parameter(key = "classes_per_group", description = "Schwa tells us the likelihood of classes containing a fault - prioritising using this information involves finding all tests that execute a faulty class. This variable controls how many classes to \"group\" together when finding test cases to prioritise", category = "schwa")
   public static int CLASSES_PER_GROUP = 1;
 
+  @Parameter(key = "use_percentage_classes", description = "Whether to select a raw number of classes or a percentage of classes using -Dclasses_per_group", category = "Schwa")
+  public static boolean usePercentageClasses = true;
+
   @Parameter(key = "schwa_file", description = "Running schwa creates a json file containing the probabilities of faults in every class. If this has already been created then it can be used instead of running Schwa from Kanonizo", category = "schwa")
   public static File SCHWA_FILE = null;
 
   private List<SchwaClass> classes;
   private List<SchwaClass> active = new ArrayList<>();
   private List<TestCase> testCasesForActive = new ArrayList<>();
+  private int totalClasses;
 
   private static boolean validSchwaFile() {
     return SCHWA_FILE != null && SCHWA_FILE.exists() && SCHWA_FILE.getAbsolutePath()
@@ -83,6 +87,7 @@ public class Schwa extends TestCasePrioritiser {
           cl -> cl.getPath().endsWith(".java") && getClassFile(cl.getPath()) != null
               && ClassStore.get(getClassName(getClassFile(cl.getPath()))) != null)
           .collect(Collectors.toList());
+      totalClasses = classes.size();
       if (classes.isEmpty()) {
         logger.error(
             "No classes remaining. Is the project root set correctly so that we can identify java files from the Schwa output?");
@@ -103,7 +108,8 @@ public class Schwa extends TestCasePrioritiser {
       if (classes.size() > 0) {
         // pick next n classes to prioritise tests for, either CLASSES_PER_GROUP or all remaining classes
         active.clear();
-        for (int i = 0; i < Math.min(CLASSES_PER_GROUP, classes.size()); i++) {
+        int classesToSelect = Math.min(usePercentageClasses ? totalClasses * CLASSES_PER_GROUP/100 : CLASSES_PER_GROUP, classes.size());
+        for (int i = 0; i < classesToSelect; i++) {
           active.add(classes.get(i));
         }
         classes.removeAll(active);
