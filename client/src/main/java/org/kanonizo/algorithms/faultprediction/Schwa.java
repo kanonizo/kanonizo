@@ -10,6 +10,7 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
@@ -131,14 +132,14 @@ public class Schwa extends TestCasePrioritiser {
 
   private List<TestCase> getTestsCoveringClasses(List<TestCase> candidates,
       List<SchwaClass> classes) {
-    List<TestCase> tests = new ArrayList<>();
+    Set<TestCase> tests = new HashSet<>();
     Iterator<SchwaClass> it = classes.iterator();
     while (it.hasNext()) {
       SchwaClass cl = it.next();
       String filePath = cl.getPath();
       tests.addAll(getTestsCoveringClass(candidates, filePath));
     }
-    return tests;
+    return new ArrayList<>(tests);
   }
 
   private File getClassFile(String filePath) {
