@@ -94,7 +94,7 @@ public class Schwa extends TestCasePrioritiser {
             "No classes remaining. Is the project root set correctly so that we can identify java files from the Schwa output?");
       }
       // sort classes by probability of containing a fault
-      Collections.sort(classes, Comparator.comparingDouble(o -> o.getProb()));
+      Collections.sort(classes, Comparator.comparingDouble(o -> 1 - o.getProb()));
       if (createTemp) {
         SCHWA_FILE.delete();
       }
@@ -109,7 +109,9 @@ public class Schwa extends TestCasePrioritiser {
       if (classes.size() > 0) {
         // pick next n classes to prioritise tests for, either CLASSES_PER_GROUP or all remaining classes
         active.clear();
-        int classesToSelect = Math.min(usePercentageClasses ? totalClasses * CLASSES_PER_GROUP/100 : CLASSES_PER_GROUP, classes.size());
+        int classesToSelect = Math
+            .min(usePercentageClasses ? totalClasses * CLASSES_PER_GROUP / 100 : CLASSES_PER_GROUP,
+                classes.size());
         for (int i = 0; i < classesToSelect; i++) {
           active.add(classes.get(i));
         }
