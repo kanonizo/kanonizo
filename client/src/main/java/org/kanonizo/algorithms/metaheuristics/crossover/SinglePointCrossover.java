@@ -13,8 +13,8 @@ public class SinglePointCrossover implements CrossoverFunction {
 
     int point = RandomInstance.nextInt(Math.min(parent1.size(), parent2.size()) - 1) + 1;
 
-    TestSuite t1 = parent1.clone();
-    TestSuite t2 = parent2.clone();
+    TestSuite t1 = parent1.getParent().clone().getTestSuite();
+    TestSuite t2 = parent2.getParent().clone().getTestSuite();
 
     parent1.crossover(t2, point, point);
     parent2.crossover(t1, point, point);

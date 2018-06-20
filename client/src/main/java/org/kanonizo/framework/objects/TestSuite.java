@@ -94,7 +94,7 @@ public class TestSuite implements Comparable<TestSuite>, Disposable {
 
   public TestSuite mutate() {
     long startTime = java.lang.System.currentTimeMillis();
-    TestSuite clone = this.clone();
+    TestSuite clone = parent.clone().getTestSuite();
     if (RandomInstance.nextDouble() < REMOVAL_CHANCE) {
       clone.removeTestCase();
     }
@@ -278,21 +278,6 @@ public class TestSuite implements Comparable<TestSuite>, Disposable {
       result += t.hashCode();
     }
     return result;
-  }
-
-  @Override
-  public TestSuite clone() {
-    long startTime = System.currentTimeMillis();
-    TestSuite clone = new TestSuite();
-    clone.parent = parent;
-    clone.testCases = new ArrayList<>(testCases);
-    clone.removedTestCases = new ArrayList<>(removedTestCases);
-    clone.fitness = fitness;
-    clone.func = func == null ? null : func.clone(parent);
-    if(Properties.PROFILE){
-      System.out.println("Cloned test suite in "+(System.currentTimeMillis() - startTime)+"ms");
-    }
-    return clone;
   }
 
   /**

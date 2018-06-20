@@ -48,14 +48,9 @@ public class SystemUnderTest implements Cloneable {
 
   public SystemUnderTest clone() {
     SystemUnderTest clone = new SystemUnderTest();
-    for (ClassUnderTest cut : classesUnderTest) {
-      clone.addClass(cut.clone());
-    }
-    for (Class<?> extra : extraClasses) {
-      clone.extraClasses.add(extra);
-    }
-    clone.suite = suite.clone();
-    clone.suite.setParent(clone);
+    clone.classesUnderTest.addAll(classesUnderTest);
+    clone.extraClasses.addAll(extraClasses);
+    suite.getTestCases().forEach(tc -> clone.suite.addTestCase(tc));
     return clone;
   }
 

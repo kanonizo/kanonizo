@@ -436,9 +436,12 @@ public class ScytheInstrumenter implements Instrumenter {
               in.endArray();
               in.nextName();
               long executionTime = in.nextLong();
-              test.setResult(new KanonizoTestResult(test.getTestClass(), test.getMethod(), result, failures, executionTime));
-              inst.testSuite.addTestCase(test);
-              if (test == null) {
+              if(test != null) {
+                test.setResult(
+                    new KanonizoTestResult(test.getTestClass(), test.getMethod(), result, failures,
+                        executionTime));
+                inst.testSuite.addTestCase(test);
+              } else {
                 logger.debug("Error deserialising test case " + testString + ".");
               }
               in.endObject();

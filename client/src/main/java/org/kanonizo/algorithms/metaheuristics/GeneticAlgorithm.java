@@ -111,8 +111,8 @@ public class GeneticAlgorithm extends TestSuitePrioritiser {
       TestSuite parent1 = selection.select(population);
       TestSuite parent2 = selection.select(population);
 
-      TestSuite offspring1 = parent1.clone();
-      TestSuite offspring2 = parent2.clone();
+      TestSuite offspring1 = parent1.getParent().clone().getTestSuite();
+      TestSuite offspring2 = parent2.getParent().clone().getTestSuite();
 
       if (RandomInstance.nextDouble() <= CROSSOVER_CHANCE) {
         crossover.crossover(offspring1, offspring2);
@@ -166,7 +166,7 @@ public class GeneticAlgorithm extends TestSuitePrioritiser {
     sortPopulation();
     List<TestSuite> elite = new ArrayList<>();
     for (int i = 0; i < ELITE; i++) {
-      elite.add(population.get(i).clone());
+      elite.add(population.get(i).getParent().clone().getTestSuite());
     }
     return elite;
   }

@@ -40,7 +40,7 @@ public class RandomSearchAlgorithm extends TestSuitePrioritiser {
 
   @Override
   protected List<TestSuite> evolve() {
-    clone = getCurrentOptimal().clone();
+    clone = getCurrentOptimal().getParent().clone().getTestSuite();
     List<TestCase> testCases = clone.getTestCases();
     List<TestCase> randomOrdering = generateRandomOrder(testCases);
     clone.setTestCases(randomOrdering);
