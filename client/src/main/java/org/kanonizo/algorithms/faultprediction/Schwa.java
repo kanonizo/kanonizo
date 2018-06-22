@@ -22,11 +22,13 @@ import org.kanonizo.Framework;
 import org.kanonizo.algorithms.TestCasePrioritiser;
 import org.kanonizo.algorithms.heuristics.comparators.AdditionalGreedyComparator;
 import org.kanonizo.algorithms.heuristics.comparators.GreedyComparator;
+import org.kanonizo.algorithms.heuristics.comparators.RandomComparator;
 import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.annotations.ConditionalParameter;
 import org.kanonizo.annotations.OptionProvider;
 import org.kanonizo.annotations.Prerequisite;
 import org.kanonizo.framework.ClassStore;
+import org.kanonizo.framework.ObjectiveFunction;
 import org.kanonizo.framework.objects.ClassUnderTest;
 import org.kanonizo.framework.objects.Line;
 import org.kanonizo.framework.objects.TestCase;
@@ -50,7 +52,7 @@ public class Schwa extends TestCasePrioritiser {
   public static double FIXES_WEIGHT = 0.5;
 
   @Parameter(key = "schwa_secondary_objective", description = "Since Schwa tells us the likelihood of each class/method containing a fault, we discover the test cases that execute that area of code. However, a secondary objective can allow us to prioritise test cases within the set of test cases that cover a faulty objective", category = "schwa", hasOptions = true)
-  public static Comparator<TestCase> COMPARATOR;
+  public static ObjectiveFunction secondaryObjective;
 
   @Parameter(key = "classes_per_group", description = "Schwa tells us the likelihood of classes containing a fault - prioritising using this information involves finding all tests that execute a faulty class. This variable controls how many classes to \"group\" together when finding test cases to prioritise", category = "schwa")
   public static int CLASSES_PER_GROUP = 1;
@@ -122,9 +124,9 @@ public class Schwa extends TestCasePrioritiser {
         // if there are no more classes reported by Schwa, just add test cases in the order we found them
         testCasesForActive = testCases;
       }
-      if (COMPARATOR != null) {
+      if (secondaryObjective != null) {
         // secondary objective sort for test cases
-        testCasesForActive.sort(COMPARATOR);
+        testCasesForActive = secondaryObjective.sort(testCasesForActive);
       }
     }
     TestCase next = testCasesForActive.get(0);
@@ -195,10 +197,11 @@ public class Schwa extends TestCasePrioritiser {
   }
 
   @OptionProvider(paramKey = "schwa_secondary_objective")
-  public static List<Comparator> getOptions() {
-    ArrayList<Comparator> options = new ArrayList<>();
+  public static List<ObjectiveFunction> getOptions() {
+    ArrayList<ObjectiveFunction> options = new ArrayList<>();
     options.add(new GreedyComparator());
     options.add(new AdditionalGreedyComparator());
+    options.add(new RandomComparator());
     return options;
   }
 

@@ -1,12 +1,14 @@
 package org.kanonizo.algorithms.heuristics.comparators;
 
 import java.util.Comparator;
+import java.util.List;
 import org.kanonizo.Framework;
+import org.kanonizo.framework.ObjectiveFunction;
 import org.kanonizo.framework.Readable;
 import org.kanonizo.framework.instrumentation.Instrumenter;
 import org.kanonizo.framework.objects.TestCase;
 
-public class GreedyComparator implements Comparator<TestCase>, Readable {
+public class GreedyComparator implements ObjectiveFunction, Comparator<TestCase> {
 
   private Instrumenter inst;
   private Framework fw = Framework.getInstance();
@@ -28,5 +30,11 @@ public class GreedyComparator implements Comparator<TestCase>, Readable {
   @Override
   public String readableName() {
     return "greedy";
+  }
+
+  @Override
+  public List<TestCase> sort(List<TestCase> candidates) {
+    candidates.sort(this);
+    return candidates;
   }
 }
