@@ -10,11 +10,12 @@ public class RandomComparator implements ObjectiveFunction {
 
   @Override
   public List<TestCase> sort(List<TestCase> candidates) {
+    ArrayList<TestCase> candidatesClone = new ArrayList<>(candidates);
     ArrayList<TestCase> newOrder = new ArrayList<>();
-    while(!candidates.isEmpty()){
-      int index = RandomInstance.nextInt(candidates.size());
-      TestCase t = candidates.get(index);
-      candidates.remove(t);
+    while(!candidatesClone.isEmpty()){
+      int index = RandomInstance.nextInt(candidatesClone.size());
+      TestCase t = candidatesClone.get(index);
+      candidatesClone.remove(t);
       newOrder.add(t);
     }
     return newOrder;
