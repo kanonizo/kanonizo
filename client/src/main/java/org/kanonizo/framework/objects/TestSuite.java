@@ -181,6 +181,10 @@ public class TestSuite implements Comparable<TestSuite>, Disposable {
     return fitness;
   }
 
+  void setFitness(double fitness){
+    this.fitness = fitness;
+  }
+
   public void evolutionComplete() {
     if (changed) {
       evaluateFitness();
@@ -289,7 +293,7 @@ public class TestSuite implements Comparable<TestSuite>, Disposable {
    * @return the fitter individual according to the current fitness function. Always <code>this</code> or <code>other</code>, never null or a new object. This allows for object comparison if required
    */
   public TestSuite fitter(TestSuite other) {
-    if (func.isMaximisationFunction()) {
+    if (getFitnessFunction().isMaximisationFunction()) {
       return fitness > other.fitness ? this : other;
     } else {
       return fitness < other.fitness ? this : other;

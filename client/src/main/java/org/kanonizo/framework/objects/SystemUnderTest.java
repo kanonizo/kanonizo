@@ -51,6 +51,7 @@ public class SystemUnderTest implements Cloneable {
     clone.classesUnderTest.addAll(classesUnderTest);
     clone.extraClasses.addAll(extraClasses);
     suite.getTestCases().forEach(tc -> clone.suite.addTestCase(tc));
+    clone.suite.setFitness(suite.getFitness());
     return clone;
   }
 
