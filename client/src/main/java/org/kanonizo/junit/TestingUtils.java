@@ -29,7 +29,7 @@ public class TestingUtils {
     List<Method> methods = Arrays.asList(cl.getMethods());
     boolean anyTestMethods = methods.stream().anyMatch(m -> isJUnit4Test(m));
     boolean constructorCheck = cl.getConstructors().length == 1 && Modifier.isPublic(cl.getConstructors()[0].getModifiers());
-    return constructorCheck && (anyTestMethods || (cl.isMemberClass() && isJUnit4Class(cl.getEnclosingClass())));
+    return constructorCheck && (anyTestMethods || (cl.isMemberClass() && isJUnit4Class(cl.getEnclosingClass()))) && !cl.isAnnotationPresent(Ignore.class);
   }
 
   public static boolean isJUnit4Test(Method method) {
