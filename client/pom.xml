@@ -139,7 +139,7 @@
                                     <pattern>com.gzoltar</pattern>
                                     <shadedPattern>org.kanonizo.internal.com.gzoltar</shadedPattern>
                                 </relocation>
-                                <relocation>
+                                <!--relocation>
                                     <pattern>org.hamcrest</pattern>
                                     <shadedPattern>org.kanonizo.internal.org.hamcrest</shadedPattern>
                                 </relocation>
@@ -150,7 +150,7 @@
                                 <relocation>
                                     <pattern>org.jacoco</pattern>
                                     <shadedPattern>org.kanonizo.internal.org.jacoco</shadedPattern>
-                                </relocation>
+                                </relocation-->
                             </relocations>
                             <transformers>
                                 <!-- add Main-Class to manifest file -->
