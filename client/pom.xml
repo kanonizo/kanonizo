@@ -231,6 +231,14 @@
             <artifactId>gson</artifactId>
             <version>2.3.1</version>
         </dependency>
+        <dependency>
+            <groupId>com.gzoltar</groupId>
+            <artifactId>com.gzoltar.core</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/com.gzoltar.core-0.0.1-SNAPSHOT.201806211106.jar</systemPath>
+            <type>jar</type>
+        </dependency>
     </dependencies>
     <properties>
     </properties>
