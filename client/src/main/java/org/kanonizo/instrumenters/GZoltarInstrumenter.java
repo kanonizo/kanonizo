@@ -31,6 +31,7 @@ import org.kanonizo.framework.objects.LineStore;
 import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
+import org.kanonizo.junit.KanonizoTestFailure;
 import org.kanonizo.junit.KanonizoTestResult;
 import org.kanonizo.util.HashSetCollector;
 
@@ -104,9 +105,14 @@ public class GZoltarInstrumenter implements Instrumenter {
         }
       }
 
+      List<KanonizoTestFailure> failures = new ArrayList<KanonizoTestFailure>();
+      if (transaction.hasFailed()) {
+        failures.add(new KanonizoTestFailure(new Exception(), transaction.getStackTrace()));
+      }
+
       tc.setResult(
-          new KanonizoTestResult(tc.getTestClass(), tc.getMethod(), transaction.hasFailed(),
-              Collections.emptyList(), transaction.getRuntime()));
+            new KanonizoTestResult(tc.getTestClass(), tc.getMethod(), transaction.hasFailed(),
+                failures, transaction.getRuntime()));
     }
 
   }
