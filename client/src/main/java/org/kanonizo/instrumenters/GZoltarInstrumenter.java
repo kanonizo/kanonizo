@@ -54,6 +54,7 @@ public class GZoltarInstrumenter implements Instrumenter {
     try {
       final SpectrumReader reader = new SpectrumReader(Framework.getInstance().getSourceFolder().getAbsolutePath(), agentConfigs,
             new FileInputStream(gzFile));
+      reader.read();
       final Spectrum spectrum = reader.getSpectrum();
       List<ProbeGroup> probeGroups = new ArrayList<>(spectrum.getProbeGroups()); // a ProbeGroup contains all probes (i.e., lines that have been instrumented) of each class
       List<Transaction> transactions = spectrum.getTransactions(); // a transaction is in fact a test case execution
@@ -86,6 +87,8 @@ public class GZoltarInstrumenter implements Instrumenter {
         }
       }
     } catch (FileNotFoundException e) {
+      e.printStackTrace();
+    } catch(Exception e){
       e.printStackTrace();
     }
   }
