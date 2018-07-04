@@ -89,10 +89,10 @@ public class GZoltarInstrumenter implements Instrumenter {
       String testMethodName = tcName.substring(tcName.indexOf("#") + 1);
       TestCase tc = TestCaseStore.with(testMethodName + "(" + testClassName + ")");
       for (ProbeGroup probeGroup : probeGroups) {
+        String className = probeGroup.getName();
+        ClassUnderTest cut = ClassStore.get(className);
         for (Probe probe : probeGroup.getProbes()) {
           if (transaction.isProbeActived(probeGroup, probe.getArrayIndex())) {
-            String className = probeGroup.getName();
-            ClassUnderTest cut = ClassStore.get(className);
             int lineNumber = probe.getNode().getLineNumber();
             Line l = LineStore.with(cut, lineNumber);
             if (!linesCovered.containsKey(tc)) {
