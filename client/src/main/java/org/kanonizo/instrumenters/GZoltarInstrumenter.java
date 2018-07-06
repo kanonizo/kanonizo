@@ -3,6 +3,7 @@ package org.kanonizo.instrumenters;
 
 import com.gzoltar.core.AgentConfigs;
 import com.gzoltar.core.instr.InstrumentationLevel;
+import com.gzoltar.core.model.Node;
 import com.gzoltar.core.model.Transaction;
 import com.gzoltar.core.runtime.Probe;
 import com.gzoltar.core.runtime.ProbeGroup;
@@ -17,10 +18,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.commons.lang3.tuple.Pair;
 import org.kanonizo.Framework;
+import org.kanonizo.Properties;
 import org.kanonizo.framework.ClassStore;
 import org.kanonizo.framework.TestCaseStore;
 import org.kanonizo.framework.instrumentation.Instrumenter;
@@ -76,9 +80,11 @@ public class GZoltarInstrumenter implements Instrumenter {
 
   @Override
   public void collectCoverage() {
+    long startTime = System.currentTimeMillis();
     Spectrum spectrum = getSpectrum();
-    List<ProbeGroup> probeGroups = new ArrayList<>(spectrum
-        .getProbeGroups()); // a ProbeGroup contains all probes (i.e., lines that have been instrumented) of each class
+    if(Properties.PROFILE){
+      System.out.println("Spectrum loaded in "+(System.currentTimeMillis() - startTime)+"ms");
+    }
     List<Transaction> transactions = spectrum
         .getTransactions(); // a transaction is in fact a test case execution
 
@@ -87,28 +93,36 @@ public class GZoltarInstrumenter implements Instrumenter {
       String testClassName = tcName.substring(0, tcName.indexOf("#"));
       String testMethodName = tcName.substring(tcName.indexOf("#") + 1);
       TestCase tc = TestCaseStore.with(testMethodName + "(" + testClassName + ")");
-      for (ProbeGroup probeGroup : probeGroups) {
-        for (Probe probe : probeGroup.getProbes()) {
-          if (transaction.isProbeActived(probeGroup, probe.getArrayIndex())) {
-            String className = probeGroup.getName();
-            ClassUnderTest cut = ClassStore.get(className);
-            int lineNumber = probe.getNode().getLineNumber();
-            Line l = LineStore.with(cut, lineNumber);
-            if (!linesCovered.containsKey(tc)) {
-              linesCovered.put(tc, new HashSet<>());
-            }
-            linesCovered.get(tc).add(l);
-            totalCoverage.add(l);
-            // transaction covered this particular probe, i.e., line
+      List<Node> hits = spectrum.getHitNodes(transaction);
+
+      for (Node hit : hits) {
+        int lineNumber = hit.getLineNumber();
+        String className = hit.getName().substring(0, hit.getName().indexOf("#")).replaceFirst("\\$", ".");
+        ClassUnderTest cut = ClassStore.get(className);
+        if(cut == null){
+          Class<?> cl = null;
+          try {
+            cl = Class.forName(className);
+            cut = new ClassUnderTest(cl);
+          } catch (ClassNotFoundException e) {
+            e.printStackTrace();
           }
         }
+        Line l = LineStore.with(cut, lineNumber);
+        if (!linesCovered.containsKey(tc)) {
+          linesCovered.put(tc, new HashSet<>());
+        }
+        linesCovered.get(tc).add(l);
+        totalCoverage.add(l);
       }
 
       tc.setResult(
           new KanonizoTestResult(tc.getTestClass(), tc.getMethod(), transaction.hasFailed(),
               Collections.emptyList(), transaction.getRuntime()));
     }
-
+    if(Properties.PROFILE){
+      System.out.println("Coverage deserialised in "+(System.currentTimeMillis() - startTime)+"ms");
+    }
   }
 
   @Override
@@ -142,7 +156,7 @@ public class GZoltarInstrumenter implements Instrumenter {
         .filter(pg -> pg.getName().equals(cut.getCUT().getName())).findFirst();
     if (optGroup.isPresent()) {
       ProbeGroup group = optGroup.get();
-      List<Probe> probes = optGroup.get().getProbes();
+      List<Probe> probes = group.getProbes();
       Set<Integer> lineNumbers = probes.stream().map(p -> p.getNode().getLineNumber())
           .collect(Collectors
               .toSet());
