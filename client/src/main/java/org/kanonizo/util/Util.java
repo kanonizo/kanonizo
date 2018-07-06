@@ -30,6 +30,7 @@ import org.junit.Test;
 import org.junit.runner.Runner;
 import org.kanonizo.annotations.OptionProvider;
 import org.kanonizo.framework.Readable;
+import org.kanonizo.junit.TestingUtils;
 import org.reflections.Reflections;
 import org.reflections.scanners.FieldAnnotationsScanner;
 import org.reflections.scanners.SubTypesScanner;
@@ -276,8 +277,7 @@ public class Util {
     if (Runner.class.isAssignableFrom(cl)) {
       return false;
     }
-    if (cl.getSuperclass() != null && Modifier.isAbstract(cl.getSuperclass().getModifiers())
-        && isTestClass(cl.getSuperclass())) {
+    if (cl.getSuperclass() != null && TestingUtils.getTestMethods(cl.getSuperclass()).size() > 0) {
       return true;
     }
     // junit 3 test classes must inherit from TestCase
