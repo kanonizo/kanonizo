@@ -35,6 +35,7 @@ import org.kanonizo.framework.objects.LineStore;
 import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
+import org.kanonizo.junit.KanonizoTestFailure;
 import org.kanonizo.junit.KanonizoTestResult;
 import org.kanonizo.util.HashSetCollector;
 
@@ -61,6 +62,7 @@ public class GZoltarInstrumenter implements Instrumenter {
 
   private Spectrum getSpectrum() {
     if (spectrum == null) {
+      long startTime = System.currentTimeMillis();
       final AgentConfigs agentConfigs = new AgentConfigs();
       agentConfigs.setInstrumentationLevel(InstrumentationLevel.NONE);
       try {
@@ -69,6 +71,9 @@ public class GZoltarInstrumenter implements Instrumenter {
             new FileInputStream(gzFile));
         reader.read();
         spectrum = reader.getSpectrum();
+        if(Properties.PROFILE){
+          System.out.println("Initial spectrum read completed in "+(System.currentTimeMillis() - startTime) + "ms");
+        }
       } catch (FileNotFoundException e) {
         e.printStackTrace();
       } catch (Exception e) {
@@ -99,15 +104,6 @@ public class GZoltarInstrumenter implements Instrumenter {
         int lineNumber = hit.getLineNumber();
         String className = hit.getName().substring(0, hit.getName().indexOf("#")).replaceFirst("\\$", ".");
         ClassUnderTest cut = ClassStore.get(className);
-        if(cut == null){
-          Class<?> cl = null;
-          try {
-            cl = Class.forName(className);
-            cut = new ClassUnderTest(cl);
-          } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-          }
-        }
         Line l = LineStore.with(cut, lineNumber);
         if (!linesCovered.containsKey(tc)) {
           linesCovered.put(tc, new HashSet<>());
@@ -116,9 +112,14 @@ public class GZoltarInstrumenter implements Instrumenter {
         totalCoverage.add(l);
       }
 
+      List<KanonizoTestFailure> failures = new ArrayList<KanonizoTestFailure>();
+      if (transaction.hasFailed()) {
+        failures.add(new KanonizoTestFailure(new Exception(), transaction.getStackTrace()));
+      }
+
       tc.setResult(
-          new KanonizoTestResult(tc.getTestClass(), tc.getMethod(), transaction.hasFailed(),
-              Collections.emptyList(), transaction.getRuntime()));
+            new KanonizoTestResult(tc.getTestClass(), tc.getMethod(), transaction.hasFailed(),
+                failures, transaction.getRuntime()));
     }
     if(Properties.PROFILE){
       System.out.println("Coverage deserialised in "+(System.currentTimeMillis() - startTime)+"ms");
