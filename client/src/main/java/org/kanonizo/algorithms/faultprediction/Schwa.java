@@ -23,6 +23,7 @@ import org.kanonizo.algorithms.TestCasePrioritiser;
 import org.kanonizo.algorithms.heuristics.comparators.AdditionalGreedyComparator;
 import org.kanonizo.algorithms.heuristics.comparators.GreedyComparator;
 import org.kanonizo.algorithms.heuristics.comparators.RandomComparator;
+import org.kanonizo.algorithms.heuristics.comparators.ConstraintSolverComparator;
 import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.annotations.ConditionalParameter;
 import org.kanonizo.annotations.OptionProvider;
@@ -62,6 +63,9 @@ public class Schwa extends TestCasePrioritiser {
 
   @Parameter(key = "schwa_file", description = "Running schwa creates a json file containing the probabilities of faults in every class. If this has already been created then it can be used instead of running Schwa from Kanonizo", category = "schwa")
   public static File SCHWA_FILE = null;
+
+  @Parameter(key = "constraint_solver_path", description = "Path to the constraint solver binary", category = "schwa")
+  public static String CONSTRAINT_SOLVER_PATH = null;
 
   private List<SchwaClass> classes;
   private List<SchwaClass> active = new ArrayList<>();
@@ -202,6 +206,7 @@ public class Schwa extends TestCasePrioritiser {
     options.add(new GreedyComparator());
     options.add(new AdditionalGreedyComparator());
     options.add(new RandomComparator());
+    options.add(new ConstraintSolverComparator(CONSTRAINT_SOLVER_PATH));
     return options;
   }
 
