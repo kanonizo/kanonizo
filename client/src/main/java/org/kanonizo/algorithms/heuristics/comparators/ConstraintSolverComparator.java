@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.kanonizo.Framework;
 import org.kanonizo.framework.ObjectiveFunction;
 import org.kanonizo.framework.instrumentation.Instrumenter;
@@ -20,6 +22,8 @@ import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.util.RandomInstance;
 
 public class ConstraintSolverComparator implements ObjectiveFunction {
+
+  private static final Logger logger = LogManager.getLogger(ConstraintSolverComparator.class);
 
   private Instrumenter inst;
 
@@ -36,10 +40,12 @@ public class ConstraintSolverComparator implements ObjectiveFunction {
       File in = File.createTempFile("minion-input-file", ".txt");
       in.deleteOnExit();
       MINION_INPUT_FILE = in.getAbsolutePath();
+      logger.debug("Minion input file: " + MINION_INPUT_FILE);
 
       File out = File.createTempFile("minion-output-file", ".txt");
       out.deleteOnExit();
       MINION_OUPUT_FILE = out.getAbsolutePath();
+      logger.debug("Minion output file: " + MINION_OUPUT_FILE);
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -105,6 +111,7 @@ public class ConstraintSolverComparator implements ObjectiveFunction {
     try {
       List<List<TestCase>> solutions = this.analyseMinionOutput(testCases);
       int index = RandomInstance.nextInt(solutions.size());
+      logger.debug("Selected solution '" + index + "' out of " + solutions.size());
       return solutions.get(index);
     } catch (Exception e) {
       e.printStackTrace();
@@ -202,10 +209,10 @@ public class ConstraintSolverComparator implements ObjectiveFunction {
       String s = null;
 
       while ((s = stdInput.readLine()) != null) {
-        System.out.println(s);
+        logger.debug(s);
       }
       while ((s = stdError.readLine()) != null) {
-        System.out.println(s);
+        logger.debug(s);
       }
     }
 
@@ -242,6 +249,8 @@ public class ConstraintSolverComparator implements ObjectiveFunction {
       }
 
       if (!solution.isEmpty()) {
+        // TODO it does not seem necessary, but we may want to use a Trie
+        // (https://en.wikipedia.org/wiki/Trie) to discard subsumed solutions
         solutions.add(solution);
       }
     }
