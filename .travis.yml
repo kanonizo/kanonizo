@@ -10,8 +10,6 @@ before_install:
   - git pull origin dev
   - mvn clean install
   - popd
-  - cd client
-  - mvn install:install-file -Dfile=lib/com.gzoltar.core-0.0.1-SNAPSHOT.201806211106.jar -DgroupId=com.gzoltar -DartifactId=com.gzoltar.core -Dversion=0.0.1-SNAPSHOT -Dpackaging=jar -DlocalRepositoryPath=lib
 script:
   - mvn test package
 notifications:
