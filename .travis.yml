@@ -10,6 +10,7 @@ before_install:
   - git pull origin dev
   - mvn clean install
   - popd
+  - cd client
 script:
   - mvn test package
 notifications:
