@@ -5,16 +5,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.apache.commons.lang3.tuple.Pair;
-import org.kanonizo.Framework;
+import java.util.stream.Collectors;
 import org.kanonizo.framework.ObjectiveFunction;
-import org.kanonizo.framework.instrumentation.Instrumenter;
-import org.kanonizo.framework.objects.Line;
+import org.kanonizo.framework.objects.Pair;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.similarity.DistanceFunction;
 import org.kanonizo.framework.similarity.JaccardDistance;
+import org.kanonizo.util.RandomInstance;
 
 public class SimilarityComparator implements ObjectiveFunction {
 
@@ -29,18 +26,46 @@ public class SimilarityComparator implements ObjectiveFunction {
   public List<TestCase> sort(List<TestCase> candidates) {
     // calculate similarity matrix
     List<TestCase> copy = new ArrayList<>(candidates);
-    Map<Pair<TestCase, TestCase>, Double> similarity = new HashMap<>();
+    Map<Pair<TestCase>, Double> similarity = new HashMap<>();
     for (TestCase candidate : candidates) {
       copy.remove(candidate);
       for (TestCase candidate2 : copy) {
         double sim = dist.getDistance(candidate, candidate2);
-        similarity.put(new ImmutablePair(candidate, candidate2), sim);
+        similarity.put(new Pair<>(candidate, candidate2), sim);
       }
     }
+    List<TestCase> selected = new ArrayList<>();
     // pick starting test cases
-    // remove similar test cases
+
+    while (!shouldFinish(selected) && similarity.size() > 0) {
+      // select most dissimilar test case
+      double minSimilarity = similarity.values().parallelStream().mapToDouble(a->a).min()
+          .getAsDouble();
+      List<Pair<TestCase>> leastSimilar = similarity.entrySet().stream()
+          .filter(entry -> entry.getValue() == minSimilarity).map(entry -> entry.getKey()).collect(
+              Collectors.toList());
+      Pair<TestCase> selectedPair;
+      if (leastSimilar.size() > 1) {
+        selectedPair = leastSimilar.get(RandomInstance.nextInt(leastSimilar.size()));
+      } else {
+        selectedPair = leastSimilar.get(0);
+      }
+      TestCase selectedTest =
+          RandomInstance.nextBoolean() ? selectedPair.getLeft() : selectedPair.getRight();
+
+      // add test case to list of selected
+      selected.add(selectedTest);
+      // remove all instances of that test case
+      similarity = similarity.entrySet().stream().filter(
+          entry -> !entry.getKey().contains(selectedTest)).collect(Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue()));
+    }
+
     // keep selecting test cases until coverage criteria/fixed # of test cases selected
-    return null;
+    return selected;
+  }
+
+  private boolean shouldFinish(List<TestCase> selected) {
+    return (minTestCases != -1 && selected.size() > minTestCases);
   }
 
   @Override
