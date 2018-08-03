@@ -119,6 +119,10 @@ public class Schwa extends TestCasePrioritiser {
         for (int i = 0; i < classesToSelect; i++) {
           active.add(classes.get(i));
         }
+        if (secondaryObjective != null && secondaryObjective.needsTargetClass()) {
+          secondaryObjective.setTargetClasses(
+              active.stream().map(cl -> ClassStore.get(getClassName(getClassFile(cl.getPath()))).getCUT()).collect(Collectors.toList()));
+        }
         classes.removeAll(active);
         // grab covering test cases
         testCasesForActive = getTestsCoveringClasses(testCases, active);
