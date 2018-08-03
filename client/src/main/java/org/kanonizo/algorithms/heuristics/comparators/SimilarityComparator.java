@@ -6,7 +6,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.kanonizo.Framework;
+import org.kanonizo.framework.ClassStore;
 import org.kanonizo.framework.ObjectiveFunction;
+import org.kanonizo.framework.instrumentation.Instrumenter;
 import org.kanonizo.framework.objects.Pair;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.similarity.DistanceFunction;
@@ -22,9 +25,20 @@ public class SimilarityComparator implements ObjectiveFunction {
   @Parameter(key = "similarity_distance_function", description = "Distance function to use when comparing test cases", category = "similarity")
   public static DistanceFunction<TestCase> dist = new JaccardDistance();
 
+  private List<Class<?>> targetClasses;
+  private Instrumenter inst = Framework.getInstance().getInstrumenter();
+
+  public SimilarityComparator() {
+    Framework.getInstance().addPropertyChangeListener(Framework.INSTRUMENTER_PROPERTY_NAME,
+        evt -> inst = (Instrumenter) evt.getNewValue());
+  }
+
   @Override
   public List<TestCase> sort(List<TestCase> candidates) {
     // calculate similarity matrix
+    if(candidates.size() <= 1){
+      return candidates;
+    }
     List<TestCase> copy = new ArrayList<>(candidates);
     Map<Pair<TestCase>, Double> similarity = new HashMap<>();
     for (TestCase candidate : candidates) {
@@ -39,7 +53,7 @@ public class SimilarityComparator implements ObjectiveFunction {
 
     while (!shouldFinish(selected) && similarity.size() > 0) {
       // select most dissimilar test case
-      double minSimilarity = similarity.values().parallelStream().mapToDouble(a->a).min()
+      double minSimilarity = similarity.values().parallelStream().mapToDouble(a -> a).min()
           .getAsDouble();
       List<Pair<TestCase>> leastSimilar = similarity.entrySet().stream()
           .filter(entry -> entry.getValue() == minSimilarity).map(entry -> entry.getKey()).collect(
@@ -57,7 +71,8 @@ public class SimilarityComparator implements ObjectiveFunction {
       selected.add(selectedTest);
       // remove all instances of that test case
       similarity = similarity.entrySet().stream().filter(
-          entry -> !entry.getKey().contains(selectedTest)).collect(Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue()));
+          entry -> !entry.getKey().contains(selectedTest))
+          .collect(Collectors.toMap(entry -> entry.getKey(), entry -> entry.getValue()));
     }
 
     // keep selecting test cases until coverage criteria/fixed # of test cases selected
@@ -65,12 +80,26 @@ public class SimilarityComparator implements ObjectiveFunction {
   }
 
   private boolean shouldFinish(List<TestCase> selected) {
-    return (minTestCases != -1 && selected.size() > minTestCases);
+    int linesToCover = targetClasses.stream()
+        .mapToInt(cl -> inst.getTotalLines(ClassStore.get(cl.getName()))).sum();
+    double linesCovered = selected.stream().mapToDouble(tc -> inst.getLinesCovered(tc).stream()
+        .filter(l -> targetClasses.contains(l.getParent().getCUT())).collect(Collectors.toSet()).size()).sum();
+    return (minTestCases != -1 && selected.size() > minTestCases) ||
+        (coverageAdequacy != -1
+            && linesCovered / linesToCover > coverageAdequacy);
   }
 
   @Override
   public String readableName() {
     return "similarity";
+  }
+
+  public boolean needsTargetClass() {
+    return true;
+  }
+
+  public void setTargetClasses(List<Class<?>> targetClasses) {
+    this.targetClasses = targetClasses;
   }
 
 }
