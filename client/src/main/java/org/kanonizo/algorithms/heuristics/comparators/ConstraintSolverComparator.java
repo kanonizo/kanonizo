@@ -1,5 +1,6 @@
 package org.kanonizo.algorithms.heuristics.comparators;
 
+import com.scythe.instrumenter.InstrumentationProperties.Parameter;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -29,11 +30,15 @@ public class ConstraintSolverComparator implements ObjectiveFunction {
 
   private static final Framework fw = Framework.getInstance();
 
-  private final String minionExec;
+  private String minionExec;
 
   private static String MINION_INPUT_FILE;
 
   private static String MINION_OUPUT_FILE;
+
+  @Parameter(key = "constraint_solver_path", description = "Path to the constraint solver binary", category = "schwa")
+  public static String CONSTRAINT_SOLVER_PATH = null;
+
 
   static {
     try {
@@ -51,11 +56,7 @@ public class ConstraintSolverComparator implements ObjectiveFunction {
     }
   }
 
-  public ConstraintSolverComparator(final String minionExec) {
-    this.minionExec = minionExec;
-    if (minionExec == null || !(new File(this.minionExec).exists())) {
-      throw new RuntimeException(String.format("File '%s' does not exist", this.minionExec));
-    }
+  public ConstraintSolverComparator() {
 
     this.inst = fw.getInstrumenter();
     fw.addPropertyChangeListener(Framework.INSTRUMENTER_PROPERTY_NAME, (e) -> {
@@ -83,7 +84,10 @@ public class ConstraintSolverComparator implements ObjectiveFunction {
     /**
      * Prepare input for MINION
      */
-
+    this.minionExec = CONSTRAINT_SOLVER_PATH;
+    if (minionExec == null || !(new File(this.minionExec).exists())) {
+      throw new RuntimeException(String.format("File '%s' does not exist", this.minionExec));
+    }
     try {
       if (!this.createMinionInput(testCases)) {
         return testCases;
