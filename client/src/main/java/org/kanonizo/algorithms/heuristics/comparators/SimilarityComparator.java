@@ -18,9 +18,9 @@ import org.kanonizo.util.RandomInstance;
 
 public class SimilarityComparator implements ObjectiveFunction {
 
-  @Parameter(key = "similarity_min_test_cases", description = "When comparing siilarity of test cases, use this parameter to select a minimum number of test cases that must be chosen regardless of similarity", category = "similarity")
+  @Parameter(key = "similarity_min_test_cases", description = "When comparing similarity of test cases, use this parameter to select a minimum number of test cases that must be chosen regardless of similarity", category = "similarity")
   public static int minTestCases = -1;
-  @Parameter(key = "similarity_coverage_adequacy", description = "When comparing similarity of test cases, use this parameter to specify a minimum percetnage of the target class that must be covered", category = "similarity")
+  @Parameter(key = "similarity_coverage_adequacy", description = "When comparing similarity of test cases, use this parameter to specify a minimum percentage of the target class that must be covered", category = "similarity")
   public static int coverageAdequacy = -1;
   @Parameter(key = "similarity_distance_function", description = "Distance function to use when comparing test cases", category = "similarity")
   public static DistanceFunction<TestCase> dist = new JaccardDistance();
