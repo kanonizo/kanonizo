@@ -16,7 +16,7 @@ import org.kanonizo.framework.similarity.DistanceFunction;
 import org.kanonizo.framework.similarity.JaccardDistance;
 import org.kanonizo.util.RandomInstance;
 
-public class SimilarityComparator implements ObjectiveFunction {
+public class DissimilarityComparator implements ObjectiveFunction {
 
   @Parameter(key = "similarity_min_test_cases", description = "When comparing similarity of test cases, use this parameter to select a minimum number of test cases that must be chosen regardless of similarity", category = "similarity")
   public static int minTestCases = -1;
@@ -28,7 +28,7 @@ public class SimilarityComparator implements ObjectiveFunction {
   private List<Class<?>> targetClasses;
   private Instrumenter inst = Framework.getInstance().getInstrumenter();
 
-  public SimilarityComparator() {
+  public DissimilarityComparator() {
     Framework.getInstance().addPropertyChangeListener(Framework.INSTRUMENTER_PROPERTY_NAME,
         evt -> inst = (Instrumenter) evt.getNewValue());
   }
@@ -53,10 +53,10 @@ public class SimilarityComparator implements ObjectiveFunction {
 
     while (!shouldFinish(selected) && similarity.size() > 0) {
       // select most dissimilar test case
-      double minSimilarity = similarity.values().parallelStream().mapToDouble(a -> a).min()
+      double maxDissimilarity = similarity.values().parallelStream().mapToDouble(a -> a).max()
           .getAsDouble();
       List<Pair<TestCase>> leastSimilar = similarity.entrySet().stream()
-          .filter(entry -> entry.getValue() == minSimilarity).map(entry -> entry.getKey()).collect(
+          .filter(entry -> entry.getValue() == maxDissimilarity).map(entry -> entry.getKey()).collect(
               Collectors.toList());
       Pair<TestCase> selectedPair;
       if (leastSimilar.size() > 1) {

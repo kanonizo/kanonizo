@@ -24,7 +24,7 @@ import org.kanonizo.algorithms.heuristics.comparators.AdditionalGreedyComparator
 import org.kanonizo.algorithms.heuristics.comparators.GreedyComparator;
 import org.kanonizo.algorithms.heuristics.comparators.RandomComparator;
 import org.kanonizo.algorithms.heuristics.comparators.ConstraintSolverComparator;
-import org.kanonizo.algorithms.heuristics.comparators.SimilarityComparator;
+import org.kanonizo.algorithms.heuristics.comparators.DissimilarityComparator;
 import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.annotations.ConditionalParameter;
 import org.kanonizo.annotations.OptionProvider;
@@ -209,7 +209,7 @@ public class Schwa extends TestCasePrioritiser {
     options.add(new AdditionalGreedyComparator());
     options.add(new RandomComparator());
     options.add(new ConstraintSolverComparator());
-    options.add(new SimilarityComparator());
+    options.add(new DissimilarityComparator());
     return options;
   }
 
