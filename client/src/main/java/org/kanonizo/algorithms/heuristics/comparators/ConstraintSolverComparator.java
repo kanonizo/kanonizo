@@ -135,29 +135,25 @@ public class ConstraintSolverComparator implements ObjectiveFunction {
       return false;
     }
 
-    Set<Line> allCoveredLines = new LinkedHashSet<Line>();
+    Writer output = new BufferedWriter(new FileWriter(MINION_INPUT_FILE, false));
+    output.write("MINION 3\n\n");
+    output.write("**VARIABLES**\n\n");
 
-    StringBuilder str = new StringBuilder();
-    str.append("MINION 3\n\n");
-    str.append("**VARIABLES**\n\n");
+    Set<Line> allCoveredLines = new LinkedHashSet<Line>();
 
     List<String> allTs = new ArrayList<String>();
     for (int i = 0; i < testCases.size(); i++) {
       String t = String.format("t%d", i);
       allTs.add(t);
-      str.append(String.format("BOOL %s\n", t));
+      output.write(String.format("BOOL %s\n", t));
 
       allCoveredLines.addAll(this.inst.getLinesCovered(testCases.get(i)));
     }
 
-    if (allCoveredLines.isEmpty()) {
-      return false;
-    }
-
-    str.append("\n**SEARCH**\n\n");
-    str.append(String.format("VARORDER [%s]\n\n", String.join(",", allTs)));
-    str.append("PRINT ALL\n\n");
-    str.append("**CONSTRAINTS**\n\n");
+    output.write("\n**SEARCH**\n\n");
+    output.write(String.format("VARORDER [%s]\n\n", String.join(",", allTs)));
+    output.write("PRINT ALL\n\n");
+    output.write("**CONSTRAINTS**\n\n");
 
     for (Line line : allCoveredLines) {
       List<String> testsThatCoverLine = new ArrayList<String>();
@@ -170,17 +166,14 @@ public class ConstraintSolverComparator implements ObjectiveFunction {
       }
 
       if (!testsThatCoverLine.isEmpty()) {
-        str.append(String.format("watched-or({%s})\n", String.join(",", testsThatCoverLine)));
+        output.write(String.format("watched-or({%s})\n", String.join(",", testsThatCoverLine)));
       }
     }
 
-    str.append("\n**EOF**");
-
-    Writer output = new BufferedWriter(new FileWriter(MINION_INPUT_FILE, false));
-    output.write(str.toString());
+    output.write("\n**EOF**");
     output.close();
 
-    return true;
+    return !allCoveredLines.isEmpty();
   }
 
   /**
