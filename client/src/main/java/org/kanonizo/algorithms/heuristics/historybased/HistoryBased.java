@@ -20,6 +20,17 @@ import org.kanonizo.framework.objects.TestCase;
 
 public abstract class HistoryBased extends TestCasePrioritiser {
 
+  private static final String PROJECT_ID = "project_id";
+  private static final String VERSION_ID = "version_id";
+  private static final String NUM_REVISIONS = "num_revisions";
+  private static final String REVISION_ID = "revision_id";
+  private static final String TEST_NAME = "test_name";
+  private static final String TEST_RUNTIME = "test_runtime";
+  private static final String TEST_OUTCOME = "test_outcome";
+  private static final String TEST_STACK_TRACE = "test_stack_strace";
+
+
+
   @Parameter(key = "history_file", description = "For history based techniques we must provide a readable file containing the history of the test cases so that we can calculate the number of failures, time since last failure etc",
   category = "history")
   public static File HISTORY_FILE = null;
@@ -35,21 +46,27 @@ public abstract class HistoryBased extends TestCasePrioritiser {
 
   private void readHistoryFile(){
     try {
-      CSVParser parser = new CSVParser(new FileReader(HISTORY_FILE), CSVFormat.DEFAULT);
+      CSVParser parser = new CSVParser(new FileReader(HISTORY_FILE), CSVFormat.DEFAULT.withHeader(PROJECT_ID,VERSION_ID, NUM_REVISIONS, REVISION_ID, TEST_NAME, TEST_RUNTIME, TEST_OUTCOME, TEST_STACK_TRACE).withSkipHeaderRecord(true));
       Iterator<CSVRecord> it = parser.iterator();
       while(it.hasNext()){
         CSVRecord next = it.next();
-        String testCaseName = next.get(3);
-        TestCase tc = TestCaseStore.with(testCaseName);
+        String testCaseName = next.get(TEST_NAME);
+        String testClass = testCaseName.split("::")[0];
+        String testMethod = testCaseName.split("::")[1];
+        String testString = testMethod +"("+testClass+")";
+        TestCase tc = TestCaseStore.with(testString);
         if(!historyData.containsKey(tc)){
           historyData.put(tc, new ArrayList<>());
         }
-        int ind = Math.abs(Integer.parseInt(next.get(2)));
+        int ind = Math.abs(Integer.parseInt(next.get(REVISION_ID)));
+        if(ind == 0){
+          continue;
+        }
         Throwable cause = null;
-        if(!next.get(6).equals("")){
+        if(!next.get(TEST_STACK_TRACE).equals("")){
           // parse throwable into object here
         }
-        historyData.get(tc).add(ind, new Execution(Long.parseLong(next.get(4)), next.get(5).equals("pass"), cause));
+        historyData.get(tc).add(Math.min(ind, historyData.get(tc).size()), new Execution(Long.parseLong(next.get(TEST_RUNTIME)), next.get(TEST_OUTCOME).equals("pass"), cause));
       }
     } catch (FileNotFoundException e) {
       e.printStackTrace();
@@ -72,7 +89,7 @@ public abstract class HistoryBased extends TestCasePrioritiser {
 
   public int getTimeSinceLastFailure(TestCase tc){
     if(!hasFailed(tc)){
-      return -1;
+      return Integer.MAX_VALUE;
     }
     return historyData.get(tc).indexOf(historyData.get(tc).stream().filter(ex -> !ex.isPassed()).findFirst().get());
   }
