@@ -4,9 +4,12 @@ import com.scythe.instrumenter.InstrumentationProperties.Parameter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.util.Util;
 
+@Algorithm
 public class Elbaum extends HistoryBased {
 
   @Parameter(key = "time_since_last_failure", description = "Cut off point at which we consider a failure to be relevant.", category = "history")
