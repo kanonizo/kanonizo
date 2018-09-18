@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -36,6 +37,10 @@ public abstract class HistoryBased extends TestCasePrioritiser {
   public static File HISTORY_FILE = null;
 
   private Map<TestCase, List<Execution>> historyData = new HashMap<>();
+
+  private long maxExecutionTime = -1;
+
+  private int maxExecutions = -1;
 
   public void init(List<TestCase> testCases) {
     if(HISTORY_FILE == null || !HISTORY_FILE.exists()){
@@ -66,7 +71,14 @@ public abstract class HistoryBased extends TestCasePrioritiser {
         if(!next.get(TEST_STACK_TRACE).equals("")){
           // parse throwable into object here
         }
-        historyData.get(tc).add(Math.min(ind, historyData.get(tc).size()), new Execution(Long.parseLong(next.get(TEST_RUNTIME)), next.get(TEST_OUTCOME).equals("pass"), cause));
+        long executionTime = Long.parseLong(next.get(TEST_RUNTIME));
+        if(executionTime > maxExecutionTime){
+          maxExecutionTime = executionTime;
+        }
+        historyData.get(tc).add(Math.min(ind, historyData.get(tc).size()), new Execution(executionTime, next.get(TEST_OUTCOME).equals("pass"), cause));
+        if(historyData.get(tc).size() > maxExecutions){
+          maxExecutions = historyData.get(tc).size();
+        }
       }
     } catch (FileNotFoundException e) {
       e.printStackTrace();
@@ -92,6 +104,26 @@ public abstract class HistoryBased extends TestCasePrioritiser {
       return Integer.MAX_VALUE;
     }
     return historyData.get(tc).indexOf(historyData.get(tc).stream().filter(ex -> !ex.isPassed()).findFirst().get());
+  }
+
+  public int getNumberOfTestCases(){
+    return historyData.size();
+  }
+
+  public int getMaxExecutions(){
+    return maxExecutions;
+  }
+
+  public long getMaxExecutionTime(){
+    return maxExecutionTime;
+  }
+
+  public List<Boolean> getResults(TestCase tc) {
+    return historyData.get(tc).stream().map(Execution::isPassed).collect(Collectors.toList());
+  }
+
+  public List<Long> getRuntimes(TestCase tc){
+    return historyData.get(tc).stream().map(Execution::getExecutionTime).collect(Collectors.toList());
   }
 
   public class Execution{
