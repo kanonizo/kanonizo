@@ -5,7 +5,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -18,6 +20,7 @@ import org.kanonizo.algorithms.TestCasePrioritiser;
 import org.kanonizo.exception.SystemConfigurationException;
 import org.kanonizo.framework.TestCaseStore;
 import org.kanonizo.framework.objects.TestCase;
+import org.kanonizo.util.Util;
 
 public abstract class HistoryBased extends TestCasePrioritiser {
 
@@ -68,8 +71,23 @@ public abstract class HistoryBased extends TestCasePrioritiser {
           continue;
         }
         Throwable cause = null;
-        if(!next.get(TEST_STACK_TRACE).equals("")){
+        if(!next.get(TEST_STACK_TRACE).equals("")) {
           // parse throwable into object here
+          String trace = next.get(TEST_STACK_TRACE);
+          String exceptionClass = trace.split("[^a-zA-Z.@$]")[0];
+          try{
+            Class<?> cl = Class.forName(exceptionClass);
+            if(Util.getConstructor(cl) != null){
+              cause = (Throwable) cl.newInstance();
+            } else {
+              List<Constructor> constructors = Arrays.asList(cl.getConstructors());
+              // find constructor with only primitive or string arguments and use it
+              //constructors.stream().filter(c -> areAllPrimitive(c.getParameterTypes())).findFirst()
+            }
+
+          }catch(ClassNotFoundException | InstantiationException | IllegalAccessException e){
+            e.printStackTrace();
+          }
         }
         long executionTime = Long.parseLong(next.get(TEST_RUNTIME));
         if(executionTime > maxExecutionTime){
