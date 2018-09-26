@@ -183,6 +183,37 @@ public abstract class HistoryBased extends TestCasePrioritiser {
         .collect(Collectors.toList());
   }
 
+  public int getTimeSinceLastFailure(TestCase tc) {
+    if (!hasFailed(tc)) {
+      return Integer.MAX_VALUE;
+    }
+    return historyData.get(tc)
+        .indexOf(historyData.get(tc).stream().filter(ex -> !ex.isPassed()).findFirst().get());
+  }
+
+  public int getTimeSinceLastFailure(){
+    int executionNo = 0;
+    while(!anyFail(executionNo)){
+      executionNo++;
+    }
+    return executionNo;
+  }
+
+  private boolean anyFail(int executionNo){
+    return !historyData.values().stream().allMatch(l -> l.size() > executionNo && l.get(executionNo).isPassed());
+  }
+
+  public List<TestCase> getFailingTestCases(int executionNo){
+    return historyData.entrySet().stream().filter(entry -> entry.getValue().size() > executionNo && !entry.getValue().get(executionNo).isPassed()).map(
+        Entry::getKey).collect(Collectors.toList());
+  }
+
+  public Throwable getCause(TestCase testCase, int executionNo){
+    if(historyData.get(testCase).size() < executionNo || historyData.get(testCase).get(executionNo).isPassed()){
+      return null;
+    }
+    return historyData.get(testCase).get(executionNo).getFailureCause();
+  }
   public class Execution {
 
     private long executionTime;
