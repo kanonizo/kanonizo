@@ -76,12 +76,13 @@ public abstract class HistoryBased extends TestCasePrioritiser {
         String testMethod = testCaseName.split("::")[1];
         String testString = testMethod + "(" + testClass + ")";
         TestCase tc = TestCaseStore.with(testString);
-        if (!historyData.containsKey(tc)) {
-          historyData.put(tc, new ArrayList<>());
-        }
+        // skip 0th execution since this is the "current" state, and we shouldn't know this information at runtime
         int ind = Math.abs(Integer.parseInt(next.get(REVISION_ID)));
         if (ind == 0) {
           continue;
+        }
+        if (!historyData.containsKey(tc)) {
+          historyData.put(tc, new ArrayList<>());
         }
         Throwable cause = null;
         if (!next.get(TEST_STACK_TRACE).equals("")) {
@@ -113,8 +114,22 @@ public abstract class HistoryBased extends TestCasePrioritiser {
         if (executionTime > maxExecutionTime) {
           maxExecutionTime = executionTime;
         }
-        historyData.get(tc).add(Math.min(ind, historyData.get(tc).size()),
-            new Execution(executionTime, next.get(TEST_OUTCOME).equals("pass"), cause));
+        int numExecutions = historyData.get(tc).size();
+        // necessary check to ensure that test cases that only existed in previous versions are not considered "current"
+        // for example if a test case exists in the current version, the first element of its history data should be considered
+        // the most recent execution of all test cases, but if we discover a test case later that
+        if(ind > numExecutions){
+          for(int i = numExecutions; i < ind; i++){
+            historyData.get(tc).add(i, Execution.NULL_EXECUTION);
+          }
+        }
+        // if we have padded test matrix with null executions and now we find an execution that should "slot in" to a location
+        // this should never happen with the current history file structure, since we systematically move backwards in executions
+        // but this guards against the case where we find execution -10, pad 9 NULL_EXECUTION objects and then find version -5, for example
+        if(historyData.get(tc).size() > ind && historyData.get(tc).get(ind) == Execution.NULL_EXECUTION){
+          historyData.get(tc).remove(ind);
+        }
+        historyData.get(tc).add(ind, new Execution(executionTime, next.get(TEST_OUTCOME).equals("pass"), cause));
         if (historyData.get(tc).size() > maxExecutions) {
           maxExecutions = historyData.get(tc).size();
         }
@@ -214,30 +229,7 @@ public abstract class HistoryBased extends TestCasePrioritiser {
     }
     return historyData.get(testCase).get(executionNo).getFailureCause();
   }
-  public class Execution {
 
-    private long executionTime;
-    private boolean passed;
-    private Throwable failureCause;
-
-    public Execution(long executionTime, boolean passed, Throwable failureCause) {
-      this.executionTime = executionTime;
-      this.passed = passed;
-      this.failureCause = failureCause;
-    }
-
-    public long getExecutionTime() {
-      return executionTime;
-    }
-
-    public boolean isPassed() {
-      return passed;
-    }
-
-    public Throwable getFailureCause() {
-      return failureCause;
-    }
-  }
 
 }
 
