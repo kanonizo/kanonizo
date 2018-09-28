@@ -41,6 +41,12 @@ public class Cho extends HistoryBased {
     if(results.size() == 0){
       return 0;
     }
+    int consecutiveFails = results.indexOf(true);
+    if(consecutiveFails > 0){
+      // push simulated pass to the start of the results to ensure recent consecutive fails contribute to
+      // frMin, frMax, frAvg etc
+      results.add(0, true);
+    }
     int frMin = Integer.MAX_VALUE;
     int frMax = 0;
     double frSum = 0.0;
@@ -51,7 +57,8 @@ public class Cho extends HistoryBased {
         if(failures > 0){
           if(failures < frMin){
             frMin = failures;
-          } else if (failures > frMax){
+          }
+          if (failures > frMax){
             frMax = failures;
           }
           frSum += failures;
@@ -62,11 +69,13 @@ public class Cho extends HistoryBased {
         failures++;
       }
     }
+
     double frAvg = frSum / frCount;
-    int consecutiveFails = results.indexOf(true);
     double priority = 0;
     for(int i = 0; i < results.size() - consecutiveFails; i++){
-      priority += TEST_FAILURE_WEIGHT * omega;
+      if(!results.get(i)) {
+        priority += TEST_FAILURE_WEIGHT * omega;
+      }
     }
     for(int i = 0; i < consecutiveFails; i++){
       if(i < frMin){
