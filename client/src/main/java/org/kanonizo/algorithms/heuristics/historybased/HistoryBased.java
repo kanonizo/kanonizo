@@ -135,6 +135,7 @@ public abstract class HistoryBased extends TestCasePrioritiser {
           maxExecutions = historyData.get(tc).size();
         }
       }
+      bar.complete();
     } catch (FileNotFoundException e) {
       e.printStackTrace();
     } catch (IOException e) {
