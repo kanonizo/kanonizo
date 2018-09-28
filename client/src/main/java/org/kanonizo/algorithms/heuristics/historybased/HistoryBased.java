@@ -199,6 +199,9 @@ public abstract class HistoryBased extends TestCasePrioritiser {
   }
 
   public List<Long> getRuntimes(TestCase tc) {
+    if(!historyData.containsKey(tc)){
+      return Collections.emptyList();
+    }
     return historyData.get(tc).stream().map(Execution::getExecutionTime)
         .collect(Collectors.toList());
   }
