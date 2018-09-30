@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Scanner;
 import java.util.stream.Collectors;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -31,14 +32,14 @@ import org.kanonizo.util.Util;
 
 public abstract class HistoryBased extends TestCasePrioritiser {
 
-  private static final String PROJECT_ID = "project_id";
-  private static final String VERSION_ID = "version_id";
-  private static final String NUM_REVISIONS = "num_revisions";
-  private static final String REVISION_ID = "revision_id";
-  private static final String TEST_NAME = "test_name";
-  private static final String TEST_RUNTIME = "test_runtime";
-  private static final String TEST_OUTCOME = "test_outcome";
-  private static final String TEST_STACK_TRACE = "test_stack_strace";
+  private static final int PROJECT_ID = 0;
+  private static final int VERSION_ID = 1;
+  private static final int NUM_REVISIONS = 2;
+  private static final int REVISION_ID = 3;
+  private static final int TEST_NAME = 4;
+  private static final int TEST_RUNTIME = 5;
+  private static final int TEST_OUTCOME = 6;
+  private static final int TEST_STACK_TRACE = 7;
 
 
   @Parameter(key = "history_file", description = "For history based techniques we must provide a readable file containing the history of the test cases so that we can calculate the number of failures, time since last failure etc",
@@ -61,24 +62,24 @@ public abstract class HistoryBased extends TestCasePrioritiser {
 
   private void readHistoryFile() {
     try {
-      CSVParser parser = new CSVParser(new FileReader(HISTORY_FILE), CSVFormat.DEFAULT
-          .withHeader(PROJECT_ID, VERSION_ID, NUM_REVISIONS, REVISION_ID, TEST_NAME, TEST_RUNTIME,
-              TEST_OUTCOME, TEST_STACK_TRACE).withSkipHeaderRecord(true));
+      Scanner p = new Scanner(HISTORY_FILE);
+      // skip header line
+      p.nextLine();
       int numRecords = (int) Files.lines(Paths.get(HISTORY_FILE.getAbsolutePath())).count();
       int count = 0;
-      Iterator<CSVRecord> it = parser.iterator();
       ProgressBar bar = new ProgressBar(System.out);
       bar.setTitle("Reading history file");
-      while(it.hasNext()){
+      while(p.hasNextLine()){
         bar.reportProgress(count++, numRecords);
-        CSVRecord next = it.next();
-        String testCaseName = next.get(TEST_NAME);
+        String line = p.nextLine();
+        String[] lineParts = line.split(",");
+        String testCaseName = lineParts[TEST_NAME];
         String testClass = testCaseName.split("::")[0];
         String testMethod = testCaseName.split("::")[1];
         String testString = testMethod + "(" + testClass + ")";
         TestCase tc = TestCaseStore.with(testString);
         // skip 0th execution since this is the "current" state, and we shouldn't know this information at runtime
-        int ind = Math.abs(Integer.parseInt(next.get(REVISION_ID)));
+        int ind = Math.abs(Integer.parseInt(lineParts[REVISION_ID]));
         if (ind == 0) {
           continue;
         }
@@ -86,9 +87,9 @@ public abstract class HistoryBased extends TestCasePrioritiser {
           historyData.put(tc, new ArrayList<>());
         }
         Throwable cause = null;
-        if (!next.get(TEST_STACK_TRACE).equals("")) {
+        if (lineParts.length > TEST_STACK_TRACE) {
           // parse throwable into object here
-          String trace = next.get(TEST_STACK_TRACE);
+          String trace = lineParts[TEST_STACK_TRACE];
           String exceptionClass = trace.split("[^a-zA-Z.@$]")[0];
           try {
             Class<?> cl = Class.forName(exceptionClass);
@@ -107,11 +108,14 @@ public abstract class HistoryBased extends TestCasePrioritiser {
               }
             }
 
-          } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
+          } catch (ClassNotFoundException e){
+            // if the exception class does not exist, we will just use a generic exception
+            cause = new Exception();
+          } catch(InstantiationException | IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
           }
         }
-        long executionTime = Long.parseLong(next.get(TEST_RUNTIME));
+        long executionTime = Long.parseLong(lineParts[TEST_RUNTIME]);
         if (executionTime > maxExecutionTime) {
           maxExecutionTime = executionTime;
         }
@@ -130,7 +134,7 @@ public abstract class HistoryBased extends TestCasePrioritiser {
         if(historyData.get(tc).size() > ind && historyData.get(tc).get(ind) == Execution.NULL_EXECUTION){
           historyData.get(tc).remove(ind);
         }
-        historyData.get(tc).add(ind, new Execution(executionTime, next.get(TEST_OUTCOME).equals("pass"), cause));
+        historyData.get(tc).add(ind, new Execution(executionTime, lineParts[TEST_OUTCOME].equals("pass"), cause));
         if (historyData.get(tc).size() > maxExecutions) {
           maxExecutions = historyData.get(tc).size();
         }
