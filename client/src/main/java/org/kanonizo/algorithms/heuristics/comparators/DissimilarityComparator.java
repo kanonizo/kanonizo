@@ -5,15 +5,18 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.kanonizo.Framework;
 import org.kanonizo.framework.ClassStore;
 import org.kanonizo.framework.ObjectiveFunction;
 import org.kanonizo.framework.instrumentation.Instrumenter;
+import org.kanonizo.framework.objects.Line;
 import org.kanonizo.framework.objects.Pair;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.similarity.DistanceFunction;
 import org.kanonizo.framework.similarity.JaccardDistance;
+import org.kanonizo.util.HashSetCollector;
 import org.kanonizo.util.RandomInstance;
 
 public class DissimilarityComparator implements ObjectiveFunction {
@@ -82,11 +85,12 @@ public class DissimilarityComparator implements ObjectiveFunction {
   private boolean shouldFinish(List<TestCase> selected) {
     int linesToCover = targetClasses.stream()
         .mapToInt(cl -> inst.getTotalLines(ClassStore.get(cl.getName()))).sum();
-    double linesCovered = selected.stream().mapToDouble(tc -> inst.getLinesCovered(tc).stream()
-        .filter(l -> targetClasses.contains(l.getParent().getCUT())).collect(Collectors.toSet()).size()).sum();
+    Set<Line> linesCovered1 = selected.stream().map(tc -> inst.getLinesCovered(tc)).collect(new HashSetCollector<>());
+    linesCovered1 = linesCovered1.stream().filter(l -> targetClasses.contains(l.getParent().getCUT())).collect(Collectors.toSet());
+    double linesCovered = linesCovered1.size();
     return (minTestCases != -1 && selected.size() > minTestCases) ||
         (coverageAdequacy != -1
-            && linesCovered / linesToCover > coverageAdequacy);
+            && (linesCovered / linesToCover) * 100 > coverageAdequacy);
   }
 
   @Override
