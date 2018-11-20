@@ -7,6 +7,9 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -16,11 +19,14 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.MissingOptionException;
 import org.apache.commons.cli.Options;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.kanonizo.TestSuitePrioritisation.ReturnOption;
 import org.kanonizo.algorithms.SearchAlgorithm;
 import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.annotations.Prerequisite;
+import org.kanonizo.commandline.Table;
 import org.kanonizo.display.ConsoleDisplay;
 import org.kanonizo.display.Display;
 import org.kanonizo.display.fx.KanonizoFrame;
@@ -43,14 +49,40 @@ public class Main {
     Options options = TestSuitePrioritisation.getCommandLineOptions();
     CommandLine line = null;
     try {
+      Set<Field> parameters = Util.getParameters();
       line = new DefaultParser().parse(options, args, false);
-      if (TestSuitePrioritisation.hasHelpOption(line)) {
-        HelpFormatter formatter = new HelpFormatter();
-        formatter.printHelp("Search Algorithms", options);
+      if (TestSuitePrioritisation.hasReturnOption(line)) {
+        switch(TestSuitePrioritisation.getReturnOption(line)) {
+          case HELP:
+            HelpFormatter formatter = new HelpFormatter();
+            formatter.printHelp("Search Algorithms", options);
+            break;
+          case LIST_ALGORITHMS:
+            Table algs = new Table(20,50);
+            algs.setHeaders("Algorithm Name", "Algorithm Description");
+            Framework.getAvailableAlgorithms().forEach(alg -> {
+              algs.addRow(alg.readableName(), alg.getClass().getAnnotation(Algorithm.class).description());
+            });
+            algs.print();
+            break;
+          case LIST_PARAMETERS:
+            Table params = new Table(35,20,100);
+            params.setHeaders("Parameter Key", "Parameter Group", "Description");
+            ArrayList<Field> ordered = new ArrayList<>(parameters);
+
+            ordered.sort(Comparator.comparing(o -> o.getAnnotation(Parameter.class).key()));
+            ordered.forEach(par -> {
+
+              Parameter p = par.getAnnotation(Parameter.class);
+              params.addRow(p.key(),p.category(),p.description());
+
+            });
+            params.print();
+            break;
+        }
         return;
       }
-      Reflections r = Util.getReflections();
-      Set<Field> parameters = r.getFieldsAnnotatedWith(Parameter.class);
+
       TestSuitePrioritisation.handleProperties(line, parameters);
       if (MutationProperties.VISIT_MUTANTS) {
         InstrumentingClassLoader.getInstance().setVisitMutants(true);

@@ -392,4 +392,9 @@ public class Util {
 
     return result;
   }
+
+  public static Set<Field> getParameters(){
+    Reflections r = getReflections();
+    return r.getFieldsAnnotatedWith(Parameter.class);
+  }
 }

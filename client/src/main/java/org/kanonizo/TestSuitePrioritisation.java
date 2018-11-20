@@ -27,6 +27,8 @@ public class TestSuitePrioritisation {
   public static final String GUI_LONG = "gui";
   public static final String ROOT_FOLDER_SHORT = "r";
   public static final String ROOT_FOLDER_LONG = "root";
+  private static final String LIST_ALGORITHM_OPTION = "listAlgorithms";
+  private static final String LIST_PARAMETER_OPTION = "listParameters";
 
   private static Logger logger = LogManager.getLogger(TestSuitePrioritisation.class);
 
@@ -61,11 +63,23 @@ public class TestSuitePrioritisation {
     options.addOption(noGui);
     Option root = Option.builder(ROOT_FOLDER_SHORT).desc("Root folder of the target project").longOpt(ROOT_FOLDER_LONG).hasArg().build();
     options.addOption(root);
+    Option listAlgorithms = Option.builder(LIST_ALGORITHM_OPTION).desc("List available algorithms and return").build();
+    options.addOption(listAlgorithms);
+    Option listParameters = Option.builder(LIST_PARAMETER_OPTION).desc("List available parameters and return").build();
+    options.addOption(listParameters);
     return options;
   }
 
-  public static boolean hasHelpOption(CommandLine line) {
-    return line.hasOption(HELP_SHORT);
+  public static boolean hasReturnOption(CommandLine line) {
+    return line.hasOption(HELP_SHORT) || line.hasOption(LIST_PARAMETER_OPTION) || line.hasOption(LIST_ALGORITHM_OPTION);
+  }
+
+  enum ReturnOption{
+    HELP, LIST_PARAMETERS, LIST_ALGORITHMS
+  }
+
+  public static ReturnOption getReturnOption(CommandLine line){
+    return line.hasOption(HELP_SHORT) ? ReturnOption.HELP : line.hasOption(LIST_PARAMETER_OPTION) ? ReturnOption.LIST_PARAMETERS : ReturnOption.LIST_ALGORITHMS;
   }
 
   public static void handleProperties(CommandLine line, Set<Field> parameters) {
