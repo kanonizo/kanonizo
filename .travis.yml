@@ -4,10 +4,6 @@ jdk:
 before_install:
   - git clone --depth=1 https://github.com/thomasdeanwhite/scythe.git
   - pushd scythe
-  - git fetch --all
-  - git branch dev
-  - git checkout dev
-  - git pull origin dev
   - mvn clean install
   - popd
   - cd client
