@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/kanonizo/kanonizo.svg)](https://travis-ci.org/kanonizo/kanonizo)
+
+
 # Kanonizo
 Kanonizo (meaning "arrange" in Greek) is an open-source framework for Test Case Prioritization. Test Case Priorization aims to re-order test cases such that
 test cases that are most likely to detect faults placed prominently.
