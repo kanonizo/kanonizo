@@ -225,7 +225,7 @@
         </dependency>
         <dependency>
             <groupId>com.scythe</groupId>
-            <artifactId>scythe</artifactId>
+            <artifactId>client</artifactId>
             <version>0.0.1-DEV</version>
         </dependency>
         <dependency>
