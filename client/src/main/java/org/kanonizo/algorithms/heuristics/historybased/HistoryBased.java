@@ -105,6 +105,9 @@ public abstract class HistoryBased extends TestCasePrioritiser {
                 // get array of default arguments
                 Object[] args = Arrays.stream(con.getParameterTypes()).map(this::mapArgument).toArray();
                 cause = (Throwable) con.newInstance(args);
+              } else {
+                // there is no exception we can create an instance of
+                cause = new Exception();
               }
             }
 
@@ -114,6 +117,10 @@ public abstract class HistoryBased extends TestCasePrioritiser {
           } catch(InstantiationException | IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
           }
+        }
+        if (cause == null){
+          // really worst case, we didn't find anything we can use, but the cause must not be null
+          cause = new Exception();
         }
         long executionTime = Long.parseLong(lineParts[TEST_RUNTIME]);
         if (executionTime > maxExecutionTime) {
