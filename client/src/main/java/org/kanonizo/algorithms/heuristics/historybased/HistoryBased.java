@@ -1,10 +1,14 @@
 package org.kanonizo.algorithms.heuristics.historybased;
 
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
@@ -19,6 +23,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
@@ -62,94 +68,96 @@ public abstract class HistoryBased extends TestCasePrioritiser {
 
   private void readHistoryFile() {
     try {
-      Scanner p = new Scanner(HISTORY_FILE);
-      // skip header line
-      p.nextLine();
-      int numRecords = (int) Files.lines(Paths.get(HISTORY_FILE.getAbsolutePath())).count();
-      int count = 0;
-      ProgressBar bar = new ProgressBar(System.out);
-      bar.setTitle("Reading history file");
-      while(p.hasNextLine()){
-        bar.reportProgress(count++, numRecords);
-        String line = p.nextLine();
-        String[] lineParts = line.split(",");
-        String testCaseName = lineParts[TEST_NAME];
-        String testClass = testCaseName.split("::")[0];
-        String testMethod = testCaseName.split("::")[1];
-        String testString = testMethod + "(" + testClass + ")";
-        TestCase tc = TestCaseStore.with(testString);
-        // skip 0th execution since this is the "current" state, and we shouldn't know this information at runtime
-        int ind = Math.abs(Integer.parseInt(lineParts[REVISION_ID]));
-        if (ind == 0) {
-          continue;
-        }
-        if (!historyData.containsKey(tc)) {
-          historyData.put(tc, new ArrayList<>());
-        }
-        Throwable cause = null;
-        if (lineParts.length > TEST_STACK_TRACE) {
-          // parse throwable into object here
-          String trace = lineParts[TEST_STACK_TRACE];
-          String exceptionClass = trace.split("[^a-zA-Z.@$]")[0];
-          try {
-            Class<?> cl = Class.forName(exceptionClass);
-            if (Util.getConstructor(cl) != null) {
-              cause = (Throwable) cl.newInstance();
-            } else {
-              List<Constructor> constructors = Arrays.asList(cl.getConstructors());
-              // find constructor with only primitive or string arguments and use it
-              Optional<Constructor> optCon = constructors.stream()
-                  .filter(c -> areAllPrimitive(c.getParameterTypes())).findFirst();
-              if(optCon.isPresent()){
-                Constructor con = optCon.get();
-                // get array of default arguments
-                Object[] args = Arrays.stream(con.getParameterTypes()).map(this::mapArgument).toArray();
-                cause = (Throwable) con.newInstance(args);
-              } else {
-                // there is no exception we can create an instance of
+      InputStream inputFS = new FileInputStream(HISTORY_FILE);
+      BufferedReader br = new BufferedReader(new InputStreamReader(inputFS));
+      Pattern csvFormat = Pattern.compile("[A-Za-z]+,\\d+[bf],\\d+,-?(\\d+),([a-zA-Z0-9\\.\\$\\_]+)::([[a-zA-Z0-9\\[\\]_]+]+),(\\d+),(pass|fail),(([a-zA-Z.@$]*).*$)");
+      // skips the header
+      br.lines().skip(1).forEach((line) -> {
+        Matcher m = csvFormat.matcher(line);
+        if (m.matches()) {
+          String testClass = m.group(2);
+          String testMethod = m.group(3);
+          String testString = testMethod + "(" + testClass + ")";
+          TestCase tc = TestCaseStore.with(testString);
+          // skip 0th execution since this is the "current" state, and we shouldn't know this information at runtime
+          int ind = Integer.parseInt(m.group(1));
+          if (ind == 0) {
+            return;
+          }
+          if (!historyData.containsKey(tc)) {
+            historyData.put(tc, new ArrayList<>());
+          }
+          long executionTime = Long.parseLong(m.group(4));
+          if (executionTime > maxExecutionTime) {
+            maxExecutionTime = executionTime;
+          }
+          boolean passed = "pass".equals(m.group(5));
+          Throwable cause = null;
+          // if test failed, try to work out why
+          if(!passed) {
+            String trace = m.group(6);
+            if (!"".equals(trace)) {
+              // parse throwable into object here
+              String exceptionClass = m.group(7);
+              try {
+                Class<?> cl = Class.forName(exceptionClass);
+                if (Util.getConstructor(cl) != null) {
+                  cause = (Throwable) cl.newInstance();
+                } else {
+                  List<Constructor> constructors = Arrays.asList(cl.getConstructors());
+                  // find constructor with only primitive or string arguments and use it
+                  Optional<Constructor> optCon = constructors.stream()
+                      .filter(c -> areAllPrimitive(c.getParameterTypes())).findFirst();
+                  if (optCon.isPresent()) {
+                    Constructor con = optCon.get();
+                    // get array of default arguments
+                    Object[] args = Arrays.stream(con.getParameterTypes()).map(this::mapArgument)
+                        .toArray();
+                    cause = (Throwable) con.newInstance(args);
+                  } else {
+                    // there is no exception we can create an instance of
+                    cause = new Exception();
+                  }
+                }
+
+              } catch (ClassNotFoundException e) {
+                // if the exception class does not exist, we will just use a generic exception
                 cause = new Exception();
+              } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
+                e.printStackTrace();
               }
             }
-
-          } catch (ClassNotFoundException e){
-            // if the exception class does not exist, we will just use a generic exception
-            cause = new Exception();
-          } catch(InstantiationException | IllegalAccessException | InvocationTargetException e) {
-            e.printStackTrace();
+            if (cause == null) {
+              // really worst case, we didn't find anything we can use, but the cause must not be null
+              cause = new Exception();
+            }
           }
-        }
-        if (cause == null){
-          // really worst case, we didn't find anything we can use, but the cause must not be null
-          cause = new Exception();
-        }
-        long executionTime = Long.parseLong(lineParts[TEST_RUNTIME]);
-        if (executionTime > maxExecutionTime) {
-          maxExecutionTime = executionTime;
-        }
-        int numExecutions = historyData.get(tc).size();
-        // necessary check to ensure that test cases that only existed in previous versions are not considered "current"
-        // for example if a test case exists in the current version, the first element of its history data should be considered
-        // the most recent execution of all test cases, but if we discover a test case later that
-        if(ind > numExecutions){
-          for(int i = numExecutions; i < ind; i++){
-            historyData.get(tc).add(i, Execution.NULL_EXECUTION);
+          int numExecutions = historyData.get(tc).size();
+          // necessary check to ensure that test cases that only existed in previous versions are not considered "current"
+          // for example if a test case exists in the current version, the first element of its history data should be considered
+          // the most recent execution of all test cases, but if we discover a test case later that
+          if (ind > numExecutions) {
+            for (int i = numExecutions; i < ind; i++) {
+              historyData.get(tc).add(i, Execution.NULL_EXECUTION);
+            }
           }
+          // if we have padded test matrix with null executions and now we find an execution that should "slot in" to a location
+          // this should never happen with the current history file structure, since we systematically move backwards in executions
+          // but this guards against the case where we find execution -10, pad 9 NULL_EXECUTION objects and then find version -5, for example
+          if (historyData.get(tc).size() > ind
+              && historyData.get(tc).get(ind) == Execution.NULL_EXECUTION) {
+            historyData.get(tc).remove(ind);
+          }
+          historyData.get(tc)
+              .add(ind, new Execution(executionTime, passed, cause));
+          if (historyData.get(tc).size() > maxExecutions) {
+            maxExecutions = historyData.get(tc).size();
+          }
+        } else {
+          System.out.println("Line "+line + " does not match regex");
         }
-        // if we have padded test matrix with null executions and now we find an execution that should "slot in" to a location
-        // this should never happen with the current history file structure, since we systematically move backwards in executions
-        // but this guards against the case where we find execution -10, pad 9 NULL_EXECUTION objects and then find version -5, for example
-        if(historyData.get(tc).size() > ind && historyData.get(tc).get(ind) == Execution.NULL_EXECUTION){
-          historyData.get(tc).remove(ind);
-        }
-        historyData.get(tc).add(ind, new Execution(executionTime, lineParts[TEST_OUTCOME].equals("pass"), cause));
-        if (historyData.get(tc).size() > maxExecutions) {
-          maxExecutions = historyData.get(tc).size();
-        }
-      }
-      bar.complete();
+      });
     } catch (FileNotFoundException e) {
-      e.printStackTrace();
-    } catch (IOException e) {
       e.printStackTrace();
     }
   }
