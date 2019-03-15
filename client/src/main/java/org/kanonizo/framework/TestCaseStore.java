@@ -9,10 +9,12 @@ import org.kanonizo.framework.objects.TestCase;
 public class TestCaseStore {
 
   private static HashMap<Integer, TestCase> testCases = new HashMap<>();
+  private static HashMap<String, TestCase> testCasesByString = new HashMap<>();
   private static final Logger logger = LogManager.getLogger(TestCaseStore.class);
 
   public static void register(int id, TestCase testCase) {
     testCases.put(id, testCase);
+    testCasesByString.put(testCase.toString(), testCase);
   }
 
   public static TestCase get(int id) {
@@ -24,12 +26,6 @@ public class TestCaseStore {
   }
 
   public static TestCase with(String testString){
-    Optional<TestCase> test = testCases.values().stream().filter(t -> t.toString().equals(testString)).findFirst();
-    if(test.isPresent()){
-      return test.get();
-    } else {
-      logger.debug("Test case with identifier "+testString + " does not exist");
-      return null;
-    }
+    return testCasesByString.get(testString);
   }
 }
