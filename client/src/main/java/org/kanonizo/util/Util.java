@@ -3,7 +3,10 @@ package org.kanonizo.util;
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
@@ -396,5 +399,30 @@ public class Util {
   public static Set<Field> getParameters(){
     Reflections r = getReflections();
     return r.getFieldsAnnotatedWith(Parameter.class);
+  }
+
+  public static String runSystemCommand(String... command) throws IOException {
+    StringBuilder sb = new StringBuilder();
+    String[] commandSh = new String[command.length + 2];
+    commandSh[0] = "/bin/sh";
+    commandSh[1] = "-c";
+    System.arraycopy(command, 0, commandSh, 2, command.length);
+    ProcessBuilder pb = new ProcessBuilder(commandSh);
+    Process p = pb.start();
+    BufferedReader stdIn = new BufferedReader(new InputStreamReader(p.getInputStream()));
+    String s;
+    while((s = stdIn.readLine()) != null){
+      sb.append(s);
+    }
+    return sb.toString();
+  }
+
+  public static int runIntSystemCommand(String... command) throws IOException{
+    String result = runSystemCommand(command);
+    try{
+      return Integer.parseInt(result);
+    } catch(NumberFormatException e){
+      throw new IOException("Command did not return a numeric value: "+Arrays.stream(command).reduce("", (a,b)->a+" "+b) +"\nActual output: "+result);
+    }
   }
 }

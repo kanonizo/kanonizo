@@ -5,36 +5,25 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
-import org.apache.commons.lang3.time.StopWatch;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kanonizo.algorithms.TestCasePrioritiser;
-import org.kanonizo.commandline.ProgressBar;
 import org.kanonizo.exception.SystemConfigurationException;
 import org.kanonizo.framework.TestCaseStore;
 import org.kanonizo.framework.objects.TestCase;
@@ -43,14 +32,6 @@ import org.kanonizo.util.Util;
 public abstract class HistoryBased extends TestCasePrioritiser {
 
   private static final Logger logger = LogManager.getLogger(HistoryBased.class);
-  private static final int PROJECT_ID = 0;
-  private static final int VERSION_ID = 1;
-  private static final int NUM_REVISIONS = 2;
-  private static final int REVISION_ID = 3;
-  private static final int TEST_NAME = 4;
-  private static final int TEST_RUNTIME = 5;
-  private static final int TEST_OUTCOME = 6;
-  private static final int TEST_STACK_TRACE = 7;
 
 
   @Parameter(key = "history_file", description = "For history based techniques we must provide a readable file containing the history of the test cases so that we can calculate the number of failures, time since last failure etc",
@@ -78,7 +59,7 @@ public abstract class HistoryBased extends TestCasePrioritiser {
       Pattern csvFormat = Pattern.compile(
           "[A-Za-z]+,\\d+[bf],\\d+,-?(\\d+),([a-zA-Z0-9\\.\\$\\_]+)::([[a-zA-Z0-9\\[\\]_]+]+),(\\d+),(pass|fail),(([a-zA-Z.@$]*).*$)");
       try {
-        int numLines = Files.readAllLines(Paths.get(HISTORY_FILE.getAbsolutePath())).size();
+        int numLines = Util.runIntSystemCommand("cat "+ HISTORY_FILE.getAbsolutePath() + " | wc -l");
         logger.debug("Lines to read: " + numLines);
       } catch (IOException e) {
         e.printStackTrace();
