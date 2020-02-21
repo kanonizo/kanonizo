@@ -24,7 +24,7 @@ Once the dependencies are installed, Kanonizo can be built from source
 - ```
      git clone https://github.com/kanonizo/kanonizo.git /path/to/kanonizo/dir
      cd /path/to/kanonizo/dir
-     mvn clean package install
+     mvn clean package install -DskipTests=true
   ```
 - The built jar file will be available at `/path/to/kanonizo/dir/client/target/kanonizo.jar` or inside your local .m2 repository
 
