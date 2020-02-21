@@ -11,3 +11,4 @@ classes/
 out/
 dependency-reduced-pom.xml
 **/scythe_coverage.json
+client/scythe

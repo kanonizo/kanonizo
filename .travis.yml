@@ -2,13 +2,8 @@ dist: trusty
 language: java
 jdk:
   - oraclejdk8
-install:
-  - git clone --depth=1 https://github.com/thomasdeanwhite/scythe.git
-  - pushd scythe
-  - mvn clean install
-  - popd
-  - cd client
-  - mvn test package
+script:
+  - ./client/build.sh
 notifications:
   slack: testprioritisation:b88gEuUpTCwV7zTZKYcdUMz8
   email:

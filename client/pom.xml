@@ -271,9 +271,10 @@
         </dependency>
       <dependency>
         <groupId>com.scythe</groupId>
-        <artifactId>scythe</artifactId>
+        <artifactId>client</artifactId>
         <version>0.0.1-DEV</version>
-        <scope>compile</scope>
+        <scope>system</scope>
+          <systemPath>${basedir}/scythe/client/target/client-0.0.1-DEV.jar</systemPath>
       </dependency>
     </dependencies>
     <properties>
