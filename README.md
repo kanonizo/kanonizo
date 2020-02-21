@@ -24,7 +24,7 @@ Once the dependencies are installed, Kanonizo can be built from source
 - ```
      git clone https://github.com/kanonizo/kanonizo.git /path/to/kanonizo/dir
      cd /path/to/kanonizo/dir
-     mvn clean package install
+     mvn clean package install -DskipTests=true
   ```
 - The built jar file will be available at `/path/to/kanonizo/dir/client/target/kanonizo.jar` or inside your local .m2 repository
 
@@ -69,5 +69,3 @@ During its execution, Kanonizo writes a number of log/data files that represent 
 
 In most cases, the user will only be interested in the ordering file, since this is the primary reason for running the tool.
 Both the directory in which data files are stored and the name of the data files can be specified on the command line using -Dlog_dir and -Dlog_filename respectively
-
-
