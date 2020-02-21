@@ -20,11 +20,11 @@ techniques
   ```
   
 ## Installing Kanonizo
-Once the dependencies are installed, Kanonizo can be built from source
+The easiest way to build Kanonizo is to use the provided build.sh script in the client directory.
 - ```
      git clone https://github.com/kanonizo/kanonizo.git /path/to/kanonizo/dir
-     cd /path/to/kanonizo/dir
-     mvn clean package install -DskipTests=true
+     cd /path/to/kanonizo/dir/client #DO NOT FORGET THE CLIENT PART
+     bash build.sh
   ```
 - The built jar file will be available at `/path/to/kanonizo/dir/client/target/kanonizo.jar` or inside your local .m2 repository
 
