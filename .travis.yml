@@ -5,7 +5,8 @@ jdk:
 install: true
 script:
   - cd client
-  - ./build.sh
+  - chmod +x build.sh
+  - bash build.sh
 notifications:
   slack: testprioritisation:b88gEuUpTCwV7zTZKYcdUMz8
   email:
