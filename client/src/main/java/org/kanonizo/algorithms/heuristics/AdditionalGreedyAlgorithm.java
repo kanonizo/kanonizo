@@ -13,7 +13,7 @@ public class AdditionalGreedyAlgorithm extends TestCasePrioritiser {
   @Override
   public TestCase selectTestCase(List<TestCase> testCases) {
     Collections.sort(testCases, comp);
-    TestCase next = testCases.get(0);
+    TestCase next = testCases.remove(0);
     return next;
   }
 

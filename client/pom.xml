@@ -236,7 +236,6 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-all</artifactId>
-            <version>1.9.5</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -263,6 +262,18 @@
             <artifactId>jacoco-maven-plugin</artifactId>
             <version>0.8.1</version>
         </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>3.15.0</version>
+            <scope>test</scope>
+        </dependency>
+      <dependency>
+        <groupId>com.scythe</groupId>
+        <artifactId>scythe</artifactId>
+        <version>0.0.1-DEV</version>
+        <scope>compile</scope>
+      </dependency>
     </dependencies>
     <properties>
     </properties>

@@ -1,29 +1,31 @@
 package org.kanonizo.algorithms.heuristics.historybased;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.Scanner;
 import java.util.stream.Collectors;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.kanonizo.algorithms.TestCasePrioritiser;
+import org.kanonizo.commandline.ProgressBar;
 import org.kanonizo.exception.SystemConfigurationException;
 import org.kanonizo.framework.TestCaseStore;
 import org.kanonizo.framework.objects.TestCase;
@@ -31,7 +33,14 @@ import org.kanonizo.util.Util;
 
 public abstract class HistoryBased extends TestCasePrioritiser {
 
-  private static final Logger logger = LogManager.getLogger(HistoryBased.class);
+  private static final int PROJECT_ID = 0;
+  private static final int VERSION_ID = 1;
+  private static final int NUM_REVISIONS = 2;
+  private static final int REVISION_ID = 3;
+  private static final int TEST_NAME = 4;
+  private static final int TEST_RUNTIME = 5;
+  private static final int TEST_OUTCOME = 6;
+  private static final int TEST_STACK_TRACE = 7;
 
 
   @Parameter(key = "history_file", description = "For history based techniques we must provide a readable file containing the history of the test cases so that we can calculate the number of failures, time since last failure etc",
@@ -52,131 +61,110 @@ public abstract class HistoryBased extends TestCasePrioritiser {
     readHistoryFile();
   }
 
-  private void readHistoryFile() {
+  @VisibleForTesting
+  protected void readHistoryFile() {
     try {
-      InputStream inputFS = new FileInputStream(HISTORY_FILE);
-      BufferedReader br = new BufferedReader(new InputStreamReader(inputFS));
-      Pattern csvFormat = Pattern.compile(
-          "[A-Za-z]+,\\d+[bf],\\d+,-?(\\d+),([a-zA-Z0-9\\.\\$\\_]+)::([[a-zA-Z0-9\\[\\]_]+]+),(\\d+),(pass|fail),(([a-zA-Z.@$]*).*$)");
-      try {
-        int numLines = Util.runIntSystemCommand("cat "+ HISTORY_FILE.getAbsolutePath() + " | wc -l");
-        logger.debug("Lines to read: " + numLines);
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
+      Scanner p = new Scanner(HISTORY_FILE);
+      // skip header line
+      p.nextLine();
+      int numRecords = (int) Files.lines(Paths.get(HISTORY_FILE.getAbsolutePath())).count();
       int count = 0;
-      // skips the header
-      br.lines().skip(1).forEach((line) -> {
-        Matcher m = csvFormat.matcher(line);
-        if (m.matches()) {
-          String testClass = m.group(2);
-          String testMethod = m.group(3);
-          String testString = testMethod + "(" + testClass + ")";
-          TestCase tc = TestCaseStore.with(testString);
-          // we have a historical test case that has no current equivalent - move on
-          if (tc == null) {
-            return;
-          }
-          // skip 0th execution since this is the "current" state, and we shouldn't know this information at runtime
-          int ind = Integer.parseInt(m.group(1)) - 1;
-          if (ind == -1) {
-            return;
-          }
-          if (!historyData.containsKey(tc)) {
-            historyData.put(tc, new LinkedList<>());
-          }
-          long executionTime = Long.parseLong(m.group(4));
-          if (executionTime > maxExecutionTime) {
-            maxExecutionTime = executionTime;
-          }
-          boolean passed = "pass".equals(m.group(5));
-          Throwable cause = null;
-          // if test failed, try to work out why
-          if (!passed) {
-            String trace = m.group(6);
-            if (!"".equals(trace)) {
-              // parse throwable into object here
-              String exceptionClass = m.group(7);
-              try {
-                Class<?> cl = Class.forName(exceptionClass);
-                if (Util.getConstructor(cl) != null) {
-                  cause = (Throwable) cl.newInstance();
-                } else {
-                  List<Constructor> constructors = Arrays.asList(cl.getConstructors());
-                  // find constructor with only primitive or string arguments and use it
-                  Optional<Constructor> optCon = constructors.stream()
-                      .filter(c -> areAllPrimitive(c.getParameterTypes())).findFirst();
-                  if (optCon.isPresent()) {
-                    Constructor con = optCon.get();
-                    // get array of default arguments
-                    Object[] args = Arrays.stream(con.getParameterTypes()).map(this::mapArgument)
-                        .toArray();
-                    cause = (Throwable) con.newInstance(args);
-                  } else {
-                    // there is no exception we can create an instance of
-                    cause = new Exception();
-                  }
-                }
-
-              } catch (ClassNotFoundException e) {
-                // if the exception class does not exist, we will just use a generic exception
-                cause = new Exception();
-              } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
-                e.printStackTrace();
+      ProgressBar bar = new ProgressBar(System.out);
+      bar.setTitle("Reading history file");
+      while(p.hasNextLine()){
+        bar.reportProgress(count++, numRecords);
+        String line = p.nextLine();
+        String[] lineParts = line.split(",");
+        String testCaseName = lineParts[TEST_NAME];
+        String testClass = testCaseName.split("::")[0];
+        String testMethod = testCaseName.split("::")[1];
+        String testString = testMethod + "(" + testClass + ")";
+        TestCase tc = TestCaseStore.with(testString);
+        // skip 0th execution since this is the "current" state, and we shouldn't know this information at runtime
+        int ind = Math.abs(Integer.parseInt(lineParts[REVISION_ID]));
+        if (ind == 0) {
+          continue;
+        }
+        if (!historyData.containsKey(tc)) {
+          historyData.put(tc, new ArrayList<>());
+        }
+        Throwable cause = null;
+        if (lineParts.length > TEST_STACK_TRACE) {
+          // parse throwable into object here
+          String trace = lineParts[TEST_STACK_TRACE];
+          String exceptionClass = trace.split("[^a-zA-Z.@$]")[0];
+          try {
+            Class<?> cl = Class.forName(exceptionClass);
+            if (Util.getConstructor(cl) != null) {
+              cause = (Throwable) cl.newInstance();
+            } else {
+              List<Constructor> constructors = Arrays.asList(cl.getConstructors());
+              // find constructor with only primitive or string arguments and use it
+              Optional<Constructor> optCon = constructors.stream()
+                  .filter(c -> areAllPrimitive(c.getParameterTypes())).findFirst();
+              if(optCon.isPresent()){
+                Constructor con = optCon.get();
+                // get array of default arguments
+                Object[] args = Arrays.stream(con.getParameterTypes()).map(this::mapArgument).toArray();
+                cause = (Throwable) con.newInstance(args);
               }
             }
-            if (cause == null) {
-              // really worst case, we didn't find anything we can use, but the cause must not be null
-              cause = new Exception();
-            }
+
+          } catch (ClassNotFoundException e){
+            // if the exception class does not exist, we will just use a generic exception
+            cause = new Exception();
+          } catch(InstantiationException | IllegalAccessException | InvocationTargetException e) {
+            e.printStackTrace();
           }
-          List<Execution> testHistory = historyData.get(tc);
-          int numExecutions = testHistory.size();
-          // necessary check to ensure that test cases that only existed in previous versions are not considered "current"
-          // for example if a test case exists in the current version, the first element of its history data should be considered
-          // the most recent execution of all test cases, but if we discover a test case later that
-          if (ind > numExecutions) {
-            for (int i = numExecutions; i < ind; i++) {
-              testHistory.add(i, Execution.NULL_EXECUTION);
-            }
-          }
-          // if we have padded test matrix with null executions and now we find an execution that should "slot in" to a location
-          // this should never happen with the current history file structure, since we systematically move backwards in executions
-          // but this guards against the case where we find execution -10, pad 9 NULL_EXECUTION objects and then find version -5, for example
-          if (testHistory.size() > 0 && testHistory.size() > ind
-              && testHistory.get(ind) == Execution.NULL_EXECUTION) {
-            testHistory.remove(ind);
-          }
-          testHistory.add(ind, new Execution(executionTime, passed, cause));
-          if (testHistory.size() > maxExecutions) {
-            maxExecutions = testHistory.size();
-          }
-        } else {
-          System.out.println("Line " + line + " does not match regex");
         }
-      });
+        long executionTime = Long.parseLong(lineParts[TEST_RUNTIME]);
+        if (executionTime > maxExecutionTime) {
+          maxExecutionTime = executionTime;
+        }
+        int numExecutions = historyData.get(tc).size();
+        // necessary check to ensure that test cases that only existed in previous versions are not considered "current"
+        // for example if a test case exists in the current version, the first element of its history data should be considered
+        // the most recent execution of all test cases, but if we discover a test case later that
+        if(ind > numExecutions){
+          for(int i = numExecutions; i < ind; i++){
+            historyData.get(tc).add(i, Execution.NULL_EXECUTION);
+          }
+        }
+        // if we have padded test matrix with null executions and now we find an execution that should "slot in" to a location
+        // this should never happen with the current history file structure, since we systematically move backwards in executions
+        // but this guards against the case where we find execution -10, pad 9 NULL_EXECUTION objects and then find version -5, for example
+        if(historyData.get(tc).size() > ind && historyData.get(tc).get(ind) == Execution.NULL_EXECUTION){
+          historyData.get(tc).remove(ind);
+        }
+        historyData.get(tc).add(ind, new Execution(executionTime, lineParts[TEST_OUTCOME].equals("pass"), cause));
+        if (historyData.get(tc).size() > maxExecutions) {
+          maxExecutions = historyData.get(tc).size();
+        }
+      }
+      bar.complete();
     } catch (FileNotFoundException e) {
+      e.printStackTrace();
+    } catch (IOException e) {
       e.printStackTrace();
     }
   }
 
-  private static List<Class> primitives = Arrays
-      .asList(new Class[]{Integer.class, int.class, Float.class,
-          float.class, Double.class, double.class,
-          Short.class, short.class,
-          Long.class, long.class,
-          Byte.class, byte.class,
-          Character.class, char.class,
-          Boolean.class, boolean.class, String.class});
+  private static List<Class> primitives = Arrays.asList(new Class[]{Integer.class, int.class, Float.class,
+      float.class, Double.class, double.class,
+      Short.class, short.class,
+      Long.class, long.class,
+      Byte.class, byte.class,
+      Character.class, char.class,
+      Boolean.class, boolean.class, String.class});
 
   private boolean areAllPrimitive(Class[] types) {
     return primitives.containsAll(Arrays.asList(types));
   }
 
-  private Object mapArgument(Class<?> type) {
-    if (type.equals(String.class)) {
+  private Object mapArgument(Class<?> type){
+    if(type.equals(String.class)){
       return "";
-    } else if (type.equals(Boolean.class) || type.equals(boolean.class)) {
+    } else if(type.equals(Boolean.class) || type.equals(boolean.class)){
       return false;
     } else {
       return 0;
@@ -210,14 +198,14 @@ public abstract class HistoryBased extends TestCasePrioritiser {
   }
 
   public List<Boolean> getResults(TestCase tc) {
-    if (!historyData.containsKey(tc)) {
+    if(!historyData.containsKey(tc)){
       return Collections.emptyList();
     }
     return historyData.get(tc).stream().map(Execution::isPassed).collect(Collectors.toList());
   }
 
   public List<Long> getRuntimes(TestCase tc) {
-    if (!historyData.containsKey(tc)) {
+    if(!historyData.containsKey(tc)){
       return Collections.emptyList();
     }
     return historyData.get(tc).stream().map(Execution::getExecutionTime)
@@ -232,29 +220,25 @@ public abstract class HistoryBased extends TestCasePrioritiser {
         .indexOf(historyData.get(tc).stream().filter(ex -> !ex.isPassed()).findFirst().get());
   }
 
-  public int getTimeSinceLastFailure() {
+  public int getTimeSinceLastFailure(){
     int executionNo = 0;
-    while (!anyFail(executionNo)) {
+    while(!anyFail(executionNo)){
       executionNo++;
     }
     return executionNo;
   }
 
-  private boolean anyFail(int executionNo) {
-    return !historyData.values().stream()
-        .allMatch(l -> l.size() > executionNo && l.get(executionNo).isPassed());
+  private boolean anyFail(int executionNo){
+    return !historyData.values().stream().allMatch(l -> l.size() > executionNo && l.get(executionNo).isPassed());
   }
 
-  public List<TestCase> getFailingTestCases(int executionNo) {
-    return historyData.entrySet().stream().filter(
-        entry -> entry.getValue().size() > executionNo && !entry.getValue().get(executionNo)
-            .isPassed()).map(
+  public List<TestCase> getFailingTestCases(int executionNo){
+    return historyData.entrySet().stream().filter(entry -> entry.getValue().size() > executionNo && !entry.getValue().get(executionNo).isPassed()).map(
         Entry::getKey).collect(Collectors.toList());
   }
 
-  public Throwable getCause(TestCase testCase, int executionNo) {
-    if (historyData.get(testCase).size() < executionNo || historyData.get(testCase).get(executionNo)
-        .isPassed()) {
+  public Throwable getCause(TestCase testCase, int executionNo){
+    if(historyData.get(testCase).size() < executionNo || historyData.get(testCase).get(executionNo).isPassed()){
       return null;
     }
     return historyData.get(testCase).get(executionNo).getFailureCause();

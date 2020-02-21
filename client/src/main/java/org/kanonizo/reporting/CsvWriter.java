@@ -1,6 +1,7 @@
 package org.kanonizo.reporting;
 
 import com.scythe.instrumenter.InstrumentationProperties;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -9,7 +10,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
-import org.kanonizo.algorithms.SearchAlgorithm;
 
 public abstract class CsvWriter {
 

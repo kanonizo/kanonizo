@@ -3,6 +3,7 @@ package org.kanonizo.test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.kanonizo.algorithms.metaheuristics.GeneticAlgorithm.POPULATION_SIZE;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
@@ -20,11 +21,9 @@ import org.kanonizo.Properties;
 import org.kanonizo.Properties.CoverageApproach;
 import org.kanonizo.TestSuitePrioritisation;
 import org.kanonizo.util.Util;
-import org.mockito.Mock;
 import org.reflections.Reflections;
 
 public class TestSuitePrioritisationTest extends MockitoTest {
-  @Mock
   private CommandLine line;
   private java.util.Properties props = new java.util.Properties();
   private Reflections r = Util.getReflections();
@@ -33,6 +32,7 @@ public class TestSuitePrioritisationTest extends MockitoTest {
 
   @Before
   public void setup() {
+    line = mock(CommandLine.class);
     props.clear();
     parameters = r.getFieldsAnnotatedWith(Parameter.class);
     for (Field f : parameters) {

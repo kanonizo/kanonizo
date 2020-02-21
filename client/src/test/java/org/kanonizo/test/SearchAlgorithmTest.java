@@ -7,6 +7,8 @@ import com.scythe.instrumenter.instrumentation.ClassReplacementTransformer;
 import com.scythe.instrumenter.instrumentation.InstrumentingClassLoader;
 import java.io.File;
 import java.util.Arrays;
+
+import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.kanonizo.Framework;
@@ -20,6 +22,7 @@ public abstract class SearchAlgorithmTest extends MockitoTest {
     protected SearchAlgorithm algorithm;
     protected Instrumenter scytheInst = new ScytheInstrumenter();
     private TestSuite tsc;
+    private ClassLoader cachedClassLoader = Thread.currentThread().getContextClassLoader();
 
 
     protected SearchAlgorithmTest(SearchAlgorithm algorithm) {
@@ -54,4 +57,9 @@ public abstract class SearchAlgorithmTest extends MockitoTest {
         }
     }
 
+    @After
+    public void tearDown()
+    {
+        Thread.currentThread().setContextClassLoader(cachedClassLoader);
+    }
 }

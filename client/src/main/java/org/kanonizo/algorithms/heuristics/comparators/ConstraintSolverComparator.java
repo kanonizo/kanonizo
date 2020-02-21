@@ -197,8 +197,7 @@ public class ConstraintSolverComparator implements ObjectiveFunction {
           MINION_OUPUT_FILE};
       p = r.exec(cmd);
     } else if (osName.contains("windows") == true) {
-      String cmd[] = {"cmd.exe", "/c", "start /min " + this.minionExec + " -noprintsols -noresume "
-          + MINION_INPUT_FILE + " -solsout " + MINION_OUPUT_FILE};
+      String cmd[] = {this.minionExec, "-noprintsols", "-noresume", MINION_INPUT_FILE, "-solsout", MINION_OUPUT_FILE};
       p = r.exec(cmd);
 
       BufferedReader stdInput = new BufferedReader(new InputStreamReader(p.getInputStream()));

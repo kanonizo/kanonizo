@@ -52,13 +52,13 @@ public class Main {
       Set<Field> parameters = Util.getParameters();
       line = new DefaultParser().parse(options, args, false);
       if (TestSuitePrioritisation.hasReturnOption(line)) {
-        switch(TestSuitePrioritisation.getReturnOption(line)) {
+        switch (TestSuitePrioritisation.getReturnOption(line)) {
           case HELP:
             HelpFormatter formatter = new HelpFormatter();
             formatter.printHelp("Search Algorithms", options);
             break;
           case LIST_ALGORITHMS:
-            Table algs = new Table(20,50);
+            Table algs = new Table(20, 50);
             algs.setHeaders("Algorithm Name", "Algorithm Description");
             Framework.getAvailableAlgorithms().forEach(alg -> {
               algs.addRow(alg.readableName(), alg.getClass().getAnnotation(Algorithm.class).description());
@@ -66,7 +66,7 @@ public class Main {
             algs.print();
             break;
           case LIST_PARAMETERS:
-            Table params = new Table(35,20,100);
+            Table params = new Table(35, 20, 100);
             params.setHeaders("Parameter Key", "Parameter Group", "Description");
             ArrayList<Field> ordered = new ArrayList<>(parameters);
 
@@ -74,7 +74,7 @@ public class Main {
             ordered.forEach(par -> {
 
               Parameter p = par.getAnnotation(Parameter.class);
-              params.addRow(p.key(),p.category(),p.description());
+              params.addRow(p.key(), p.category(), p.description());
 
             });
             params.print();
@@ -88,6 +88,8 @@ public class Main {
         InstrumentingClassLoader.getInstance().setVisitMutants(true);
       }
       setupFramework(line, fw);
+    } catch(MissingOptionException e){
+      return;
     } catch (Exception e) {
       logger.error(e);
     }

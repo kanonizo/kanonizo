@@ -22,7 +22,7 @@ public class Huang extends HistoryBased {
     Collections.sort(failingTestCases, (o1, o2) -> {
         Throwable cause1 = getCause(o1, executionNo);
         Throwable cause2 = getCause(o2, executionNo);
-        return Integer.compare(getSeverity(cause1), getSeverity(cause2));
+        return Integer.compare(-getSeverity(cause1), -getSeverity(cause2));
     });
   }
 

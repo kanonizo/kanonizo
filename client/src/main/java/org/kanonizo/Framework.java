@@ -179,7 +179,7 @@ public class Framework implements Serializable {
    * dependencies through using maven as a system tool
    *
    * @param lib - a library folder containing JAR files that are required for the test cases to
-   *            execute properly
+   * execute properly
    */
   public void addLibrary(File lib) {
     if (lib.isDirectory()) {
@@ -307,19 +307,20 @@ public class Framework implements Serializable {
         }
       }
     }
-    if(testSuites.size() > 0){
+    if (testSuites.size() > 0) {
       sut.getTestSuite().clear();
-      for(TestSuite ts : testSuites){
+      for (TestSuite ts : testSuites) {
         List<TestCase> testCases = collectTestCases(ts);
-        for(TestCase tc : testCases){
-          if(!sut.getTestSuite().contains(tc)) {
+        for (TestCase tc : testCases) {
+          if (!sut.getTestSuite().contains(tc)) {
             sut.getTestSuite().addTestCase(tc);
           }
         }
       }
     }
     ClassUnderTest.resetCount();
-    logger.info("Finished adding source and test files. Total " + sut.getClassesUnderTest().size() + " classes and " + sut.getTestSuite().size() + " test cases");
+    logger.info("Finished adding source and test files. Total " + sut.getClassesUnderTest().size()
+        + " classes and " + sut.getTestSuite().size() + " test cases");
   }
 
   private List<TestCase> collectTestCases(TestSuite suite) {
@@ -343,7 +344,7 @@ public class Framework implements Serializable {
             TestCase tc = TestCaseStore.with(desc);
             // some test cases never get added to the test case store because kanonizo doesn't recognise them
             // as test cases. To prevent NPEs later on we only at test cases that are registered in the store
-            if(tc != null){
+            if (tc != null) {
               retTests.add(tc);
             }
           } catch (NoSuchMethodException e) {
@@ -369,8 +370,7 @@ public class Framework implements Serializable {
         logger.info("Ignoring class " + jcl.getClassName() + " because it is forbidden");
         return null;
       } else {
-        cl = Class
-            .forName(jcl.getClassName(), false, Thread.currentThread().getContextClassLoader());
+        cl = inst.loadClass(jcl.getClassName());
       }
 
     } catch (ClassNotFoundException | NoClassDefFoundError e) {

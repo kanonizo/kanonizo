@@ -14,26 +14,27 @@ import org.kanonizo.util.Util;
 
 @Algorithm
 public class Marijan extends HistoryBased{
-  private Map<TestCase, Double> priority = new HashMap<>();
-  private List<TestCase> order = new ArrayList<>();
+  private Map<TestCase, Double> priority;
+
   @Override
   public void init(List<TestCase> testCases){
     super.init(testCases);
+    priority = new HashMap<>();
     createFailureMatrix(testCases);
   }
 
   private void createFailureMatrix(List<TestCase> testCases){
-    double weight = 0.7;
     for(int i = 0; i < testCases.size(); i++){
-      double p = 0;
-      if(i > 2){
-        weight = 0.1;
-      } else if (i > 1){
-        weight = 0.2;
-      }
+      double weight = 0.7;
       TestCase tc = testCases.get(i);
       List<Boolean> results = getResults(tc);
+      double p = 0;
       for(int j = 0; j < results.size(); j++){
+        if(j > 2){
+          weight = 0.1;
+        } else if (j > 1){
+          weight = 0.2;
+        }
         boolean res = results.get(j);
         if(res){
           p += 1 * weight;

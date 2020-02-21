@@ -16,7 +16,7 @@ import org.kanonizo.listeners.TestCaseSelectionListener;
 public class AdditionalGreedyComparator implements Comparator<TestCase>, TestCaseSelectionListener,
     ObjectiveFunction {
 
-  private Set<Line> cache = new HashSet<>();
+  private Set<Line> cache;
   private Instrumenter inst;
   private Framework fw = Framework.getInstance();
 
@@ -26,6 +26,7 @@ public class AdditionalGreedyComparator implements Comparator<TestCase>, TestCas
       inst = (Instrumenter) e.getNewValue();
     });
     inst = fw.getInstrumenter();
+    cache = new HashSet<>();
   }
 
   @Override

@@ -1,5 +1,6 @@
 package org.kanonizo.algorithms.heuristics.historybased;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,32 +26,39 @@ public class Cho extends HistoryBased {
   public static double omega = 0.1;
 
   private static final int TEST_FAILURE_WEIGHT = -1;
-  private HashMap<TestCase, Double> priority = new HashMap<>();
-  private List<TestCase> ordering = new ArrayList<>();
+  private HashMap<TestCase, Double> priority;
+  private List<TestCase> ordering;
 
   @Override
   public void init(List<TestCase> testCases) {
     super.init(testCases);
+
+    priority = new HashMap<>();
+    ordering = new ArrayList<>();
+
     testCases.forEach(tc -> priority.put(tc, getPriority(tc)));
     ordering.addAll(testCases);
-    Collections.sort(ordering, Comparator.comparingDouble(t -> priority.get(t)));
+    ordering.sort(Comparator.comparingDouble(priority::get));
   }
 
-  private double getPriority(TestCase tc){
+  @VisibleForTesting
+  protected double getPriority(TestCase tc){
     List<Boolean> results = getResults(tc);
     if(results.size() == 0){
       return 0;
     }
-
+    int consecutiveFails = results.indexOf(true);
+    if(consecutiveFails > 0){
+      // push simulated pass to the start of the results to ensure recent consecutive fails contribute to
+      // frMin, frMax, frAvg etc
+      results.add(0, true);
+    }
     int frMin = Integer.MAX_VALUE;
     int frMax = 0;
     double frSum = 0.0;
     int frCount = 0;
     int failures = 0;
-    int consecutiveFails = results.indexOf(true);
-    // only consider historic failures when calculating averages
-    for(int i = consecutiveFails; i < results.size(); i++){
-      boolean result = results.get(i);
+    for(Boolean result : results){
       if(result){
         if(failures > 0){
           if(failures < frMin){
@@ -69,7 +77,12 @@ public class Cho extends HistoryBased {
     }
 
     double frAvg = frSum / frCount;
-    double priority = consecutiveFails * (TEST_FAILURE_WEIGHT * omega);
+    double priority = 0;
+    for(int i = 0; i < results.size() - consecutiveFails; i++){
+      if(!results.get(i)) {
+        priority += TEST_FAILURE_WEIGHT * omega;
+      }
+    }
     for(int i = 0; i < consecutiveFails; i++){
       if(i < frMin){
         priority += TEST_FAILURE_WEIGHT * alpha;

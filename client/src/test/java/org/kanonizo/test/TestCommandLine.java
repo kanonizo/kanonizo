@@ -1,6 +1,7 @@
 package org.kanonizo.test;
 
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.apache.commons.cli.CommandLine;
@@ -9,9 +10,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.kanonizo.Framework;
 import org.kanonizo.Main;
-import org.mockito.Mock;
 
-public class TestCommandLine extends MockitoTest {
+public class TestCommandLine {
 
   private static final String SOURCE_OPTION = "s";
   private static final String SOURCE_FOLDER = "testing/src/sample_classes";
@@ -19,12 +19,13 @@ public class TestCommandLine extends MockitoTest {
   private static final String TEST_FOLDER = "testing/test/sample_tests";
   private static final String ALGORITHM_OPTION = "a";
   private static final String ALGORITHM_CHOICE = "greedy";
-  @Mock
+
   private CommandLine line;
   private Framework framework = Framework.getInstance();
 
   @Before
   public void setup() {
+    line = mock(CommandLine.class);
     when(line.hasOption(SOURCE_OPTION)).thenReturn(true);
     when(line.getOptionValue(SOURCE_OPTION)).thenReturn(SOURCE_FOLDER);
     when(line.hasOption(TEST_OPTION)).thenReturn(true);

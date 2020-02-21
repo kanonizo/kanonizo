@@ -18,7 +18,7 @@ public class GreedyAlgorithm extends TestCasePrioritiser {
   }
   @Override
   public TestCase selectTestCase(List<TestCase> testCases) {
-    return testCases.get(0);
+    return testCases.remove(0);
   }
 
 
