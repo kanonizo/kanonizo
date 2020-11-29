@@ -1,6 +1,7 @@
 package org.kanonizo.algorithms.heuristics;
 
 import static java.util.Arrays.asList;
+import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Matchers.any;
@@ -25,7 +26,7 @@ public class GreedyTest {
   private final TestCase testCase2 = mock(TestCase.class);
   private final TestCase testCase3 = mock(TestCase.class);
   private final List<TestCase> allTests = new ArrayList<>(asList(testCase1, testCase2, testCase3));
-  private final GreedyAlgorithm alg = new GreedyAlgorithm();
+  private final GreedyAlgorithm alg = new GreedyAlgorithm(configurationModel, emptyList(), instrumenter, display);
 
   @Before
   public void setup()

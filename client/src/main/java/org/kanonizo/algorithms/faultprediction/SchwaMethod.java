@@ -1,6 +1,7 @@
 package org.kanonizo.algorithms.faultprediction;
 
-public class SchwaMethod {
+public class SchwaMethod
+{
 
     private int authors;
     private String name;
@@ -10,31 +11,38 @@ public class SchwaMethod {
     private String type;
     private int revisions;
 
-    public int getAuthors() {
+    public int getAuthors()
+    {
         return authors;
     }
 
-    public String getName() {
+    public String getName()
+    {
         return name;
     }
 
-    public int getFixes() {
+    public int getFixes()
+    {
         return fixes;
     }
 
-    public double getProb() {
+    public double getProb()
+    {
         return prob;
     }
 
-    public double getSize() {
+    public double getSize()
+    {
         return size;
     }
 
-    public String getType() {
+    public String getType()
+    {
         return type;
     }
 
-    public int getRevisions() {
+    public int getRevisions()
+    {
         return revisions;
     }
 

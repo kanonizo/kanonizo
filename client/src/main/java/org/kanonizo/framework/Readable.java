@@ -1,5 +1,6 @@
 package org.kanonizo.framework;
 
-public interface Readable {
-  String readableName();
+public interface Readable
+{
+    String readableName();
 }

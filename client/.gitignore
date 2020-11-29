@@ -1,2 +1,5 @@
 deps/
 scythe-coverage.json
+.idea/
+!.idea/codeStyles/
+*.iml

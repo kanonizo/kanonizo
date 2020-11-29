@@ -1,24 +1,39 @@
 package org.kanonizo.algorithms.heuristics;
 
-import java.util.Collections;
 import java.util.List;
+
 import org.kanonizo.algorithms.TestCasePrioritiser;
 import org.kanonizo.algorithms.heuristics.comparators.AdditionalGreedyComparator;
-import org.kanonizo.annotations.Algorithm;
+import org.kanonizo.configuration.KanonizoConfigurationModel;
+import org.kanonizo.display.Display;
+import org.kanonizo.framework.instrumentation.Instrumenter;
 import org.kanonizo.framework.objects.TestCase;
+import org.kanonizo.listeners.TestOrderChangedListener;
 
-@Algorithm
-public class AdditionalGreedyAlgorithm extends TestCasePrioritiser {
-  private AdditionalGreedyComparator comp = new AdditionalGreedyComparator();
-  @Override
-  public TestCase selectTestCase(List<TestCase> testCases) {
-    Collections.sort(testCases, comp);
-    TestCase next = testCases.remove(0);
-    return next;
-  }
+public class AdditionalGreedyAlgorithm extends TestCasePrioritiser
+{
+    private final AdditionalGreedyComparator additionalGreedyComparator = new AdditionalGreedyComparator();
 
-  @Override
-  public String readableName() {
-    return "additionalgreedy";
-  }
+    public AdditionalGreedyAlgorithm(
+            KanonizoConfigurationModel configurationModel,
+            List<TestOrderChangedListener> testOrderChangedListeners,
+            Instrumenter instrumenter,
+            Display display
+    )
+    {
+        super(configurationModel, testOrderChangedListeners, instrumenter, display);
+    }
+
+    @Override
+    public TestCase selectTestCase(List<TestCase> testCases)
+    {
+        testCases.sort(additionalGreedyComparator);
+        return testCases.remove(0);
+    }
+
+    @Override
+    public String readableName()
+    {
+        return "additionalgreedy";
+    }
 }

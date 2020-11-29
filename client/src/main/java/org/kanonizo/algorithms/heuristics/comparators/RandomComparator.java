@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.kanonizo.framework.ObjectiveFunction;
 import org.kanonizo.framework.objects.TestCase;
-import org.kanonizo.util.RandomInstance;
+import org.kanonizo.util.RandomSource;
 
 public class RandomComparator implements ObjectiveFunction {
 
@@ -13,7 +13,7 @@ public class RandomComparator implements ObjectiveFunction {
     ArrayList<TestCase> candidatesClone = new ArrayList<>(candidates);
     ArrayList<TestCase> newOrder = new ArrayList<>();
     while(!candidatesClone.isEmpty()){
-      int index = RandomInstance.nextInt(candidatesClone.size());
+      int index = RandomSource.nextInt(candidatesClone.size());
       TestCase t = candidatesClone.get(index);
       candidatesClone.remove(t);
       newOrder.add(t);

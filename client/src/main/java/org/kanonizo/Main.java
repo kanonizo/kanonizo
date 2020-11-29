@@ -3,239 +3,239 @@ package org.kanonizo;
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
 import com.scythe.instrumenter.instrumentation.InstrumentingClassLoader;
 import com.scythe.instrumenter.mutation.MutationProperties;
-import java.io.File;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.MissingOptionException;
 import org.apache.commons.cli.Options;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.kanonizo.TestSuitePrioritisation.ReturnOption;
+import org.kanonizo.algorithms.Algorithm;
+import org.kanonizo.algorithms.Algorithm.AlgorithmFactory;
 import org.kanonizo.algorithms.SearchAlgorithm;
-import org.kanonizo.annotations.Algorithm;
 import org.kanonizo.annotations.Prerequisite;
 import org.kanonizo.commandline.Table;
-import org.kanonizo.display.ConsoleDisplay;
+import org.kanonizo.configuration.KanonizoConfigurationModel;
 import org.kanonizo.display.Display;
-import org.kanonizo.display.fx.KanonizoFrame;
+import org.kanonizo.display.DisplayType;
+import org.kanonizo.display.DisplayType.DisplayFactory;
 import org.kanonizo.exception.SystemConfigurationException;
 import org.kanonizo.framework.instrumentation.Instrumenter;
 import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
+import org.kanonizo.instrumenters.InstrumenterType;
+import org.kanonizo.instrumenters.InstrumenterType.InstrumenterFactory;
 import org.kanonizo.util.Util;
-import org.reflections.Reflections;
 
-public class Main {
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
-  public static final Logger logger = LogManager.getLogger(Main.class);
+import static java.util.Collections.emptyList;
+import static java.util.stream.Collectors.toList;
+import static org.kanonizo.TestSuitePrioritisationConfiguration.CommandLineOption.ALGORITHM_OPTION;
+import static org.kanonizo.TestSuitePrioritisationConfiguration.CommandLineOption.GUI_OPTION;
+import static org.kanonizo.TestSuitePrioritisationConfiguration.CommandLineOption.INSTRUMENTER_OPTION;
+import static org.kanonizo.TestSuitePrioritisationConfiguration.CommandLineOption.LIB_FOLDER_OPTION;
+import static org.kanonizo.TestSuitePrioritisationConfiguration.CommandLineOption.ROOT_FOLDER_OPTION;
+import static org.kanonizo.TestSuitePrioritisationConfiguration.CommandLineOption.SOURCE_FOLDER_OPTION;
+import static org.kanonizo.TestSuitePrioritisationConfiguration.CommandLineOption.TEST_FOLDER_OPTION;
+import static org.kanonizo.algorithms.Algorithm.GREEDY;
+import static org.kanonizo.configuration.KanonizoConfigurationModel.fromCommandLine;
+import static org.kanonizo.display.DisplayType.CONSOLE_DISPLAY;
+import static org.kanonizo.instrumenters.InstrumenterType.SCYTHE_INSTRUMENTER;
+
+public class Main
+{
+
+    public static final Logger logger = LogManager.getLogger(Main.class);
 
 
-  public static void main(String[] args) {
-    Framework fw = Framework.getInstance();
-    // org.evosuite.Properties.TT = true;
-    Options options = TestSuitePrioritisation.getCommandLineOptions();
-    CommandLine line = null;
-    try {
-      Set<Field> parameters = Util.getParameters();
-      line = new DefaultParser().parse(options, args, false);
-      if (TestSuitePrioritisation.hasReturnOption(line)) {
-        switch (TestSuitePrioritisation.getReturnOption(line)) {
-          case HELP:
-            HelpFormatter formatter = new HelpFormatter();
-            formatter.printHelp("Search Algorithms", options);
-            break;
-          case LIST_ALGORITHMS:
-            Table algs = new Table(20, 50);
-            algs.setHeaders("Algorithm Name", "Algorithm Description");
-            Framework.getAvailableAlgorithms().forEach(alg -> {
-              algs.addRow(alg.readableName(), alg.getClass().getAnnotation(Algorithm.class).description());
-            });
-            algs.print();
-            break;
-          case LIST_PARAMETERS:
-            Table params = new Table(35, 20, 100);
-            params.setHeaders("Parameter Key", "Parameter Group", "Description");
-            ArrayList<Field> ordered = new ArrayList<>(parameters);
+    public static void main(String[] args)
+    {
+        // org.evosuite.Properties.TT = true;
+        Options options = TestSuitePrioritisationConfiguration.getCommandLineOptions();
+        try
+        {
+            Set<Field> parameters = Util.getParameters();
+            CommandLine line = new DefaultParser().parse(options, args, false);
+            TestSuitePrioritisationConfiguration configuration = TestSuitePrioritisationConfiguration.from(line);
+            if (configuration.hasTerminalOption())
+            {
+                switch (configuration.getTerminalOption())
+                {
+                    case HELP_OPTION:
+                        HelpFormatter formatter = new HelpFormatter();
+                        formatter.printHelp("Search Algorithms", options);
+                        break;
+                    case LIST_ALGORITHMS_OPTION:
+                        Table availableAlgorithms = new Table(20, 50);
+                        availableAlgorithms.setHeaders("Algorithm Name", "Algorithm Description");
+                        Arrays.stream(Algorithm.values()).forEach(
+                                alg -> availableAlgorithms.addRow(alg.readableName, alg.description));
+                        availableAlgorithms.print();
+                        break;
+                    case LIST_PARAMETERS_OPTION:
+                        Table params = new Table(35, 20, 100);
+                        params.setHeaders("Parameter Key", "Parameter Group", "Description");
+                        ArrayList<Field> ordered = new ArrayList<>(parameters);
 
-            ordered.sort(Comparator.comparing(o -> o.getAnnotation(Parameter.class).key()));
-            ordered.forEach(par -> {
+                        ordered.sort(Comparator.comparing(o -> o.getAnnotation(Parameter.class).key()));
+                        ordered.forEach(
+                                par ->
+                                {
 
-              Parameter p = par.getAnnotation(Parameter.class);
-              params.addRow(p.key(), p.category(), p.description());
+                                    Parameter p = par.getAnnotation(Parameter.class);
+                                    params.addRow(p.key(), p.category(), p.description());
 
-            });
-            params.print();
-            break;
+                                });
+                        params.print();
+                        break;
+                    default:
+                        throw new IllegalStateException("Unexpected terminal command line option: " + configuration.getTerminalOption());
+                }
+                return;
+            }
+
+            TestSuitePrioritisation.handleProperties(line, parameters);
+            InstrumentingClassLoader.getInstance().setVisitMutants(MutationProperties.VISIT_MUTANTS);
+            KanonizoConfigurationModel configModel = fromCommandLine(line);
+            Framework framework = buildFramework(configuration, configModel);
+            TestSuite result = framework.run();
+
         }
-        return;
-      }
-
-      TestSuitePrioritisation.handleProperties(line, parameters);
-      if (MutationProperties.VISIT_MUTANTS) {
-        InstrumentingClassLoader.getInstance().setVisitMutants(true);
-      }
-      setupFramework(line, fw);
-    } catch(MissingOptionException e){
-      return;
-    } catch (Exception e) {
-      logger.error(e);
-    }
-    Display d = null;
-    if (!line.hasOption(TestSuitePrioritisation.GUI_SHORT)) {
-      d = new ConsoleDisplay();
-      d.initialise();
-      fw.setDisplay(d);
-      fw.addSelectionListener((ConsoleDisplay) d);
-      try {
-        fw.run();
-      } catch (Exception e) {
-        logger.error(e);
-        e.printStackTrace();
-      }
-      // necessary due to random thread creation during test cases (don't do
-      // this ever again)
-      java.lang.System.exit(0);
-    } else {
-      d = new KanonizoFrame();
-      d.initialise();
-    }
-  }
-
-  /**
-   * Takes options from the {@link CommandLine} and creates a {@link TestSuite} instance containing
-   * all of the test cases and a {@link SystemUnderTest} object containing all of the source
-   * classes. The command line must contain a -s/--sourceFolder option for the source classes and a
-   * -t/--testFolder option for the test cases. Both of these folders will be added to the
-   * classpath, and all nested .class files will be loaded in as either source or test cases ready
-   * for instrumentation. Currently, instrumentation and JUnit execution takes place in the
-   * constructor of a {@link TestSuite}, but this may well be changed as fitness functions are
-   * introduced that are not reliant on code coverage.
-   *
-   * @param line - the {@link CommandLine} instance which must contain -s and -t options for source
-   * and test folders respectively
-   * @return a {@link TestSuite} object containing a {@link SystemUnderTest} with all of the source
-   * classes and a list of {@link TestCase} objects for all of the test cases contained within the
-   * specified location
-   */
-  public static void setupFramework(CommandLine line, Framework fw) throws Exception {
-    File file;
-    String folder;
-    String[] libFolders;
-    if (!line.hasOption("s") || !line.hasOption("t")) {
-      throw new MissingOptionException(
-          "In order to run the test suite prioritisation, a source folder must be given using -s or --sourceFolder and a test folder must be given using -t or --testFolder");
-    }
-    if (line.hasOption("l")) {
-      // lib folder
-      libFolders = line.getOptionValues("l");
-      for (String libFolder : libFolders) {
-        file = Util.getFile(libFolder);
-        fw.addLibrary(file);
-      }
-    }
-    if (!MutationProperties.MAJOR_ROOT.equals("")) {
-      File majorJar = Util.getFile(MutationProperties.MAJOR_ROOT + "/config/config.jar");
-      Util.addToClassPath(majorJar);
-    }
-    folder = line.getOptionValue("s");
-    // relative path
-    file = Util.getFile(folder);
-    fw.setSourceFolder(file);
-    if(line.hasOption(TestSuitePrioritisation.ROOT_FOLDER_SHORT)){
-      fw.setRootFolder(Util.getFile(line.getOptionValue(TestSuitePrioritisation.ROOT_FOLDER_SHORT)));
-    }
-    File root = fw.getRootFolder() != null ? fw.getRootFolder() : file.getParentFile().getParentFile();
-//    if (MavenAnalyser.isMavenProject(root) && fw.getLibraries().isEmpty()) {
-//      MavenAnalyser.addMavenDependencies(root);
-//    }
-    // test folder
-    folder = line.getOptionValue("t");
-    // relative path
-    file = Util.getFile(folder);
-    fw.setTestFolder(file);
-    String algorithmChoice = line.hasOption("a") ? line.getOptionValue("a") : "";
-    fw.setAlgorithm(getAlgorithm(algorithmChoice));
-    String instrumenter = Properties.INSTRUMENTER;
-    setInstrumenter(fw, instrumenter);
-  }
-
-  private static void setInstrumenter(Framework fw, String instrumenter) {
-    Reflections r = Util.getReflections();
-    Set<?> instrumenters = r
-        .getTypesAnnotatedWith(org.kanonizo.annotations.Instrumenter.class).stream().map(cl -> {
-          try {
-            return cl.newInstance();
-          } catch (IllegalAccessException | InstantiationException e) {
-            logger.error(e);
-          }
-          return null;
-        }).collect(Collectors.toSet());
-    for (Object inst : instrumenters) {
-      if (instrumenter
-          .equals(((Instrumenter) inst).readableName())) {
-        fw.setInstrumenter(
-            (org.kanonizo.framework.instrumentation.Instrumenter) inst);
-
-      }
-    }
-  }
-
-  private static SearchAlgorithm getAlgorithm(String algorithmChoice)
-      throws InstantiationException, IllegalAccessException {
-    Reflections r = Util.getReflections();
-    Set<Class<?>> algorithms = r.getTypesAnnotatedWith(Algorithm.class);
-    Optional<?> algorithmClass = algorithms.stream()
-        .map(cl -> {
-          try {
-            return cl.newInstance();
-          } catch (IllegalAccessException | InstantiationException e) {
-            logger.error(e);
-          }
-          return null;
-        })
-        .filter(obj -> ((SearchAlgorithm) obj).readableName().equals(algorithmChoice))
-        .findFirst();
-    if (algorithmClass.isPresent()) {
-      SearchAlgorithm algorithm = (SearchAlgorithm) algorithmClass.get();
-      List<Method> requirements = Framework.getPrerequisites(algorithm);
-      boolean anyFail = false;
-      for (Method requirement : requirements) {
-        try {
-          boolean passed = (boolean) requirement.invoke(null, null);
-          if (!passed) {
-            anyFail = true;
-            String error = requirement.getAnnotation(Prerequisite.class).failureMessage();
-            logger.error("System is improperly configured: " + error);
-          }
-        } catch (InvocationTargetException e) {
-          logger.error(e);
+        catch (MissingOptionException ignored)
+        {
         }
-      }
-      if (anyFail) {
-        throw new SystemConfigurationException("");
-      }
-      return algorithm;
-    }
-    List<String> algorithmNames = Framework.getAvailableAlgorithms().stream()
-        .map(alg -> alg.readableName())
-        .collect(Collectors.toList());
-    throw new RuntimeException(
-        "Algorithm could not be created. The list of available algorithms is given as: "
-            + algorithmNames.stream().reduce((s, s2) -> s + "\n" + s2));
+        catch (Exception e)
+        {
+            logger.error(e);
+        }
 
-  }
+    }
+
+    /**
+     * Takes options from the {@link CommandLine} and creates a {@link TestSuite} instance containing
+     * all of the test cases and a {@link SystemUnderTest} object containing all of the source
+     * classes. The command line must contain a -s/--sourceFolder option for the source classes and a
+     * -t/--testFolder option for the test cases. Both of these folders will be added to the
+     * classpath, and all nested .class files will be loaded in as either source or test cases ready
+     * for instrumentation. Currently, instrumentation and JUnit execution takes place in the
+     * constructor of a {@link TestSuite}, but this may well be changed as fitness functions are
+     * introduced that are not reliant on code coverage.
+     *
+     * @param configuration - the {@link CommandLine} instance which must contain -s and -t options for source
+     *                      and test folders respectively
+     * @param configModel
+     * @return a {@link TestSuite} object containing a {@link SystemUnderTest} with all of the source
+     * classes and a list of {@link TestCase} objects for all of the test cases contained within the
+     * specified location
+     */
+    private static Framework buildFramework(
+            TestSuitePrioritisationConfiguration configuration,
+            KanonizoConfigurationModel configModel
+    ) throws Exception
+    {
+        if (!configuration.getCommandLineValue(SOURCE_FOLDER_OPTION).isPresent() && !configuration.getCommandLineValue(
+                TEST_FOLDER_OPTION).isPresent())
+        {
+            throw new MissingOptionException(
+                    "In order to run the test suite prioritisation, a source folder must be given using -s or --sourceFolder and a test folder must be given using -t or --testFolder");
+        }
+
+        if (!MutationProperties.MAJOR_ROOT.isEmpty())
+        {
+            File majorJar = Util.getFile(MutationProperties.MAJOR_ROOT + "/config/config.jar");
+            Util.addToClassPath(majorJar);
+        }
+        File sourceFolder = Util.getFile(configuration.getRequiredCommandLineValue(SOURCE_FOLDER_OPTION));
+        File testFolder = Util.getFile(configuration.getRequiredCommandLineValue(TEST_FOLDER_OPTION));
+        Optional<String> rootFolderName = configuration.getCommandLineValue(ROOT_FOLDER_OPTION);
+        File rootFolder = rootFolderName.map(Util::getFile).orElse(null);
+        List<File> libFolders = configuration.getCommandLineValues(LIB_FOLDER_OPTION).map(suppliedLibFolders -> suppliedLibFolders.stream().map(
+                Util::getFile).collect(toList())).orElse(emptyList());
+        Display display = getDisplay(configuration, configModel);
+        String instrumenterChoice = configuration.getCommandLineValue(INSTRUMENTER_OPTION).orElse(SCYTHE_INSTRUMENTER.commandLineSwitch);
+        Instrumenter instrumenter = getInstrumenter(instrumenterChoice, configModel, display, sourceFolder);
+        String algorithmChoice = configuration.getCommandLineValue(ALGORITHM_OPTION).orElse(GREEDY.commandLineSwitch);
+        SearchAlgorithm algorithm = getAlgorithm(algorithmChoice, configModel, instrumenter, display);
+        return new Framework(
+                configModel,
+                sourceFolder,
+                testFolder,
+                rootFolder,
+                libFolders,
+                emptyList(),
+                new SystemUnderTest(configModel, instrumenter, algorithm),
+                algorithm,
+                instrumenter,
+                display
+        );
+    }
+
+    private static <T extends Display> T getDisplay(
+            TestSuitePrioritisationConfiguration line,
+            KanonizoConfigurationModel configModel
+    )
+    {
+        DisplayFactory<T> displayFactory = DisplayType.fromCommandLineSwitch(
+                line.getCommandLineValue(GUI_OPTION).orElse(CONSOLE_DISPLAY.commandLineSwitch)
+        ).getDisplayFactory();
+        T display = displayFactory.from(configModel);
+        display.initialise();
+        return display;
+    }
+
+    private static <T extends Instrumenter> T getInstrumenter(
+            String instrumenterChoice,
+            KanonizoConfigurationModel configModel,
+            Display display,
+            File sourceFolder
+    ) throws Exception
+    {
+        InstrumenterFactory<T> instrumenterFactory = InstrumenterType.fromCommandLineSwitch(instrumenterChoice).getInstrumenterFactory();
+        return instrumenterFactory.from(configModel, display, sourceFolder);
+    }
+
+    private static <T extends SearchAlgorithm> T getAlgorithm(
+            String algorithmChoice,
+            KanonizoConfigurationModel configurationModel,
+            Instrumenter instrumenter,
+            Display display
+    ) throws IOException
+    {
+        Optional<AlgorithmFactory<T>> algorithmFactory = Algorithm.withCommandLineSwitch(algorithmChoice).map(Algorithm::getFactory);
+        if (algorithmFactory.isPresent())
+        {
+            T searchAlgorithm = algorithmFactory.get().from(configurationModel, emptyList(), instrumenter, display);
+            List<Prerequisite<T>> predicates = Framework.getPrerequisites(searchAlgorithm);
+            Optional<String> failedPrerequisite = predicates
+                    .stream()
+                    .filter(predicate -> !predicate.test(searchAlgorithm))
+                    .map(Prerequisite::failureMessage)
+                    .findFirst();
+            if (failedPrerequisite.isPresent())
+            {
+                throw new SystemConfigurationException(failedPrerequisite.get());
+            }
+            return searchAlgorithm;
+        }
+        List<String> algorithmNames = Arrays.stream(Algorithm.values())
+                .map(alg -> alg.readableName)
+                .collect(toList());
+
+        throw new RuntimeException(
+                "Algorithm could not be created. The list of available algorithms is given as: "
+                        + String.join("\n", algorithmNames)
+        );
+
+    }
 
 }

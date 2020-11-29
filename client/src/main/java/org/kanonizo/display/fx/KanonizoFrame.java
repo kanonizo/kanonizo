@@ -1,21 +1,6 @@
 package org.kanonizo.display.fx;
 
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
-import java.beans.PropertyChangeListener;
-import java.io.File;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.net.URL;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.ResourceBundle;
-import java.util.Set;
-import java.util.concurrent.locks.Condition;
-import java.util.stream.Collectors;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
@@ -52,23 +37,40 @@ import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Screen;
 import javafx.util.StringConverter;
-import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
-import javax.script.ScriptException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kanonizo.Framework;
+import org.kanonizo.algorithms.Algorithm;
 import org.kanonizo.algorithms.SearchAlgorithm;
 import org.kanonizo.annotations.ConditionalParameter;
 import org.kanonizo.annotations.OptionProvider;
 import org.kanonizo.annotations.Prerequisite;
+import org.kanonizo.configuration.KanonizoConfigurationModel;
 import org.kanonizo.display.Display;
 import org.kanonizo.display.fx.converters.ReadableConverter;
 import org.kanonizo.framework.objects.TestSuite;
 import org.kanonizo.gui.AlertUtils;
 import org.kanonizo.gui.GuiUtils;
 import org.kanonizo.gui.KanonizoFxApplication;
+import org.kanonizo.instrumenters.InstrumenterType;
 import org.kanonizo.util.Util;
+
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+import java.io.File;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.net.URL;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.ResourceBundle;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class KanonizoFrame implements Display, Initializable {
 
@@ -106,6 +108,11 @@ public class KanonizoFrame implements Display, Initializable {
 
   private static Logger logger = LogManager.getLogger(KanonizoFrame.class);
   private static final int ITEMS_PER_ROW = 2;
+
+  public KanonizoFrame(KanonizoConfigurationModel configModel)
+  {
+
+  }
 
   @FXML
   public void exit() {
@@ -358,7 +365,7 @@ public class KanonizoFrame implements Display, Initializable {
   }
 
   @Override
-  public int ask(String question) {
+  public Answer ask(String question) {
     return GuiUtils.ask(question);
   }
 
@@ -412,7 +419,7 @@ public class KanonizoFrame implements Display, Initializable {
     addLibListeners();
     selectRoot.setOnAction(ev -> selectRoot());
     try {
-      algorithmChoices.getItems().addAll(Framework.getAvailableAlgorithms());
+      algorithmChoices.getItems().addAll(Algorithm.values());
       algorithmChoices.setConverter(new ReadableConverter());
 
       algorithmChoices.valueProperty().addListener((ov, t, t1) -> {
@@ -420,7 +427,7 @@ public class KanonizoFrame implements Display, Initializable {
         fw.setAlgorithm(alg);
       });
       algorithmChoices.getSelectionModel().select(fw.getAlgorithm());
-      instrumenterChoices.getItems().addAll(Framework.getAvailableInstrumenters());
+      instrumenterChoices.getItems().addAll(InstrumenterType.values());
       instrumenterChoices.setConverter(new ReadableConverter());
       instrumenterChoices.valueProperty().addListener((ov, t, t1) -> {
         org.kanonizo.framework.instrumentation.Instrumenter inst = (org.kanonizo.framework.instrumentation.Instrumenter) ov

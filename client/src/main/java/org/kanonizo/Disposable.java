@@ -1,5 +1,6 @@
 package org.kanonizo;
 
-public interface Disposable {
-  public void dispose();
+public interface Disposable
+{
+    void dispose();
 }

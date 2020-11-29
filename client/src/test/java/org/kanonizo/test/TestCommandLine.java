@@ -37,7 +37,7 @@ public class TestCommandLine {
   @Test
   public void testSetupFramework() {
     try {
-      Main.setupFramework(line, framework);
+      Main.buildFramework(line, framework);
     } catch (Exception e) {
       e.printStackTrace();
       fail("Not expecting exception to be thrown");
@@ -48,7 +48,7 @@ public class TestCommandLine {
   public void testMissingSource() {
     when(line.hasOption(SOURCE_OPTION)).thenReturn(false);
     try {
-      Main.setupFramework(line, framework);
+      Main.buildFramework(line, framework);
       fail("Expected Missing Option exception");
     } catch (MissingOptionException e) {
 
@@ -61,7 +61,7 @@ public class TestCommandLine {
   public void testMissingTest() {
     when(line.hasOption(TEST_OPTION)).thenReturn(false);
     try {
-      Main.setupFramework(line, framework);
+      Main.buildFramework(line, framework);
       fail("Expected Missing Option Exception");
     } catch (MissingOptionException e) {
 

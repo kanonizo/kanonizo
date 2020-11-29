@@ -1,11 +1,36 @@
 package org.kanonizo;
 
 import com.scythe.instrumenter.InstrumentationProperties.Parameter;
+import org.kanonizo.algorithms.metaheuristics.fitness.APBCFunction;
+import org.kanonizo.algorithms.metaheuristics.fitness.APLCFunction;
+import org.kanonizo.algorithms.metaheuristics.fitness.FitnessFunction;
+import org.kanonizo.framework.instrumentation.Instrumenter;
+import org.kanonizo.framework.objects.TestCaseContainer;
 
 public class Properties {
 
     public enum CoverageApproach {
-        BRANCH, LINE
+        BRANCH(APBCFunction::new), LINE(APLCFunction::new);
+
+        private final FitnessFunctionFactory<?> fitnessFunctionFactory;
+
+        <T extends TestCaseContainer> CoverageApproach(FitnessFunctionFactory<T> fitnessFunctionFactory)
+        {
+            this.fitnessFunctionFactory = fitnessFunctionFactory;
+        }
+
+        public <T extends TestCaseContainer> FitnessFunctionFactory<T> getFitnessFunctionFactory()
+        {
+            return (FitnessFunctionFactory<T>) fitnessFunctionFactory;
+        }
+
+        @FunctionalInterface
+        public interface FitnessFunctionFactory<T extends TestCaseContainer>
+        {
+            FitnessFunction<T> from(Instrumenter instrumenter, T fitnessObjective);
+        }
+
+
     }
 
     @Parameter(key = "number_mutations", description = "If we have decided to perform mutation based on the MUTATION_CHANCE property, the number of mutations determines how many individuals will swap places in their parent container", category = "TCP")

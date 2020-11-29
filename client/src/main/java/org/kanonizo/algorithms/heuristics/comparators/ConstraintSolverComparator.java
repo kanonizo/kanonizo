@@ -20,7 +20,7 @@ import org.kanonizo.framework.ObjectiveFunction;
 import org.kanonizo.framework.instrumentation.Instrumenter;
 import org.kanonizo.framework.objects.Line;
 import org.kanonizo.framework.objects.TestCase;
-import org.kanonizo.util.RandomInstance;
+import org.kanonizo.util.RandomSource;
 
 public class ConstraintSolverComparator implements ObjectiveFunction {
 
@@ -114,7 +114,7 @@ public class ConstraintSolverComparator implements ObjectiveFunction {
 
     try {
       List<List<TestCase>> solutions = this.analyseMinionOutput(testCases);
-      int index = RandomInstance.nextInt(solutions.size());
+      int index = RandomSource.nextInt(solutions.size());
       logger.debug("Selected solution '" + index + "' out of " + solutions.size());
       return solutions.get(index);
     } catch (Exception e) {

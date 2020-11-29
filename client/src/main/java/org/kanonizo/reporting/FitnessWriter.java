@@ -1,40 +1,40 @@
 package org.kanonizo.reporting;
 
-import java.util.Calendar;
+import org.kanonizo.algorithms.TestSuitePrioritiser.EvolutionListener;
 
-import org.kanonizo.algorithms.SearchAlgorithm;
-import org.kanonizo.algorithms.metaheuristics.fitness.FitnessFunction;
-import org.kanonizo.framework.objects.TestSuite;
-import com.scythe.instrumenter.InstrumentationProperties;
+import java.util.function.Supplier;
 
-public class FitnessWriter extends CsvWriter {
-  private SearchAlgorithm algorithm;
-  private FitnessFunction<TestSuite> func;
+public class FitnessWriter extends CsvWriter implements EvolutionListener
+{
+    private final Supplier<Integer> ageSupplier;
+    private final Supplier<Double> fitnessSupplier;
 
-  public FitnessWriter(SearchAlgorithm algorithm) {
-    this.algorithm = algorithm;
-  }
-
-  public FitnessWriter(FitnessFunction<TestSuite> func) {
-    this.func = func;
-  }
-
-  protected FitnessWriter() {
-
-  }
-
-  @Override
-  public String getDir() {
-    return "fitness";
-  }
-
-  @Override
-  protected void prepareCsv() {
-    setHeaders(new String[] { "Iteration", "Best Individual Fitness" });
+    public FitnessWriter(Supplier<Integer> ageSupplier, Supplier<Double> fitnessSupplier)
+    {
+        this.ageSupplier = ageSupplier;
+        this.fitnessSupplier = fitnessSupplier;
     }
 
-  public void addRow(int iteration, double fitness) {
-    super.addRow(new String[] { Integer.toString(iteration), Double.toString(1 - fitness) });
-  }
+    @Override
+    public String getDir()
+    {
+        return "fitness";
+    }
 
+    @Override
+    protected void prepareCsv()
+    {
+        setHeaders("Iteration", "Best Individual Fitness");
+    }
+
+    public void addRow(int iteration, double fitness)
+    {
+        super.addRow(Integer.toString(iteration), Double.toString(1 - fitness));
+    }
+
+    @Override
+    public void evolutionComplete()
+    {
+        addRow(ageSupplier.get(), fitnessSupplier.get());
+    }
 }

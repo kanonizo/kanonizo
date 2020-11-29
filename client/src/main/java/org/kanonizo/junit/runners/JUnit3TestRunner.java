@@ -3,9 +3,13 @@ package org.kanonizo.junit.runners;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Optional;
+
 import junit.framework.Test;
 import junit.framework.TestFailure;
 import junit.framework.TestResult;
@@ -18,69 +22,88 @@ import org.kanonizo.junit.KanonizoTestResult;
 import org.kanonizo.util.NullPrintStream;
 import org.kanonizo.util.Util;
 
-public class JUnit3TestRunner extends TestRunner implements KanonizoTestRunner {
-  private static Logger logger = LogManager.getLogger(JUnit3TestRunner.class);
+public class JUnit3TestRunner extends TestRunner implements KanonizoTestRunner
+{
+    private static final Logger logger = LogManager.getLogger(JUnit3TestRunner.class);
+    private final TestCase tc;
 
-  public JUnit3TestRunner() {
-    super(NullPrintStream.instance);
-  }
-
-  @Override
-  public KanonizoTestResult runTest(TestCase tc) {
-    Test test = createMethodSuite(tc.getTestClass(), tc.getMethod());
-    if (test == null) {
-      logger.error("Unable to create test case");
-      throw new RuntimeException();
+    public JUnit3TestRunner(TestCase tc)
+    {
+        super(NullPrintStream.instance);
+        this.tc = tc;
     }
-    long startTime = System.currentTimeMillis();
-    TestResult result = doRun(test, false);
-    long runTime = System.currentTimeMillis() - startTime;
-    List<KanonizoTestFailure> failures = new ArrayList<>();
-    Enumeration<TestFailure> testFailures = result.failures();
-    Enumeration<TestFailure> errors = result.errors();
-    List<TestFailure> allErrors = Util.combine(testFailures, errors);
-    for(TestFailure f : allErrors){
-      failures.add(new KanonizoTestFailure(f.thrownException(), f.trace()));
-    }
-    return new KanonizoTestResult(tc.getTestClass(), tc.getMethod(), result.wasSuccessful(), failures, runTime);
-  }
 
-  private static <T> Test createMethodSuite(Class<T> testClass, Method testMethod) {
-    try {
-      Constructor<T> con = Util.getConstructor(testClass, new Class[0]);
-      if (con == null) {
-        con = Util.getConstructor(testClass, new Class[]{String.class});
-        if (con == null) {
-          logger.error(testClass.getSimpleName() + " has no default or String constructor");
+    @Override
+    public KanonizoTestResult runTest()
+    {
+        Test methodSuite = createMethodSuite(tc.getTestClass(), tc.getMethod());
+        if (methodSuite == null)
+        {
+            logger.error("Unable to create test case");
+            throw new RuntimeException();
         }
-        return (Test) con.newInstance(new Object[]{testMethod.getName()});
-      } else {
-        junit.framework.TestCase test = (junit.framework.TestCase) con.newInstance(new Object[0]);
-        test.setName(testMethod.getName());
-        return test;
-      }
-
-    } catch (ClassCastException e1) {
-      boolean methodExists;
-      try {
-        //noinspection SSBasedInspection
-        testClass.getMethod(testMethod.getName(), new Class[0]);
-        methodExists = true;
-      } catch (NoSuchMethodException e2) {
-        methodExists = false;
-      }
-      if (!methodExists) {
-        logger.error("Trying to invoke a test method that does not exist: " + testClass.getName() + "." + testMethod.getName());
-      }
-      return null;
-    } catch (InstantiationException e1) {
-      logger.error(JUnit3TestRunner.class.getSimpleName() + " was unable to instantiate a new instance of the test class" + Util.getName(testClass));
-    } catch (IllegalAccessException e1) {
-      logger.error(JUnit3TestRunner.class.getSimpleName() + " was unable to instantiate a new instance of the test class" + Util.getName(testClass));
-    } catch (InvocationTargetException e1) {
-      logger.error(JUnit3TestRunner.class.getSimpleName() + " was unable to instantiate a new instance of the test class" + Util.getName(testClass));
+        Instant startTime = Instant.now();
+        TestResult result = doRun(methodSuite, false);
+        Duration runTime = Duration.between(startTime, Instant.now());
+        List<KanonizoTestFailure> failures = new ArrayList<>();
+        Enumeration<TestFailure> testFailures = result.failures();
+        Enumeration<TestFailure> errors = result.errors();
+        List<TestFailure> allErrors = Util.combine(testFailures, errors);
+        for (TestFailure f : allErrors)
+        {
+            failures.add(new KanonizoTestFailure(f.thrownException(), f.trace()));
+        }
+        return new KanonizoTestResult(
+                tc.getTestClass().getName(),
+                tc.getMethod().getName(),
+                result.wasSuccessful(),
+                failures,
+                runTime.toMillis()
+        );
     }
-    return null;
-  }
+
+    private <T> Test createMethodSuite(Class<T> testClass, Method testMethod)
+    {
+        try
+        {
+            Optional<Constructor<T>> noArgsConstructor = Util.getConstructorWithParameterTypes(testClass);
+            if (noArgsConstructor.isPresent())
+            {
+                return (Test) newInstance(noArgsConstructor.get()).orElseThrow(IllegalStateException::new);
+            }
+            Constructor<T> singleStringConstructor = Util.getConstructorWithParameterTypes(
+                    testClass,
+                    String.class
+            ).orElseThrow(IllegalStateException::new);
+            return (Test) newInstance(singleStringConstructor).orElseThrow(IllegalStateException::new);
+
+        }
+        catch (ClassCastException e1)
+        {
+            try
+            {
+                testClass.getMethod(testMethod.getName());
+            }
+            catch (NoSuchMethodException e2)
+            {
+                logger.error("Trying to invoke a test method that does not exist: " + testClass.getName() + "." + testMethod.getName());
+            }
+
+            return null;
+        }
+    }
+
+    private <T> Optional<T> newInstance(Constructor<T> constructor, Object... args)
+    {
+        try
+        {
+            return Optional.of(constructor.newInstance(args));
+        }
+        catch (IllegalAccessException | InstantiationException | InvocationTargetException e)
+        {
+            e.printStackTrace();
+        }
+        return Optional.empty();
+    }
 
 }

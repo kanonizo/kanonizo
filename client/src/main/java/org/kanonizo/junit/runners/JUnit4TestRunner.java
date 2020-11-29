@@ -8,7 +8,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.AssumptionViolatedException;
@@ -38,184 +40,259 @@ import org.kanonizo.junit.KanonizoTestFailure;
 import org.kanonizo.junit.KanonizoTestResult;
 import org.kanonizo.util.Util;
 
-public class JUnit4TestRunner implements KanonizoTestRunner {
+public class JUnit4TestRunner implements KanonizoTestRunner
+{
+    private static final List<TestClass> initialisedClasses = new ArrayList<>();
+    private final Logger logger = LogManager.getLogger(JUnit4TestRunner.class);
+    private final JUnitCore runner = new JUnitCore();
+    private final TestCase testCase;
 
-  private final Logger logger = LogManager.getLogger(JUnit4TestRunner.class);
-  private static List<TestClass> initialisedClasses = new ArrayList<>();
-  private JUnitCore runner = new JUnitCore();
-  private TestCase testCase;
-
-  public JUnit4TestRunner(TestCase tc) {
-    this.testCase = tc;
-  }
-
-  @Override
-  public KanonizoTestResult runTest(TestCase tc) {
-    Request request = getRequest(tc);
-    Runner testRunner = request.getRunner();
-    Result testResult = runner.run(testRunner);
-    List<KanonizoTestFailure> failures = testResult.getFailures().stream()
-        .map(failure -> new KanonizoTestFailure(failure.getException(), failure.getTrace()))
-        .collect(Collectors.toList());
-    return new KanonizoTestResult(tc.getTestClass(), tc.getMethod(), testResult.wasSuccessful(),
-        failures, testResult.getRunTime());
-  }
-
-  private Request getRequest(TestCase tc) {
-    Class<?> testClass = tc.getTestClass();
-    Method testMethod = tc.getMethod();
-    try {
-      final RunWith runWith = testClass.getAnnotation(RunWith.class);
-      if (runWith != null) {
-        final Class<? extends Runner> runnerClass = runWith.value();
-        if (runnerClass.isAssignableFrom(Parameterized.class)) {
-          try {
-            if (tc instanceof ParameterisedTestCase) {
-              ParameterisedTestCase ptc = (ParameterisedTestCase) tc;
-              Class.forName(
-                  "org.junit.runners.BlockJUnit4ClassRunner"); //ignore IgnoreIgnored for junit4.4 and <
-              return Request.runner(new ParameterizedMethodRunner(testClass, testMethod.getName(), ptc.getParameters()));
-            }
-
-          } catch (Throwable thrown) {
-            logger.error(thrown);
-          }
-        } else {
-          Constructor<?> con = Util.getConstructor(runnerClass, new Class[]{Class.class});
-          if(con != null) {
-            try {
-              Runner runner = (Runner) con.newInstance(new Object[]{testClass});
-              return Request.runner(runner).filterWith(Description.createTestDescription(testClass, testMethod.getName()));
-            } catch (InvocationTargetException e) {
-
-            }
-          }
-        }
-      } else {
-        if (testMethod != null
-            && testMethod.getAnnotation(Ignore.class) != null) { //override ignored case only
-          final Request classRequest = new ClassRequest(testClass) {
-            public Runner getRunner() {
-              try {
-                return new IgnoreIgnoredTestJUnit4ClassRunner(testClass);
-              } catch (Exception ignored) {
-              }
-              return super.getRunner();
-            }
-          };
-          return classRequest
-              .filterWith(Description.createTestDescription(testClass, testMethod.getName()));
-        }
-      }
-    } catch (Exception ignored) {
-      logger.error(ignored);
+    public JUnit4TestRunner(TestCase tc)
+    {
+        this.testCase = tc;
     }
-    return new Request() {
-      @Override
-      public Runner getRunner() {
-        try {
-          return new BlockJUnit4ClassRunner(testCase.getTestClass()) {
+
+    @Override
+    public KanonizoTestResult runTest()
+    {
+        Request request = getRequest(testCase);
+        Runner testRunner = request.getRunner();
+        Result testResult = runner.run(testRunner);
+        List<KanonizoTestFailure> failures = testResult.getFailures().stream()
+                .map(failure -> new KanonizoTestFailure(failure.getException(), failure.getTrace()))
+                .collect(Collectors.toList());
+        return new KanonizoTestResult(
+                testCase.getTestClass().getName(),
+                testCase.getMethod().getName(),
+                testResult.wasSuccessful(),
+                failures,
+                testResult.getRunTime()
+        );
+    }
+
+    private Request getRequest(TestCase tc)
+    {
+        Class<?> testClass = tc.getTestClass();
+        Method testMethod = tc.getMethod();
+        try
+        {
+            RunWith runWith = testClass.getAnnotation(RunWith.class);
+            if (runWith != null)
+            {
+                Class<? extends Runner> runnerClass = runWith.value();
+                if (runnerClass.isAssignableFrom(Parameterized.class))
+                {
+                    try
+                    {
+                        if (tc instanceof ParameterisedTestCase)
+                        {
+                            ParameterisedTestCase ptc = (ParameterisedTestCase) tc;
+                            Class.forName(
+                                    "org.junit.runners.BlockJUnit4ClassRunner"); //ignore IgnoreIgnored for junit4.4 and <
+                            return Request.runner(new ParameterizedMethodRunner(
+                                    testClass,
+                                    testMethod.getName(),
+                                    ptc.getParameters()
+                            ));
+                        }
+
+                    }
+                    catch (Throwable thrown)
+                    {
+                        logger.error(thrown);
+                    }
+                }
+                else
+                {
+                    Optional<? extends Constructor<? extends Runner>> con = Util.getConstructorWithParameterTypes(
+                            runnerClass,
+                            Class.class
+                    );
+                    if (con.isPresent())
+                    {
+                        try
+                        {
+                            Runner runner = con.get().newInstance(testClass);
+                            return Request.runner(runner).filterWith(Description.createTestDescription(
+                                    testClass,
+                                    testMethod.getName()
+                            ));
+                        }
+                        catch (InvocationTargetException ignored)
+                        {
+
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (testMethod != null
+                        && testMethod.getAnnotation(Ignore.class) != null)
+                { //override ignored case only
+                    Request classRequest = new ClassRequest(testClass)
+                    {
+                        public Runner getRunner()
+                        {
+                            try
+                            {
+                                return new IgnoreIgnoredTestJUnit4ClassRunner(testClass);
+                            }
+                            catch (Exception ignored)
+                            {
+                            }
+                            return super.getRunner();
+                        }
+                    };
+                    return classRequest
+                            .filterWith(Description.createTestDescription(testClass, testMethod.getName()));
+                }
+            }
+        }
+        catch (Exception ignored)
+        {
+            logger.error(ignored);
+        }
+        return new Request()
+        {
             @Override
-            protected Statement withBeforeClasses(Statement statement) {
-              List<FrameworkMethod> beforeClass = getTestClass().getAnnotatedMethods(BeforeClass.class);
-              TestClass testClass = getTestClass();
-              if (beforeClass.size() > 0 && !initialisedClasses.stream().anyMatch(tc -> tc.getJavaClass().equals(testClass.getJavaClass()))) {
-                initialisedClasses.add(testClass);
-                return super.withBeforeClasses(statement);
-              } else {
-                return statement;
-              }
+            public Runner getRunner()
+            {
+                try
+                {
+                    return new BlockJUnit4ClassRunner(testCase.getTestClass())
+                    {
+                        @Override
+                        protected Statement withBeforeClasses(Statement statement)
+                        {
+                            List<FrameworkMethod> beforeClass = getTestClass().getAnnotatedMethods(BeforeClass.class);
+                            TestClass testClass = getTestClass();
+                            if (beforeClass.size() > 0 && initialisedClasses.stream().noneMatch(tc -> tc.getJavaClass().equals(
+                                    testClass.getJavaClass())))
+                            {
+                                initialisedClasses.add(testClass);
+                                return super.withBeforeClasses(statement);
+                            }
+                            else
+                            {
+                                return statement;
+                            }
+                        }
+                    };
+                }
+                catch (InitializationError e)
+                {
+                    return new ErrorReportingRunner(tc.getTestClass(), e);
+                }
             }
-          };
-        } catch (InitializationError e) {
-          return new ErrorReportingRunner(tc.getTestClass(), e);
+        }.filterWith(Description.createTestDescription(testClass, testMethod.getName()));
+    }
+
+
+    private static class IgnoreIgnoredTestJUnit4ClassRunner extends BlockJUnit4ClassRunner
+    {
+        public IgnoreIgnoredTestJUnit4ClassRunner(Class clazz) throws Exception
+        {
+            super(clazz);
         }
-      }
-    }.filterWith(Description.createTestDescription(testClass, testMethod.getName()));
-  }
 
-
-  private static class IgnoreIgnoredTestJUnit4ClassRunner extends BlockJUnit4ClassRunner
-
-  {
-
-    public IgnoreIgnoredTestJUnit4ClassRunner(Class clazz) throws Exception {
-      super(clazz);
-    }
-
-    protected void runChild(FrameworkMethod method, RunNotifier notifier) {
-      final Description description = describeChild(method);
-      final EachTestNotifier eachNotifier = new EachTestNotifier(notifier, description);
-      eachNotifier.fireTestStarted();
-      try {
-        methodBlock(method).evaluate();
-      } catch (AssumptionViolatedException e) {
-        eachNotifier.addFailedAssumption(e);
-      } catch (Throwable e) {
-        eachNotifier.addFailure(e);
-      } finally {
-        eachNotifier.fireTestFinished();
-      }
-    }
-  }
-
-
-  private static class ParameterizedMethodRunner extends Parameterized {
-
-    private final String myMethodName;
-    private final Object[] parameters;
-    private static final Logger logger = LogManager.getLogger(ParameterizedMethodRunner.class);
-
-    public ParameterizedMethodRunner(Class clazz, String methodName, Object[] parameters) throws Throwable {
-      super(clazz);
-      myMethodName = methodName;
-      this.parameters = parameters;
-    }
-
-    protected List getChildren() {
-      final List children = new ArrayList<>(super.getChildren());
-      for (Iterator<?> it = children.iterator(); it.hasNext(); ) {
-        try {
-          Object[] testParameters = null;
-          Object child = it.next();
-          Class<?> childRunner = child.getClass();
-          Field parameterField = null;
-          try {
-            parameterField = childRunner.getDeclaredField("fParameters");
-          } catch (NoSuchFieldException e) {
-            try {
-              parameterField = childRunner.getDeclaredField("parameters");
-            } catch (NoSuchFieldException e1) {
-              logger.error("Couldn't find field fParameters or parameters in parameterised test class");
+        protected void runChild(FrameworkMethod method, RunNotifier notifier)
+        {
+            final Description description = describeChild(method);
+            final EachTestNotifier eachNotifier = new EachTestNotifier(notifier, description);
+            eachNotifier.fireTestStarted();
+            try
+            {
+                methodBlock(method).evaluate();
             }
-          }
-          parameterField.setAccessible(true);
-          testParameters = (Object[]) parameterField.get(child);
-
-
-          if (!Arrays.deepEquals(testParameters, parameters)) {
-            it.remove();
-          }
-          ((ParentRunner) child).filter(new Filter() {
-
-            @Override
-            public boolean shouldRun(Description description) {
-              String methodName = description.getMethodName();
-              methodName = methodName.substring(0, methodName.indexOf('['));
-              return methodName.equals(myMethodName);
+            catch (AssumptionViolatedException e)
+            {
+                eachNotifier.addFailedAssumption(e);
             }
-
-            @Override
-            public String describe() {
-              return getDescription().getDisplayName();
+            catch (Throwable e)
+            {
+                eachNotifier.addFailure(e);
             }
-
-          });
-        } catch (Exception e) {
-          e.printStackTrace();
+            finally
+            {
+                eachNotifier.fireTestFinished();
+            }
         }
-      }
-      return children;
     }
-  }
+
+
+    private static class ParameterizedMethodRunner extends Parameterized
+    {
+        private final String myMethodName;
+        private final Object[] parameters;
+        private static final Logger logger = LogManager.getLogger(ParameterizedMethodRunner.class);
+
+        public ParameterizedMethodRunner(Class clazz, String methodName, Object[] parameters) throws Throwable
+        {
+            super(clazz);
+            myMethodName = methodName;
+            this.parameters = parameters;
+        }
+
+        protected List<Runner> getChildren()
+        {
+            List<Runner> children = new ArrayList<>(super.getChildren());
+            for (Iterator<Runner> it = children.iterator(); it.hasNext(); )
+            {
+                try
+                {
+                    Object[] testParameters;
+                    Runner child = it.next();
+                    Class<?> childRunner = child.getClass();
+                    Field parameterField = null;
+                    try
+                    {
+                        parameterField = childRunner.getDeclaredField("fParameters");
+                    }
+                    catch (NoSuchFieldException e)
+                    {
+                        try
+                        {
+                            parameterField = childRunner.getDeclaredField("parameters");
+                        }
+                        catch (NoSuchFieldException e1)
+                        {
+                            logger.error("Couldn't find field fParameters or parameters in parameterised test class");
+                        }
+                    }
+                    parameterField.setAccessible(true);
+                    testParameters = (Object[]) parameterField.get(child);
+
+
+                    if (!Arrays.deepEquals(testParameters, parameters))
+                    {
+                        it.remove();
+                    }
+                    ((ParentRunner) child).filter(new Filter()
+                    {
+
+                        @Override
+                        public boolean shouldRun(Description description)
+                        {
+                            String methodName = description.getMethodName();
+                            methodName = methodName.substring(0, methodName.indexOf('['));
+                            return methodName.equals(myMethodName);
+                        }
+
+                        @Override
+                        public String describe()
+                        {
+                            return getDescription().getDisplayName();
+                        }
+
+                    });
+                }
+                catch (Exception e)
+                {
+                    e.printStackTrace();
+                }
+            }
+            return children;
+        }
+    }
 }

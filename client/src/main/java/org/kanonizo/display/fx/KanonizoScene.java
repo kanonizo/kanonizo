@@ -99,7 +99,7 @@ public class KanonizoScene implements Display, Initializable, TestCaseSelectionL
   }
 
   @Override
-  public int ask(String question) {
+  public Answer ask(String question) {
     return GuiUtils.ask(question);
   }
 

@@ -2,16 +2,18 @@ package org.kanonizo.algorithms.metaheuristics.fitness;
 
 import org.kanonizo.Disposable;
 import org.kanonizo.framework.objects.SystemUnderTest;
+import org.kanonizo.framework.objects.TestSuite;
 
-public interface FitnessFunction<T> extends Disposable {
+public interface FitnessFunction<T> extends Disposable
+{
+    double evaluateFitness();
 
-  double evaluateFitness();
+    FitnessFunction<T> clone();
 
-  FitnessFunction<T> clone(SystemUnderTest sut);
+    T getSystem();
 
-  T getSystem();
-
-  default boolean isMaximisationFunction() {
-    return false;
-  }
+    default boolean isMaximisationFunction()
+    {
+        return false;
+    }
 }

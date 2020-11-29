@@ -1,6 +1,8 @@
 package org.kanonizo.framework.instrumentation;
 
+import java.util.List;
 import java.util.Set;
+
 import org.kanonizo.framework.Readable;
 import org.kanonizo.framework.objects.Branch;
 import org.kanonizo.framework.objects.ClassUnderTest;
@@ -8,41 +10,61 @@ import org.kanonizo.framework.objects.Line;
 import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
+import org.kanonizo.util.HashSetCollector;
 
-public interface Instrumenter extends Readable {
-  Class<?> loadClass(String className) throws ClassNotFoundException;
+public interface Instrumenter extends Readable
+{
+    Class<?> loadClass(String className) throws ClassNotFoundException;
 
-  void setTestSuite(TestSuite ts);
+    void collectCoverage(TestSuite testSuite);
 
-  void collectCoverage();
+    Set<Line> getLinesCovered(TestCase testCase);
 
-  Set<Line> getLinesCovered(TestCase testCase);
+    Set<Branch> getBranchesCovered(TestCase testCase);
 
-  Set<Branch> getBranchesCovered(TestCase testCase);
+    int getTotalLines(ClassUnderTest cut);
 
-  int getTotalLines(ClassUnderTest cut);
+    int getTotalBranches(ClassUnderTest cut);
 
-  int getTotalBranches(ClassUnderTest cut);
+    Set<Line> getLines(ClassUnderTest cut);
 
-  Set<Line> getLines(ClassUnderTest cut);
+    Set<Branch> getBranches(ClassUnderTest cut);
 
-  Set<Branch> getBranches(ClassUnderTest cut);
+    Set<Line> getLinesCovered(ClassUnderTest cut);
 
-  int getTotalLines(SystemUnderTest sut);
+    Set<Branch> getBranchesCovered(ClassUnderTest cut);
 
-  int getLinesCovered(TestSuite testSuite);
+    default int getTotalLines(SystemUnderTest sut)
+    {
+        return sut.getClassesUnderTest().stream().mapToInt(this::getTotalLines).sum();
+    }
 
-  int getTotalBranches(SystemUnderTest sut);
+    default int getLinesCovered(TestSuite testSuite)
+    {
+        return testSuite.getTestCases().stream().mapToInt(testCase -> getLinesCovered(testCase).size()).sum();
+    }
 
-  int getBranchesCovered(TestSuite testSuite);
+    default  int getTotalBranches(SystemUnderTest sut)
+    {
+        return sut.getClassesUnderTest().stream().mapToInt(this::getTotalBranches).sum();
+    }
 
-  Set<Line> getLinesCovered(ClassUnderTest cut);
+    default int getBranchesCovered(TestSuite testSuite)
+    {
+        return testSuite.getTestCases().stream().mapToInt(testCase -> getBranchesCovered(testCase).size()).sum();
+    }
 
-  Set<Line> getLinesCovered(SystemUnderTest sut);
+    default Set<Line> getLinesCovered(List<ClassUnderTest> classesUnderTest)
+    {
+        return classesUnderTest.stream().map(this::getLinesCovered).collect(new HashSetCollector<>());
+    }
 
-  Set<Branch> getBranchesCovered(ClassUnderTest cut);
+    default Set<Branch> getBranchesCovered(List<ClassUnderTest> classesUnderTest)
+    {
+        return classesUnderTest.stream().map(this::getBranchesCovered).collect(new HashSetCollector<>());
+    }
 
-  Set<Branch> getBranchesCovered(SystemUnderTest sut);
+    ClassLoader getClassLoader();
 
-  ClassLoader getClassLoader();
+    String commandLineSwitch();
 }

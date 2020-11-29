@@ -2,7 +2,8 @@ package org.kanonizo.algorithms.faultprediction;
 
 import java.util.List;
 
-public class SchwaClass {
+public class SchwaClass
+{
     private int authors;
     private List<SchwaMethod> children;
     private String name;
@@ -13,39 +14,48 @@ public class SchwaClass {
     private int revisions;
     private String path;
 
-    public int getAuthors() {
+    public int getAuthors()
+    {
         return authors;
     }
 
-    public List<SchwaMethod> getChildren() {
+    public List<SchwaMethod> getChildren()
+    {
         return children;
     }
 
-    public String getName() {
+    public String getName()
+    {
         return name;
     }
 
-    public int getFixes() {
+    public int getFixes()
+    {
         return fixes;
     }
 
-    public double getProb() {
+    public double getProb()
+    {
         return prob;
     }
 
-    public double getSize() {
+    public double getSize()
+    {
         return size;
     }
 
-    public String getType() {
+    public String getType()
+    {
         return type;
     }
 
-    public int getRevisions() {
+    public int getRevisions()
+    {
         return revisions;
     }
 
-    public String getPath() {
+    public String getPath()
+    {
         return path;
     }
 }

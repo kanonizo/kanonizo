@@ -21,6 +21,11 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
+import org.kanonizo.display.Display;
+
+import static org.kanonizo.display.Display.Answer.INVALID;
+import static org.kanonizo.display.Display.Answer.NO;
+import static org.kanonizo.display.Display.Answer.YES;
 
 public class GuiUtils {
 
@@ -133,7 +138,7 @@ public class GuiUtils {
 
   }
 
-  public static int ask(String question){
+  public static Display.Answer ask(String question){
     Alert alert = new Alert(AlertType.CONFIRMATION);
     alert.setTitle("Confirm an Action");
     alert.setContentText(question);
@@ -142,10 +147,10 @@ public class GuiUtils {
     alert.getButtonTypes().setAll(yes, no);
     Optional<ButtonType> result = alert.showAndWait();
     if (result.get() == yes) {
-      return 0;
+      return YES;
     } else if (result.get() == no) {
-      return 1;
+      return NO;
     }
-    return -1;
+    return INVALID;
   }
 }

@@ -13,43 +13,52 @@ import java.util.stream.Collector;
 /**
  * Created by davidpaterson on 12/10/2015.
  */
-public class HashSetCollector<T> implements Supplier<Set<T>>, Collector<Collection<T>, Set<T>, Set<T>> {
-	private HashSet<T> set;
+public class HashSetCollector<T> implements Supplier<Set<T>>, Collector<Collection<T>, Set<T>, Set<T>>
+{
+    private final HashSet<T> set;
 
-	public HashSetCollector() {
-		set = new HashSet<T>();
-	}
+    public HashSetCollector()
+    {
+        set = new HashSet<>();
+    }
 
-	@Override
-	public Supplier<Set<T>> supplier() {
-		return this;
-	}
+    @Override
+    public Supplier<Set<T>> supplier()
+    {
+        return this;
+    }
 
-	@Override
-	public BiConsumer<Set<T>, Collection<T>> accumulator() {
-		return (t, c) -> t.addAll(c);
-	}
+    @Override
+    public BiConsumer<Set<T>, Collection<T>> accumulator()
+    {
+        return Set::addAll;
+    }
 
-	@Override
-	public BinaryOperator<Set<T>> combiner() {
-		return (t, c) -> {
-			t.addAll(c);
-			return t;
-		};
-	}
+    @Override
+    public BinaryOperator<Set<T>> combiner()
+    {
+        return (t, c) ->
+        {
+            t.addAll(c);
+            return t;
+        };
+    }
 
-	@Override
-	public Function<Set<T>, Set<T>> finisher() {
-		return t -> t;
-	}
+    @Override
+    public Function<Set<T>, Set<T>> finisher()
+    {
+        return t -> t;
+    }
 
-	@Override
-	public Set<Characteristics> characteristics() {
-		return EnumSet.of(Characteristics.UNORDERED);
-	}
+    @Override
+    public Set<Characteristics> characteristics()
+    {
+        return EnumSet.of(Characteristics.UNORDERED);
+    }
 
-	@Override
-	public Set<T> get() {
-		return set;
-	}
+    @Override
+    public Set<T> get()
+    {
+        return set;
+    }
 }

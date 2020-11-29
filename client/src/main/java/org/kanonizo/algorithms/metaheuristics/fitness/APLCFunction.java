@@ -1,41 +1,45 @@
 package org.kanonizo.algorithms.metaheuristics.fitness;
 
-import java.util.Set;
 import org.kanonizo.Framework;
 import org.kanonizo.framework.instrumentation.Instrumenter;
 import org.kanonizo.framework.objects.Goal;
-import org.kanonizo.framework.objects.Line;
-import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
+import org.kanonizo.framework.objects.TestCaseContainer;
 import org.kanonizo.util.HashSetCollector;
 
-public class APLCFunction extends APFDFunction {
-  private Instrumenter inst;
-  public APLCFunction(SystemUnderTest sut) {
-    super(sut);
-    inst=Framework.getInstance().getInstrumenter();
-  }
+import java.util.Set;
 
-  @Override
-  public Set<? extends Goal> getCoveredGoals(TestCase tc) {
-    return inst.getLinesCovered(tc);
-  }
+public class APLCFunction<T extends TestCaseContainer> extends APFDFunction<T>
+{
+    private final Instrumenter instrumenter;
 
-  @Override
-  protected Set<? extends Goal> getGoals() {
-    Instrumenter inst = Framework.getInstance().getInstrumenter();
-    return sut.getClassesUnderTest().stream().map(cut -> inst.getLines(cut)).collect(new HashSetCollector<Line>());
-  }
+    public APLCFunction(Instrumenter instrumenter, T sut)
+    {
+        super(sut);
+        this.instrumenter = instrumenter;
+    }
 
-  @Override
-  public FitnessFunction<SystemUnderTest> clone(SystemUnderTest sut) {
-    APLCFunction clone = new APLCFunction(sut);
-    clone.coveredGoals = coveredGoals;
-    return clone;
-  }
+    @Override
+    public Set<? extends Goal> getCoveredGoals(TestCase tc)
+    {
+        return instrumenter.getLinesCovered(tc);
+    }
 
-  @Override
-  protected double calculateTotalGoalsCovered() {
-    return Framework.getInstance().getInstrumenter().getLinesCovered(sut).size();
-  }
+    @Override
+    protected Set<? extends Goal> getGoals()
+    {
+        return sut.getClassesUnderTest().stream().map(instrumenter::getLines).collect(new HashSetCollector<>());
+    }
+
+    @Override
+    protected double calculateTotalGoalsCovered()
+    {
+        return instrumenter.getLinesCovered(sut.getClassesUnderTest()).size();
+    }
+
+    @Override
+    public FitnessFunction<T> clone()
+    {
+        return new APLCFunction<>(instrumenter, sut);
+    }
 }

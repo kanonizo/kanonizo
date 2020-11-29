@@ -1,12 +1,13 @@
 package org.kanonizo.algorithms.heuristics.historybased;
 
-class Execution {
-  public static Execution NULL_EXECUTION = new Execution(-1, true, null);
+class TestCaseExecutionResult
+{
+  public static TestCaseExecutionResult NULL_EXECUTION = new TestCaseExecutionResult(-1, true, null);
   private long executionTime;
   private boolean passed;
   private Throwable failureCause;
 
-  public Execution(long executionTime, boolean passed, Throwable failureCause) {
+  public TestCaseExecutionResult(long executionTime, boolean passed, Throwable failureCause) {
     this.executionTime = executionTime;
     this.passed = passed;
     this.failureCause = failureCause;

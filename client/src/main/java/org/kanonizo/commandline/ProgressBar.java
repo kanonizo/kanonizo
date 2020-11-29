@@ -1,43 +1,38 @@
 package org.kanonizo.commandline;
 
-import com.scythe.instrumenter.InstrumentationProperties.Parameter;
-import java.io.PrintStream;
+import org.kanonizo.configuration.configurableoption.ConfigurableOption;
 
-import org.apache.commons.lang.StringUtils;
+import static org.kanonizo.configuration.configurableoption.ConfigurableOption.configurableOptionFrom;
 
-public class ProgressBar {
-	@Parameter(key="progressbar_enable", description = "Progress Bar can be used to see the progress of long running tasks such as reading coverage data, historical test information etc. However, in log files, this can use a lot of lines as the \\r character is not translated into the logs", category="tcp")
-  public static boolean enable = true;
+public interface ProgressBar
+{
+    ConfigurableOption<Boolean> PROGRESS_BAR_ENABLED_OPTION = configurableOptionFrom("progressbar_enable",
+                                                                                     Boolean.class,
+                                                                                     true
+    );
 
-	private PrintStream out;
+    void setTitle(String title);
 
-	public ProgressBar(PrintStream out) {
-		this.out = out;
-	}
+    void reportProgress(double currentPoint, double totalPoints);
 
-	public ProgressBar() {
-		this(System.out);
-	}
+    void complete();
 
-	public void setTitle(String title) {
-		if(enable){
-		  out.println(title);
+    class InertProgressBar implements ProgressBar
+    {
+
+        @Override
+        public void setTitle(String title)
+        {
+        }
+
+        @Override
+        public void reportProgress(double currentPoint, double totalPoints)
+        {
+        }
+
+        @Override
+        public void complete()
+        {
+        }
     }
-	}
-
-	public void reportProgress(double currentPoint, double totalPoints) {
-	  if(enable) {
-      double percentageThrough = currentPoint / totalPoints * 100;
-      // int repeats = title.length()
-      out.print("\r|" + StringUtils.repeat("=", (int) percentageThrough)
-          + StringUtils.repeat(" ", 100 - (int) percentageThrough) + "| " + (int) percentageThrough
-          + "%");
-    }
-	}
-
-	public void complete() {
-	  if(enable) {
-      out.print("\n");
-    }
-	}
 }

@@ -1,7 +1,7 @@
 package org.kanonizo.algorithms.metaheuristics.crossover;
 
 import org.kanonizo.framework.objects.TestSuite;
-import org.kanonizo.util.RandomInstance;
+import org.kanonizo.util.RandomSource;
 
 public class SinglePointCrossover implements CrossoverFunction {
 
@@ -11,7 +11,7 @@ public class SinglePointCrossover implements CrossoverFunction {
       return;
     }
 
-    int point = RandomInstance.nextInt(Math.min(parent1.size(), parent2.size()) - 1) + 1;
+    int point = RandomSource.nextInt(Math.min(parent1.size(), parent2.size()) - 1) + 1;
 
     TestSuite t1 = parent1.getParent().clone().getTestSuite();
     TestSuite t2 = parent2.getParent().clone().getTestSuite();

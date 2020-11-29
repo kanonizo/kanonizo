@@ -1,31 +1,38 @@
 package org.kanonizo.display;
 
-import org.kanonizo.framework.objects.TestSuite;
+import org.kanonizo.configuration.KanonizoConfigurationModel;
 
-public class NullDisplay implements Display {
+import static org.kanonizo.display.Display.Answer.NO;
 
-  @Override
-  public void initialise() {
+public class NullDisplay implements Display
+{
 
-  }
+    public NullDisplay(KanonizoConfigurationModel configModel)
+    {
 
-  @Override
-  public void fireTestSuiteChange(TestSuite ts) {
+    }
 
-  }
+    @Override
+    public void initialise()
+    {
 
-  @Override
-  public void reportProgress(double current, double max) {
+    }
 
-  }
+    @Override
+    public void reportProgress(double current, double max)
+    {
 
-  @Override
-  public int ask(String question) {
-    return 0;
-  }
+    }
 
-  @Override
-  public void notifyTaskStart(String name, boolean progress) {
+    @Override
+    public Answer ask(String question)
+    {
+        return NO;
+    }
 
-  }
+    @Override
+    public void notifyTaskStart(String name, boolean progress)
+    {
+
+    }
 }

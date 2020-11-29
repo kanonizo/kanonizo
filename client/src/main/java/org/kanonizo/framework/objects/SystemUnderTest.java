@@ -1,83 +1,118 @@
 package org.kanonizo.framework.objects;
 
+import org.apache.commons.collections4.CollectionUtils;
+import org.kanonizo.Properties;
+import org.kanonizo.algorithms.SearchAlgorithm;
+import org.kanonizo.algorithms.metaheuristics.fitness.FitnessFunction;
+import org.kanonizo.configuration.KanonizoConfigurationModel;
+import org.kanonizo.framework.instrumentation.Instrumenter;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.apache.commons.collections4.CollectionUtils;
 
-public class SystemUnderTest implements Cloneable {
+import static org.kanonizo.Properties.COVERAGE_APPROACH;
 
-  private List<ClassUnderTest> classesUnderTest = new ArrayList<ClassUnderTest>();
-  private List<Class<?>> extraClasses = new ArrayList<>();
-  private TestSuite suite = new TestSuite();
+public class SystemUnderTest implements Cloneable, TestCaseContainer
+{
+    private final List<ClassUnderTest> classesUnderTest = new ArrayList<>();
+    private final List<Class<?>> extraClasses = new ArrayList<>();
+    private final TestSuite testSuite;
 
-  public SystemUnderTest() {
-    suite.setParent(this);
-  }
-
-  public List<Class<?>> getExtraClasses() {
-    return extraClasses;
-  }
-
-  public void addClass(ClassUnderTest cut) {
-    cut.setParent(this);
-    classesUnderTest.add(cut);
-  }
-
-  public void addTestCase(TestCase testCase) {
-    if (!suite.contains(testCase)) {
-      suite.addTestCase(testCase);
+    public SystemUnderTest(
+            KanonizoConfigurationModel configModel,
+            Instrumenter instrumenter,
+            SearchAlgorithm algorithm
+    )
+    {
+        this.testSuite = new TestSuite(this, getFitnessFunction(instrumenter, algorithm), configModel, instrumenter);
     }
-  }
 
-  public TestSuite getTestSuite() {
-    return suite;
-  }
-
-  public void addExtraClass(Class<?> extra) {
-    this.extraClasses.add(extra);
-  }
-
-  public List<ClassUnderTest> getClassesUnderTest() {
-    return Collections.unmodifiableList(classesUnderTest);
-  }
-
-  public int size() {
-    return classesUnderTest.size();
-  }
-
-  public SystemUnderTest clone() {
-    SystemUnderTest clone = new SystemUnderTest();
-    clone.classesUnderTest.addAll(classesUnderTest);
-    clone.extraClasses.addAll(extraClasses);
-    suite.getTestCases().forEach(tc -> clone.suite.addTestCase(tc));
-    clone.suite.setFitness(suite.getFitness());
-    return clone;
-  }
-
-  @Override
-  public int hashCode() {
-    int result = classesUnderTest.hashCode();
-    result = 31 * result + extraClasses.hashCode();
-    result = 31 * result + suite.hashCode();
-    return result;
-  }
-
-  public boolean equals(Object other) {
-    if (this == other) {
-      return true;
+    private SystemUnderTest(SystemUnderTest existing)
+    {
+        this.testSuite = existing.testSuite.clone();
+        this.classesUnderTest.addAll(existing.classesUnderTest);
+        this.extraClasses.addAll(existing.extraClasses);
     }
-    if (other == null) {
-      return false;
-    }
-    if (other.getClass() != getClass()) {
-      return false;
-    }
-    SystemUnderTest otherSUT = (SystemUnderTest) other;
-    List<ClassUnderTest> classes = otherSUT.classesUnderTest;
-    List<TestCase> testCases = otherSUT.suite.getTestCases();
-    return CollectionUtils.isEqualCollection(classes, classesUnderTest) &&
-        CollectionUtils.isEqualCollection(testCases, suite.getTestCases());
 
-  }
+    protected FitnessFunction<SystemUnderTest> getFitnessFunction(Instrumenter instrumenter, SearchAlgorithm algorithm)
+    {
+        if (algorithm.providesFitnessFunction())
+        {
+            return algorithm.getFitnessFunction();
+        }
+
+        Properties.CoverageApproach.FitnessFunctionFactory<SystemUnderTest> fitnessFunctionFactory = COVERAGE_APPROACH.getFitnessFunctionFactory();
+        return fitnessFunctionFactory.from(instrumenter, this);
+    }
+
+    public void addClass(ClassUnderTest cut)
+    {
+        cut.setParent(this);
+        classesUnderTest.add(cut);
+    }
+
+    public TestSuite getTestSuite()
+    {
+        return testSuite;
+    }
+
+    public void addExtraClass(Class<?> extra)
+    {
+        this.extraClasses.add(extra);
+    }
+
+    public List<ClassUnderTest> getClassesUnderTest()
+    {
+        return Collections.unmodifiableList(classesUnderTest);
+    }
+
+    public int size()
+    {
+        return classesUnderTest.size();
+    }
+
+    public SystemUnderTest clone()
+    {
+        SystemUnderTest clone = new SystemUnderTest(this);
+        testSuite.getTestCases().forEach(clone.testSuite::addTestCase);
+        clone.testSuite.setFitness(testSuite.getFitness());
+        return clone;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        int result = classesUnderTest.hashCode();
+        result = 31 * result + extraClasses.hashCode();
+        result = 31 * result + testSuite.hashCode();
+        return result;
+    }
+
+    public boolean equals(Object other)
+    {
+        if (this == other)
+        {
+            return true;
+        }
+        if (other == null)
+        {
+            return false;
+        }
+        if (other.getClass() != getClass())
+        {
+            return false;
+        }
+        SystemUnderTest otherSUT = (SystemUnderTest) other;
+        List<TestCase> testCases = otherSUT.testSuite.getTestCases();
+        return CollectionUtils.isEqualCollection(otherSUT.classesUnderTest, classesUnderTest) &&
+                CollectionUtils.isEqualCollection(testCases, testSuite.getTestCases());
+
+    }
+
+    @Override
+    public List<TestCase> getTestCases()
+    {
+        return getTestSuite().getTestCases();
+    }
 }
