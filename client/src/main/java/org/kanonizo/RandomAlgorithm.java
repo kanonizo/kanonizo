@@ -11,6 +11,8 @@ import org.kanonizo.listeners.TestOrderChangedListener;
 import java.util.Collections;
 import java.util.List;
 
+import static org.kanonizo.framework.objects.SystemUnderTest.copyOf;
+
 /**
  * Created by davidpaterson on 16/12/2016.
  */
@@ -29,7 +31,7 @@ public class RandomAlgorithm extends AbstractSearchAlgorithm
     @Override
     protected TestSuite generateSolution()
     {
-        TestSuite suite = problem.clone().getTestSuite();
+        TestSuite suite = copyOf(problem).getTestSuite();
         List<TestCase> testCases = suite.getTestCases();
         Collections.shuffle(testCases);
         suite.setTestCases(testCases);

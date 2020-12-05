@@ -1,6 +1,5 @@
 package org.kanonizo.framework.objects;
 
-import com.scythe.instrumenter.analysis.ClassAnalyzer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.kanonizo.Disposable;
@@ -14,7 +13,7 @@ import org.kanonizo.util.RandomSource;
 
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -34,7 +33,7 @@ public class TestSuite implements Comparable<TestSuite>, Disposable
     private final double removalChance;
     private final double insertionChance;
     private final double reorderChance;
-    private final Set<TestCase> testCases = new LinkedHashSet<>();
+    private final List<TestCase> testCases = new LinkedList<>();
     private final List<TestCase> removedTestCases = new ArrayList<>();
     private final FitnessFunction<SystemUnderTest> fitnessFunction;
 
@@ -69,6 +68,7 @@ public class TestSuite implements Comparable<TestSuite>, Disposable
         this.fitnessEvaluations = existing.fitnessEvaluations;
         this.changed = existing.changed;
         this.fitnessFunction = existing.fitnessFunction.clone();
+        this.disposed = existing.disposed;
     }
 
     public SystemUnderTest getParent()
@@ -104,7 +104,6 @@ public class TestSuite implements Comparable<TestSuite>, Disposable
 
     public void addTestCase(TestCase tc)
     {
-        tc.setParent(this);
         if (Modifier.isAbstract(tc.getMethod().getModifiers()))
         {
             logger.debug("Not adding " + tc + " because it is not runnable");
@@ -134,7 +133,7 @@ public class TestSuite implements Comparable<TestSuite>, Disposable
     public TestSuite mutate()
     {
         long startTime = java.lang.System.currentTimeMillis();
-        TestSuite clone = parent.clone().getTestSuite();
+        TestSuite clone = SystemUnderTest.copyOf(parent).getTestSuite();
         if (RandomSource.nextDouble() < removalChance)
         {
             clone.removeTestCase();
@@ -150,7 +149,7 @@ public class TestSuite implements Comparable<TestSuite>, Disposable
         clone.setChanged(true);
         if (Properties.PROFILE)
         {
-            ClassAnalyzer.out.println("Mutation completed in: " + (java.lang.System.currentTimeMillis() - startTime) + "ms");
+            logger.info("Mutation completed in: %s" + (java.lang.System.currentTimeMillis() - startTime) + "ms");
         }
         return clone;
     }
@@ -213,25 +212,19 @@ public class TestSuite implements Comparable<TestSuite>, Disposable
 
     }
 
-    public void crossover(TestSuite chr, int point1, int point2)
+    public void crossover(TestSuite toBeCrossedWith, int point1, int point2)
     {
         long startTime = java.lang.System.currentTimeMillis();
         // crossover ordering according to Antonial et al
-        while (testCases.size() > point1)
-        {
-            testCases.remove(point1);
-        }
-        for (TestCase tcc : chr.testCases)
-        {
-            if (!testCases.contains(tcc))
-            {
-                testCases.add(tcc);
-            }
-        }
+        List<TestCase> toBeRetained = testCases.subList(0, point1);
+        testCases.clear();
+        testCases.addAll(toBeRetained);
+        List<TestCase> toBeAdded = toBeCrossedWith.testCases.stream().filter(testCase -> !testCases.contains(testCase)).collect(toList());
+        testCases.addAll(toBeAdded);
         setChanged(true);
         if (Properties.PROFILE)
         {
-            ClassAnalyzer.out.println("Crossover completed in: " + (java.lang.System.currentTimeMillis() - startTime) + "ms");
+            logger.info("Crossover completed in: %s ms", + (java.lang.System.currentTimeMillis() - startTime));
         }
     }
 
@@ -348,8 +341,8 @@ public class TestSuite implements Comparable<TestSuite>, Disposable
         }
     }
 
-    public TestSuite clone()
+    public static TestSuite copyOf(TestSuite existing)
     {
-        return new TestSuite(this);
+        return new TestSuite(existing);
     }
 }

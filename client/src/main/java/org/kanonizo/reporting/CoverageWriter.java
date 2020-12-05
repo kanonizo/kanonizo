@@ -1,5 +1,14 @@
 package org.kanonizo.reporting;
 
+import org.kanonizo.framework.instrumentation.Instrumenter;
+import org.kanonizo.framework.objects.Branch;
+import org.kanonizo.framework.objects.ClassUnderTest;
+import org.kanonizo.framework.objects.Line;
+import org.kanonizo.framework.objects.SystemUnderTest;
+import org.kanonizo.framework.objects.TestCase;
+
+import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -7,22 +16,21 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.kanonizo.Framework;
-import org.kanonizo.framework.instrumentation.Instrumenter;
-import org.kanonizo.framework.objects.Branch;
-import org.kanonizo.framework.objects.ClassUnderTest;
-import org.kanonizo.framework.objects.Line;
-import org.kanonizo.framework.objects.SystemUnderTest;
-import org.kanonizo.framework.objects.TestCase;
-import org.kanonizo.util.HashSetCollector;
-
 public class CoverageWriter extends CsvWriter
 {
-    private SystemUnderTest system;
+    private final SystemUnderTest system;
+    private final Instrumenter instrumenter;
 
-    public CoverageWriter(SystemUnderTest system)
+    public CoverageWriter(
+            Path logFileDirectory,
+            String logFilename,
+            SystemUnderTest system,
+            Instrumenter instrumenter
+    )
     {
+        super(logFileDirectory, logFilename);
         this.system = system;
+        this.instrumenter = instrumenter;
     }
 
     @Override
@@ -39,7 +47,6 @@ public class CoverageWriter extends CsvWriter
         setHeaders(headers);
         List<ClassUnderTest> cuts = system.getClassesUnderTest();
         List<TestCase> testCases = system.getTestSuite().getTestCases();
-        Instrumenter inst = Framework.getInstance().getInstrumenter();
         for (ClassUnderTest cut : cuts)
         {
             if (!cut.getCUT().isInterface())
@@ -48,14 +55,14 @@ public class CoverageWriter extends CsvWriter
                 Set<Branch> branchesCovered = new HashSet<>();
                 for (TestCase tc : testCases)
                 {
-                    Set<Line> lines = inst.getLinesCovered(tc).stream().filter(line -> line.getParent().equals(cut)).collect(
+                    Set<Line> lines = instrumenter.getLinesCovered(tc).stream().filter(line -> line.getParent().equals(cut)).collect(
                             Collectors.toSet());
-                    Set<Branch> branches = inst.getBranchesCovered(tc);
+                    Set<Branch> branches = instrumenter.getBranchesCovered(tc);
                     linesCovered.addAll(lines);
                     branchesCovered.addAll(branches);
                 }
-                int totalLines = inst.getTotalLines(cut);
-                int totalBranches = inst.getTotalBranches(cut);
+                int totalLines = instrumenter.getTotalLines(cut);
+                int totalBranches = instrumenter.getTotalBranches(cut);
                 Set<Line> linesMissed = cut.getLines().stream().filter(line -> !linesCovered.contains(line))
                         .collect(HashSet::new, HashSet::add, HashSet::addAll);
                 Set<Branch> branchesMissed = cut.getBranches().stream()
@@ -63,24 +70,22 @@ public class CoverageWriter extends CsvWriter
                         .collect(HashSet::new, HashSet::add, HashSet::addAll);
                 List<Line> orderedLinesCovered = new ArrayList<>(linesCovered);
                 Collections.sort(orderedLinesCovered);
-                List<Line> orderedLinesMissed = new ArrayList<Line>(linesMissed);
+                List<Line> orderedLinesMissed = new ArrayList<>(linesMissed);
                 Collections.sort(orderedLinesMissed);
                 double percentageCoverage = totalLines > 0 ? (double) linesCovered.size() / totalLines : 0;
                 double percentageBranch = totalBranches > 0 ? (double) branchesCovered.size() / totalBranches : 0;
                 addRow(
                         cut.getCUT().getName(),
-                        Integer.toString(cut.getId()),
-                        Integer.toString(linesCovered.size()),
-                        Integer.toString(linesMissed.size()),
-                        linesCovered.size() > 0 ? orderedLinesCovered.stream().map(line -> Integer.toString(line.getLineNumber())).reduce(
-                                (lineNumber, lineNumber2) -> lineNumber + ":" + lineNumber2).get() : "",
-                        linesMissed.size() > 0 ? orderedLinesMissed.stream().map(line -> Integer.toString(line.getLineNumber())).reduce(
-                                (lineNumber, lineNumber2) -> lineNumber + ":" + lineNumber2).get() : "",
-                        Double.toString(percentageCoverage),
-                        Integer.toString(totalBranches),
-                        Double.toString(branchesCovered.size()),
-                        Double.toString(branchesMissed.size()),
-                        Double.toString(percentageBranch)
+                        cut.getId(),
+                        linesCovered.size(),
+                        linesMissed.size(),
+                        linesCovered.size() > 0 ? orderedLinesCovered.stream().map(Line::getLineNumber).map(Object::toString).collect(Collectors.joining(":")) : "",
+                        linesMissed.size() > 0 ? orderedLinesMissed.stream().map(Line::getLineNumber).map(Object::toString).collect(Collectors.joining(":")) : "",
+                        percentageCoverage,
+                        totalBranches,
+                        branchesCovered.size(),
+                        branchesMissed.size(),
+                        percentageBranch
                 );
             }
         }

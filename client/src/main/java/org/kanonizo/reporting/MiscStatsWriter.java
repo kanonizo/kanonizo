@@ -3,12 +3,19 @@ package org.kanonizo.reporting;
 import org.kanonizo.algorithms.SearchAlgorithm;
 import org.kanonizo.framework.objects.TestSuite;
 
+import java.nio.file.Path;
+
 public class MiscStatsWriter extends CsvWriter
 {
     private final SearchAlgorithm algorithm;
 
-    public MiscStatsWriter(SearchAlgorithm algorithm)
+    public MiscStatsWriter(
+            Path logFileDirectory,
+            String logFileNamePattern,
+            SearchAlgorithm algorithm
+    )
     {
+        super(logFileDirectory, logFileNamePattern);
         this.algorithm = algorithm;
     }
 
@@ -23,8 +30,12 @@ public class MiscStatsWriter extends CsvWriter
     {
         TestSuite optimal = algorithm.getCurrentOptimal();
         setHeaders("Fitness", "Iterations", "Algorithm Execution Time", "Fitness Evaluations");
-        addRow(Double.toString(optimal.getFitness()), Integer.toString(algorithm.getAge()),
-               Long.toString(algorithm.getTotalTime()), Integer.toString(algorithm.getFitnessEvaluations())
+        addRow(
+                optimal.getFitness(),
+                algorithm.getAge(),
+                algorithm.getTotalTime(),
+                algorithm.getFitnessEvaluations()
+
         );
     }
 

@@ -70,32 +70,7 @@ public class TestCase
         this.id = TEST_ID_SUPPLIER.incrementAndGet();
         TestCaseStore.register(id, this);
     }
-
-    private TestCase(TestCase existing)
-    {
-        this.testClass = existing.testClass;
-        this.testMethod = existing.testMethod;
-        this.id = existing.id;
-        this.testTimeout = existing.testTimeout;
-        this.executeTestsInRootFolder = existing.executeTestsInRootFolder;
-        this.resultSupplier = Lazy.of(this::run);
-    }
-
-    public TestCase(String className, String methodName, KanonizoTestResult testResult) throws ClassNotFoundException, NoSuchMethodException
-    {
-        this.testClass = Class.forName(className);
-        this.testMethod = testClass.getMethod(methodName);
-        this.id = TEST_ID_SUPPLIER.incrementAndGet();
-        this.testTimeout = Duration.ZERO;
-        this.executeTestsInRootFolder = false;
-        this.resultSupplier = Lazy.of(() -> testResult);
-    }
-
-    public int getId()
-    {
-        return id;
-    }
-
+ m,p
     /**
      * Executes a single test method on the JUnitCore class, using default
      * Runners and configuration. This method must reload the class from the

@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.kanonizo.framework.objects.Population.singleton;
+import static org.kanonizo.framework.objects.SystemUnderTest.copyOf;
 
 public class RandomSearchAlgorithm extends TestSuitePrioritiser
 {
@@ -40,11 +41,11 @@ public class RandomSearchAlgorithm extends TestSuitePrioritiser
     @Override
     protected Population<TestSuite> evolve()
     {
-        TestSuite clone = getCurrentOptimal().getParent().clone().getTestSuite();
+        TestSuite clone = copyOf(getCurrentOptimal().getParent()).getTestSuite();
         List<TestCase> testCases = clone.getTestCases();
         List<TestCase> randomOrdering = generateRandomOrder(testCases);
         clone.setTestCases(randomOrdering);
-        if (clone.fitter(getCurrentOptimal()).equals(clone))
+        if (clone.getFitness() > getCurrentOptimal().getFitness())
         {
             return Population.singleton(clone);
         }

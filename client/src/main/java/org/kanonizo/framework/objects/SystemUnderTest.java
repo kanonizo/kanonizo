@@ -30,7 +30,7 @@ public class SystemUnderTest implements Cloneable, TestCaseContainer
 
     private SystemUnderTest(SystemUnderTest existing)
     {
-        this.testSuite = existing.testSuite.clone();
+        this.testSuite = TestSuite.copyOf(existing.testSuite);
         this.classesUnderTest.addAll(existing.classesUnderTest);
         this.extraClasses.addAll(existing.extraClasses);
     }
@@ -72,12 +72,9 @@ public class SystemUnderTest implements Cloneable, TestCaseContainer
         return classesUnderTest.size();
     }
 
-    public SystemUnderTest clone()
+    public static SystemUnderTest copyOf(SystemUnderTest existing)
     {
-        SystemUnderTest clone = new SystemUnderTest(this);
-        testSuite.getTestCases().forEach(clone.testSuite::addTestCase);
-        clone.testSuite.setFitness(testSuite.getFitness());
-        return clone;
+        return new SystemUnderTest(existing);
     }
 
     @Override

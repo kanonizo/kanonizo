@@ -4,6 +4,7 @@ import org.kanonizo.Framework;
 import org.kanonizo.configuration.KanonizoConfigurationModel;
 import org.kanonizo.display.Display;
 import org.kanonizo.framework.instrumentation.Instrumenter;
+import org.kanonizo.framework.objects.SystemUnderTest;
 import org.kanonizo.framework.objects.TestCase;
 import org.kanonizo.framework.objects.TestSuite;
 import org.kanonizo.listeners.TestOrderChangedListener;
@@ -32,7 +33,7 @@ public abstract class TestCasePrioritiser extends AbstractSearchAlgorithm
     @Override
     protected final TestSuite generateSolution()
     {
-        TestSuite suite = problem.clone().getTestSuite();
+        TestSuite suite = SystemUnderTest.copyOf(problem).getTestSuite();
         List<TestCase> testCases = suite.getTestCases();
         List<TestCase> orderedTestCases = new LinkedList<>();
         init(testCases);

@@ -10,16 +10,12 @@ import org.apache.bcel.classfile.JavaClass;
 import org.apache.commons.lang.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.runner.Description;
 import org.junit.runners.Parameterized.Parameters;
-import org.kanonizo.Properties.CoverageApproach.FitnessFunctionFactory;
 import org.kanonizo.algorithms.SearchAlgorithm;
-import org.kanonizo.algorithms.metaheuristics.fitness.APFDFunction;
-import org.kanonizo.algorithms.metaheuristics.fitness.APLCFunction;
-import org.kanonizo.algorithms.metaheuristics.fitness.FitnessFunction;
 import org.kanonizo.annotations.Prerequisite;
 import org.kanonizo.configuration.KanonizoConfigurationModel;
 import org.kanonizo.configuration.configurableoption.BooleanOption;
+import org.kanonizo.configuration.configurableoption.FileOption;
 import org.kanonizo.configuration.configurableoption.StringOption;
 import org.kanonizo.display.Display;
 import org.kanonizo.framework.TestCaseStore;
@@ -36,6 +32,7 @@ import org.kanonizo.junit.testidentification.JUnit4TestIdentificationStrategy;
 import org.kanonizo.junit.testidentification.JUnit5TestIdentificationStrategy;
 import org.kanonizo.junit.testidentification.TestIdentificationStrategy;
 import org.kanonizo.listeners.TestCaseSelectionListener;
+import org.kanonizo.reporting.CoverageWriter;
 import org.kanonizo.reporting.CsvWriter;
 import org.kanonizo.reporting.MiscStatsWriter;
 import org.kanonizo.reporting.TestCaseOrderingWriter;
@@ -53,13 +50,15 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -68,8 +67,8 @@ import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Stream.empty;
 import static org.junit.runner.Description.createTestDescription;
-import static org.kanonizo.Properties.COVERAGE_APPROACH;
 import static org.kanonizo.configuration.configurableoption.BooleanOption.booleanOption;
+import static org.kanonizo.configuration.configurableoption.FileOption.fileOption;
 import static org.kanonizo.configuration.configurableoption.StringOption.stringOption;
 import static org.kanonizo.junit.TestingUtils.getTestMethods;
 
@@ -77,18 +76,19 @@ public class Framework implements Serializable
 {
     private static final StringOption FORBIDDEN_CLASSNAMES_OPTION = stringOption("forbidden_classnames", "");
     private static final BooleanOption USE_SUITE_METHODS_OPTION = booleanOption("use_suite_methods", false);
+    private static final FileOption LOG_DIR_OPTION = fileOption("log_dir");
+    private static final StringOption LOG_FILENAME_OPTION = stringOption("log_filename", "");
 
-    private static final List<TestIdentificationStrategy> TEST_IDENTIFICATION_STRATEGIES = asList(
-            new JUnit5TestIdentificationStrategy(),
-            new JUnit4ParameterisedTestIdentificationStrategy(),
-            new JUnit4TestIdentificationStrategy(),
-            new JUnit3TestSuiteIdentificationStrategy(),
-            new JUnit3TestCaseIdentificationStrategy()
-    )
+    private static final Function<KanonizoConfigurationModel, List<TestIdentificationStrategy>> TEST_IDENTIFICATION_STRATEGIES = configModel ->
+            asList(
+                    new JUnit5TestIdentificationStrategy(),
+                    new JUnit4ParameterisedTestIdentificationStrategy(),
+                    new JUnit4TestIdentificationStrategy(configModel),
+                    new JUnit3TestSuiteIdentificationStrategy(),
+                    new JUnit3TestCaseIdentificationStrategy()
+            );
 
     private static final Logger logger = LogManager.getLogger(Framework.class);
-
-    private List<TestCaseSelectionListener> listeners = new ArrayList<>();
 
     @Expose
     private final File sourceFolder;
@@ -110,13 +110,11 @@ public class Framework implements Serializable
     private final List<File> testFiles;
     private final List<String> forbiddenClasses;
     private final boolean useSuiteMethods;
+    private final Path logFileDirectory;
+    private final String logFileNamePattern;
 
-    public static final String SOURCE_FOLDER_PROPERTY_NAME = "sourceFolder";
-    public static final String TEST_FOLDER_PROPERTY_NAME = "testFolder";
-    public static final String ROOT_FOLDER_PROPERTY_NAME = "rootFolder";
-    public static final String INSTRUMENTER_PROPERTY_NAME = "instrumenter";
-    public static final String ALGORITHM_PROPERTY_NAME = "algorithm";
-    public static final String LIBS_PROPERTY_NAME = "libraries";
+    private final List<TestCaseSelectionListener> listeners = new ArrayList<>();
+    private final List<TestIdentificationStrategy> testCaseIdentificationStrategies;
 
     public Framework(
             KanonizoConfigurationModel configModel,
@@ -148,6 +146,9 @@ public class Framework implements Serializable
                 .filter(StringUtils::isNotEmpty)
                 .collect(toList());
         this.useSuiteMethods = configModel.getConfigurableOptionValue(USE_SUITE_METHODS_OPTION);
+        this.logFileDirectory = Paths.get(configModel.getFileOption(LOG_DIR_OPTION).toURI());
+        this.logFileNamePattern = configModel.getStringOption(LOG_FILENAME_OPTION);
+        this.testCaseIdentificationStrategies = TEST_IDENTIFICATION_STRATEGIES.apply(configModel);
     }
 
     public SearchAlgorithm getAlgorithm()
@@ -261,8 +262,8 @@ public class Framework implements Serializable
             testSuites.forEach(testSuite -> sut.getTestSuite().addAll(collectTestCases(testSuite)));
             for (TestSuite ts : testSuites)
             {
-                List<TestCase> testCases = collectTestCases(ts);
-                for (TestCase tc : testCases)
+                List<TestCase> testCasesInSuite = collectTestCases(ts);
+                for (TestCase tc : testCasesInSuite)
                 {
                     sut.getTestSuite().addTestCase(tc);
                 }
@@ -275,7 +276,7 @@ public class Framework implements Serializable
 
     private Stream<TestCase> findTestCasesInFile(Class<?> testClass)
     {
-        for (TestIdentificationStrategy testIdentificationStrategy : TEST_IDENTIFICATION_STRATEGIES)
+        for (TestIdentificationStrategy testIdentificationStrategy : testCaseIdentificationStrategies)
         {
             if (testIdentificationStrategy.handles(testClass))
             {
@@ -381,13 +382,18 @@ public class Framework implements Serializable
         }
 
         // collect (or read) coverage
-        Instrumenter inst = getInstrumenter();
-        inst.collectCoverage(sut.getTestSuite());
+        instrumenter.collectCoverage(sut.getTestSuite());
 
-        TestCaseOrderingWriter writer = new TestCaseOrderingWriter(algorithm);
+        TestCaseOrderingWriter writer = new TestCaseOrderingWriter(
+                logFileDirectory,
+                logFileNamePattern,
+                algorithm,
+                instrumenter
+        );
+        addSelectionListener(writer);
         addWriter(writer);
-        //addWriter(new CoverageWriter(sut));
-        addWriter(new MiscStatsWriter(algorithm));
+        addWriter(new CoverageWriter(logFileDirectory, logFileNamePattern, sut, instrumenter));
+        addWriter(new MiscStatsWriter(logFileDirectory, logFileNamePattern, algorithm));
         if (Properties.PRIORITISE)
         {
             org.kanonizo.framework.objects.TestSuite solution = algorithm.run();

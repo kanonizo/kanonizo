@@ -5,27 +5,28 @@ import com.scythe.instrumenter.InstrumentationProperties;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.stream.Collectors;
+
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 public abstract class CsvWriter
 {
-
     protected static final DateFormat FORMAT = new SimpleDateFormat("yyyyMMdd-HHmmss");
     private String[] headers;
-    private ArrayList<String[]> rows = new ArrayList<String[]>();
-    private File logFile;
-    private FileOutputStream stream;
+    private ArrayList<Object[]> rows = new ArrayList<>();
+    private FileOutputStream outputStream;
 
-    public CsvWriter()
+    public CsvWriter(Path logDirectory, String logFilename)
     {
-        String logDir = InstrumentationProperties.LOG_DIR + "/" + getDir() + "/";
-        String logFileName = logDir + getLogFileName();
-        File dir = new File(logDir);
-        logFile = new File(logFileName);
+        Path fullPathToLogFile = logDirectory.resolve(getDir()).resolve(getLogFileName(logFilename));
+        File dir = fullPathToLogFile.getParent().toFile();
+        File logFile = fullPathToLogFile.toFile();
         try
         {
             if (!dir.exists())
@@ -36,7 +37,7 @@ public abstract class CsvWriter
             {
                 logFile.createNewFile();
             }
-            stream = new FileOutputStream(logFile, false);
+            outputStream = new FileOutputStream(logFile, false);
         }
         catch (IOException e)
         {
@@ -44,28 +45,27 @@ public abstract class CsvWriter
         }
     }
 
-    public abstract String getDir();
+    protected abstract String getDir();
 
     protected abstract void prepareCsv();
 
-    protected String getLogFileName()
+    private String getLogFileName(String logFilename)
     {
-        return (InstrumentationProperties.LOG_FILENAME.equals("") ? FORMAT.format(Calendar.getInstance().getTime())
-                : InstrumentationProperties.LOG_FILENAME) + ".csv";
+        return isEmpty(logFilename) ? FORMAT.format(Calendar.getInstance().getTime()) : logFilename;
     }
 
     public void write()
     {
         prepareCsv();
-        for (String[] row : rows)
+        for (Object[] row : rows)
         {
             writeRow(row);
         }
-        if (stream != null)
+        if (outputStream != null)
         {
             try
             {
-                stream.close();
+                outputStream.close();
             }
             catch (final IOException e)
             {
@@ -81,17 +81,18 @@ public abstract class CsvWriter
         writeRow(headers);
     }
 
-    protected void addRow(String... row)
+    protected void addRow(Object... row)
     {
         rows.add(row);
     }
 
-    protected void writeRow(String... row)
+    protected void writeRow(Object... row)
     {
         try
         {
-            stream.write((Arrays.stream(row).reduce((a, b) -> a + "," + b).get() + "\n").getBytes());
-            stream.flush();
+            String collectedRow = Arrays.stream(row).map(Object::toString).collect(Collectors.joining(","));
+            outputStream.write((collectedRow + "\n").getBytes());
+            outputStream.flush();
         }
         catch (IOException e)
         {

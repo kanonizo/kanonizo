@@ -25,9 +25,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 
-import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
 import static org.kanonizo.configuration.configurableoption.ConfigurableOption.configurableOptionFrom;
+import static org.kanonizo.framework.objects.SystemUnderTest.copyOf;
+import static org.kanonizo.framework.objects.TestSuite.copyOf;
 
 public class GeneticAlgorithm extends TestSuitePrioritiser
 {
@@ -67,7 +67,7 @@ public class GeneticAlgorithm extends TestSuitePrioritiser
         this.mutationChance = configurationModel.getConfigurableOptionValue(MUTATION_CHANCE_OPTION);
         this.crossoverChance = configurationModel.getConfigurableOptionValue(CROSSOVER_CHANCE_OPTION);
         this.display = display;
-        writer = new FitnessWriter(this::getAge, () -> getCurrentOptimal().getFitness());
+        writer = new FitnessWriter(null, null, this::getAge, () -> getCurrentOptimal().getFitness());
     }
 
     protected Population<TestSuite> generateInitialPopulation()
@@ -76,7 +76,7 @@ public class GeneticAlgorithm extends TestSuitePrioritiser
         Population<TestSuite> pop = new Population<>();
         for (int i = 0; i < populationSize; i++)
         {
-            TestSuite clone = problem.clone().getTestSuite();
+            TestSuite clone = copyOf(problem).getTestSuite();
             List<Integer> testCaseOrdering = IntStream.range(0, clone.getTestCases().size())
                     .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
             List<TestCase> randomOrdering = new ArrayList<>();
@@ -105,8 +105,8 @@ public class GeneticAlgorithm extends TestSuitePrioritiser
             TestSuite parent1 = selection.select(population);
             TestSuite parent2 = selection.select(population);
 
-            TestSuite offspring1 = parent1.getParent().clone().getTestSuite();
-            TestSuite offspring2 = parent2.getParent().clone().getTestSuite();
+            TestSuite offspring1 = copyOf(parent1);
+            TestSuite offspring2 = copyOf(parent2);
 
             if (RandomSource.nextDouble() <= crossoverChance)
             {
@@ -162,16 +162,16 @@ public class GeneticAlgorithm extends TestSuitePrioritiser
         List<TestSuite> elite = new ArrayList<>();
         for (int i = 0; i < eliteIndividualsInPopulation; i++)
         {
-            elite.add(population.get(i).getParent().clone().getTestSuite());
+            elite.add(copyOf(population.get(i)));
         }
         return elite;
     }
 
-    protected List<TestSuite> getNFittest(int n, TestSuite... elements)
+    protected List<TestSuite> getNFittest(int numberOfFitSolutionsToSelect, TestSuite... elements)
     {
         List<TestSuite> candidates = Arrays.asList(elements);
         Collections.sort(candidates);
-        return candidates.subList(0, n);
+        return candidates.subList(0, numberOfFitSolutionsToSelect);
     }
 
     @Override

@@ -1,9 +1,5 @@
 package org.kanonizo.reporting;
 
-import java.util.List;
-import java.util.Optional;
-
-import org.kanonizo.Framework;
 import org.kanonizo.algorithms.SearchAlgorithm;
 import org.kanonizo.algorithms.TestCasePrioritiser;
 import org.kanonizo.framework.instrumentation.Instrumenter;
@@ -12,32 +8,37 @@ import org.kanonizo.framework.objects.TestSuite;
 import org.kanonizo.junit.KanonizoTestFailure;
 import org.kanonizo.listeners.TestCaseSelectionListener;
 
+import java.nio.file.Path;
+import java.util.List;
+import java.util.stream.Collectors;
+
 public class TestCaseOrderingWriter extends CsvWriter implements TestCaseSelectionListener
 {
-    private SearchAlgorithm algorithm;
-    private Instrumenter inst;
-    private boolean finalWrite;
+    private final SearchAlgorithm algorithm;
+    private final Instrumenter instrumenter;
+    private final boolean willWriteMultipleTimes;
 
-    protected TestCaseOrderingWriter()
+    public TestCaseOrderingWriter(
+            Path logFileDirectory,
+            String logFileNamePattern,
+            SearchAlgorithm algorithm,
+            Instrumenter instrumenter
+    )
     {
-    }
-
-    public TestCaseOrderingWriter(SearchAlgorithm algorithm)
-    {
-        super();
+        super(logFileDirectory, logFileNamePattern);
         this.algorithm = algorithm;
+        this.instrumenter = instrumenter;
 
-        finalWrite = !(algorithm instanceof TestCasePrioritiser);
-        inst = Framework.getInstance().getInstrumenter();
-        Framework.getInstance().addSelectionListener(this);
+        willWriteMultipleTimes = !(algorithm instanceof TestCasePrioritiser);
         setHeaders(
-                new String[]{"TestCase", "ExecutionTime", "Passed", "Failures", "TotalLinesCovered"});
+                "TestCase", "ExecutionTime", "Passed", "Failures", "TotalLinesCovered"
+        );
     }
 
     @Override
     protected void prepareCsv()
     {
-        if (finalWrite)
+        if (willWriteMultipleTimes)
         {
             TestSuite optimal = algorithm.getCurrentOptimal();
 
@@ -46,7 +47,7 @@ public class TestCaseOrderingWriter extends CsvWriter implements TestCaseSelecti
                     Long.toString(testCase.getExecutionTime()),
                     Boolean.toString(!testCase.hasFailures()),
                     stackTraceToString(testCase.getFailures()),
-                    Integer.toString(inst.getLinesCovered(testCase).size())
+                    Integer.toString(instrumenter.getLinesCovered(testCase).size())
             ));
         }
     }
@@ -65,14 +66,13 @@ public class TestCaseOrderingWriter extends CsvWriter implements TestCaseSelecti
                 Long.toString(tc.getExecutionTime()),
                 Boolean.toString(!tc.hasFailures()),
                 stackTraceToString(tc.getFailures()),
-                Integer.toString(inst.getLinesCovered(tc).size())
+                Integer.toString(instrumenter.getLinesCovered(tc).size())
         );
     }
 
     private String stackTraceToString(List<KanonizoTestFailure> failures)
     {
-        Optional<String> failString = failures.stream().map(f -> normalizeStackTrace(f.getTrace())).reduce((a, b) -> a + ":" + b);
-        return failString.isPresent() ? failString.get() : "";
+        return failures.stream().map(f -> normalizeStackTrace(f.getTrace())).collect(Collectors.joining(":"));
     }
 
     public static String normalizeStackTrace(String stackTrace)
